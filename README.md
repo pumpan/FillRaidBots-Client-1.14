@@ -17,6 +17,7 @@ This addon is an extension for the **PartyBot Command Panel (PCP)** for **World 
   - Removes all bots from the raid while keeping one bot to avoid disbanding the raid.
 - **Remove first bot Button:**
   - Removes the first bot (party bot with bad gear). The button appears when you start filling the raid.
+![Configuration Frame](ScreenShots/fillraidbots6.png)
 - **Remove Dead bots Button:**
   - Removes the dead bots. The button appears when a bot dies/is dead.
 - **Settings Menu:**
