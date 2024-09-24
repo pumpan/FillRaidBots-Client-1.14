@@ -32,7 +32,7 @@ This addon is an extension for the **PartyBot Command Panel (PCP)** for **World 
 
 2. **Extract Files:**
    - Extract the contents to your WoW addons directory, typically located at `World of Warcraft/Interface/AddOns`.
-   - Rename the map FillRaidBots--main to FillRaidBots
+   - Rename the map FillRaidBots-1.14--main to FillRaidBots
 
 3. **Enable the Addon:**
    - Launch WoW and go to the AddOns menu from the character select screen.
