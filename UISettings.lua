@@ -45,7 +45,7 @@ local function CreateToggleCheckButton()
         checkButton:SetSize(30, 30)
         checkButton:SetPoint("TOPLEFT", UISettingsFrame, "TOPLEFT", 10, -10)
         checkButton.text = _G[checkButton:GetName() .. "Text"]
-        checkButton.text:SetText("Auto Remove Dead Bots")
+        checkButton.text:SetText("Remove Dead Bots")
         checkButton:SetChecked(FillRaidBotsSavedSettings.isCheckAndRemoveEnabled)
 
         checkButton:SetScript("OnClick", function(self)
@@ -55,7 +55,7 @@ local function CreateToggleCheckButton()
 
         checkButton:SetScript("OnEnter", function()
             GameTooltip:SetOwner(checkButton, "ANCHOR_RIGHT")
-            GameTooltip:SetText("When enabled, dead bots will be automatically removed from the raid or party.")
+            GameTooltip:SetText("When enabled, A button will appear when there is dead bots.")
             GameTooltip:Show()
         end)
         checkButton:SetScript("OnLeave", function()
