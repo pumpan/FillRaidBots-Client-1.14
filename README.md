@@ -1,9 +1,9 @@
-# FillRaidBots
+# FillRaidBots Client 1.14
 
 ## Overview
 
-This addon is an extension for the **PartyBot Command Panel (PCP)** for **World of Warcraft (WoW) 1.12.1** helps users efficiently fill a raid with bots and manage them through an intuitive command panel. It includes features for setting up bot configurations, managing presets for various dungeons and raids, and automating bot removal.
-
+This addon is an extension for the **PartyBot Command Panel (PCP)** for **World of Warcraft (WoW) 1.14** helps users efficiently fill a raid with bots and manage them through an intuitive command panel. It includes features for setting up bot configurations, managing presets for various dungeons and raids, and a button that appears for bot removal when first bot (party bot) is added and a button to remove dead bots (when a dead bot is detected).
+**Good to know is that this addon is better on 1.12.1 client where bots are automaticaly removed**
 ## Features
 
 - **Automated Interface Creation:**
@@ -15,9 +15,12 @@ This addon is an extension for the **PartyBot Command Panel (PCP)** for **World 
 ![Preset Selection](ScreenShots/fillraidbots3.png)
 - **Kick All Button:**
   - Removes all bots from the raid while keeping one bot to avoid disbanding the raid.
-
+- **Remove first bot Button:**
+  - Removes the first bot (party bot with bad gear). The button appears when you start filling the raid.
+- **Remove Dead bots Button:**
+  - Removes the dead bots. The button appears when a bot dies/is dead.
 - **Settings Menu:**
-  - Provides options to enable automatic dead bot removal.
+  - Provides options to enable remove dead bot button.
   - Allows users to suppress bot messages for a cleaner interface.
 ![Preset Selection](ScreenShots/fillraidbots4.png)
 ## Installation
@@ -49,7 +52,7 @@ This addon is an extension for the **PartyBot Command Panel (PCP)** for **World 
    - Click the "Kick All" button to remove all bots from the raid, ensuring that at least one bot remains to prevent disbanding.
 
 5. **Adjust Settings:**
-   - Access the settings menu to enable automatic dead bot removal and suppress bot messages as needed.
+   - Access the settings menu to enable dead bot removal and suppress bot messages as needed.
 
 ## Presets
 
