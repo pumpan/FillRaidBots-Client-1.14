@@ -263,6 +263,14 @@ local function CheckAndRemoveDeadBots()
     local hasDeadBots = false
     local activeMemberCount = 0
 
+	-- Check if we are in a raid and not the raid leader or officer
+	if not UnitIsGroupLeader("player") and GetNumGroupMembers() > 0 and IsInRaid() then
+		QueueMessage("You must be a raid leader to remove bots.", "debug")
+		return
+
+	end
+
+
     if GetNumGroupMembers() > 0 then
         for i = 1, GetNumGroupMembers() do
             local unit = "raid"..i 
@@ -963,20 +971,18 @@ ClickBlockerFrame:Hide()
 
 
 	-- Create the "Open FillRaid" button
-	local openFillRaidButton = CreateFrame("Button", "OpenFillRaidButton", UIParent, "GameMenuButtonTemplate")
-	openFillRaidButton:SetWidth(20)
-	openFillRaidButton:SetHeight(180)
+	local openFillRaidButton = CreateFrame("Button", "OpenFillRaidButton", UIParent)
+	openFillRaidButton:SetWidth(40)
+	openFillRaidButton:SetHeight(100)
 
-	local function SetVerticalText(button, text)
-		local verticalText = ""
-		for i = 1, string.len(text) do
-			verticalText = verticalText .. string.sub(text, i, i) .. "\n"
-		end
-		button:SetText(verticalText)
-	end
 
-	SetVerticalText(openFillRaidButton, "FILL RAID")
+	-- Set the button's texture to the .tga image
+	openFillRaidButton:SetNormalTexture("Interface\\AddOns\\fillraidbots\\img\\fillraid")
+	-- Optional: You can also set different textures for button states (hover, clicked)
+	openFillRaidButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")  -- Hover effect
+	openFillRaidButton:SetPushedTexture("Interface\\AddOns\\fillraidbots\\img\\fillraid")  -- Click effect
 
+	-- Set the OnClick behavior
 	openFillRaidButton:SetScript("OnClick", function()
 		if FillRaidFrame:IsShown() then
 			FillRaidFrame:Hide()
@@ -987,14 +993,18 @@ ClickBlockerFrame:Hide()
 		end
 	end)
 
-	openFillRaidButton:Hide() 
+	openFillRaidButton:Hide()
 
 	-- Create the "Kick All" button below OpenFillRaidButton
-	local kickAllButton = CreateFrame("Button", "KickAllButton", UIParent, "GameMenuButtonTemplate")
-	kickAllButton:SetWidth(20)
-	kickAllButton:SetHeight(180)
+	local kickAllButton = CreateFrame("Button", "OpenFillRaidButton", UIParent)
+	kickAllButton:SetWidth(40)
+	kickAllButton:SetHeight(100)
+	
+	kickAllButton:SetNormalTexture("Interface\\AddOns\\fillraidbots\\img\\kickall")
+	-- Optional: You can also set different textures for button states (hover, clicked)
+	kickAllButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")  -- Hover effect
+	kickAllButton:SetPushedTexture("Interface\\AddOns\\fillraidbots\\img\\kickall")  -- Click effect
 
-	SetVerticalText(kickAllButton, "KICK ALL")
 
 	kickAllButton:SetScript("OnClick", function()
 		UninviteAllRaidMembers()  
