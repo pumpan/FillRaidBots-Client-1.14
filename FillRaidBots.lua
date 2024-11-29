@@ -1143,5 +1143,8 @@ function UninviteAllRaidMembers()
 end
 
 
-SLASH_UNINVITE1 = "/uninviteraid"
-SlashCmdList["UNINVITE"] = UninviteAllRaidMembers
+SLASH_UNINVITE_RAID1 = "/uninviteraid"
+SlashCmdList["UNINVITE_RAID"] = function()
+    UninviteAllRaidMembers()
+end
+
