@@ -14,6 +14,8 @@ This addon is an extension for the **PartyBot Command Panel (PCP)** for **World 
   - Opens a frame where users can specify the number of bots they want to add.
   - Allows users to choose from predefined presets for various raid instances, simplifying setup.
 ![Preset Selection](ScreenShots/fillraidbots3.png)
+- **Refill Raid button:**
+  - Replaces bots that die and are removed during gameplay.
 - **Kick All Button:**
   - Removes all bots from the raid while keeping one bot to avoid disbanding the raid.
 - **Remove first bot Button:**
@@ -70,6 +72,25 @@ The addon includes optimized presets for several dungeons and raids:
 ## Editing Presets or Suppress bot messages
 - **SuppressBotMsg.lua** edit this file to add or change how often a message should be displayed
 - **Presets.lua** edit this file to add or change a preset
+
+## Changelog
+**FillraidBots 2.0.2**
+
+    🔄 Version updated: to 2.0.2. marking this as a major update due to significant new features and functionality improvements.
+    🆕 Now detects the player's faction and load the appropriate presets for Horde or Alliance.
+    🛠 Improved: Healing sorting.
+    🆕 Improved: Made the process of adding bots a little faster.
+    🆕 Added: Bots are now added in a new way: healers are added first, sorted into different groups, and then all other classes are added.
+    🛠 Fixed: Adjusted and fixed some presets for better functionality.
+    🆕 Added: A debugger window for when debugging is enabled. All debug messages are now sent here instead of cluttering the chat window.
+    🆕 Added: A version checker that notifies you if a newer version of the addon is available.
+    🆕 Added: Logic to distribute healers evenly across the raid when bots are added.
+    🆕 Added: Class and role detection in the raid, enabling new functionality such as managing bots based on their roles.
+    🆕 Added: A new "Refill Raid" button, which replaces bots that die and are removed during gameplay.
+    🛠 Fixed: The /uninviteraid slash handler to prevent conflicts with WoW's native commands like /kick and /uninvite, which were unintentionally uninviting the entire raid. (Reported by Gemma)
+    🛠 Fixed: Since the latest server update, which prevents adding bots while in combat, an issue occurred where adding certain bots, such as warriors or hunters, caused you to enter combat for a few seconds. This created a problem where the addon attempted to add bots when they couldn't be added. I have now fixed it so that the addon detects when you're in combat and pauses until you're out of combat.
+    🛠 Added: The ability to move the 'fill raid' and 'kick all' buttons if this is enabled in the settings."
+    🛠 Added: A version number to the FillRaidFrame so that it's easier to see which version you're using.
 
 
 ## License
