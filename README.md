@@ -56,7 +56,10 @@ This addon is an extension for the **PartyBot Command Panel (PCP)** for **World 
 4. **Kick All Bots:**
    - Click the "Kick All" button to remove all bots from the raid, ensuring that at least one bot remains to prevent disbanding.
 
-5. **Adjust Settings:**
+5. **Refill Raid button:**
+    - Replaces bots that die and are removed during gameplay.
+
+6. **Adjust Settings:**
    - Access the settings menu to enable dead bot removal and suppress bot messages as needed.
 
 ## Presets
