@@ -26,15 +26,14 @@ local function regenerateTooltips()
 end
 
 
-local function SetFactionPresets(factionGroup)
-    if factionGroup == "Alliance" then
-
+local function SetFactionPresets(factionName, factionGroup)
+    if factionName == "Alliance" then
+		DEFAULT_CHAT_FRAME:AddMessage("You are " .. factionGroup)
 ----------------------------------------------------------------------------------------------------
 -----------------------------------ALLIANCE PRESETS-------------------------------------------------
 ----------------------------------------------------------------------------------------------------
-	if not factionGroup then
-		DEFAULT_CHAT_FRAME:AddMessage("You are Alliance!")
-	end	
+
+
 	naxxramasPresets = {
 		{
 			label = "PatchW",
@@ -669,13 +668,11 @@ local function SetFactionPresets(factionGroup)
 	}
     regenerateTooltips()
 
-    elseif factionGroup == "Horde" then
+    elseif factionName == "Horde" then
+		DEFAULT_CHAT_FRAME:AddMessage("You are " .. factionGroup)
         ----------------------------------------------------------------------------------------------------
         -----------------------------------HORDE PRESETS-------------------------------------------------
-        ----------------------------------------------------------------------------------------------------
- 	if not factionGroup then
-		DEFAULT_CHAT_FRAME:AddMessage("You are Horde!")
-	end	
+
 	naxxramasPresets = {
 		{
 			label = "PatchW",
@@ -1314,7 +1311,7 @@ end
 
 local function CheckFaction()
     local factionName, factionGroup = UnitFactionGroup("player")
-    SetFactionPresets(factionGroup)
+    SetFactionPresets(factionName, factionGroup)
 
 
     if instanceFrame then
