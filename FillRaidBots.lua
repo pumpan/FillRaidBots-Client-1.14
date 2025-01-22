@@ -21,11 +21,13 @@ local classes = {
 
 local addonName = "FillRaidBots"
 local addonPrefix = "FillRaid1142"
-local versionNumber = "2.0.2"
+local versionNumber = "2.1.0"
+local a = "2"
 local botCount = 0
 local initialBotRemoved = false
 firstBotName = nil
 local messageQueue = {}
+local DebugMessageQueue = {}
 local delay = 0.1 
 local nextUpdateTime = 0 
 
@@ -50,6 +52,10 @@ end
 function QueueMessage(message, recipient, incrementBotCount)
     table.insert(messageQueue,
         { message = message, recipient = recipient or "none", incrementBotCount = incrementBotCount or false })
+end
+function QueueDebugMessage(message, recipient)
+    table.insert(DebugMessageQueue,
+        { message = message, recipient = recipient or "none" })
 end
 
 
@@ -231,11 +237,11 @@ function RemoveFirstBot()
         UninviteUnit(firstBotName)
 
         if UnitExists(firstBotName) then
-            QueueMessage("Botname removed: True", "debug")
+            QueueDebugMessage("Botname removed: True", "debug")
             initialBotRemoved = true
         end
     else
-        QueueMessage("Error: First bot's name not captured.", "debug")
+        QueueDebugMessage("Error: First bot's name not captured.", "debug")
     end
 end
 
@@ -297,10 +303,10 @@ local function updateRoleConfidence(playerName, class, role, confidenceIncrease,
             detectedPlayers[normalizedPlayerName] = true
             detectedPlayerCount = detectedPlayerCount + 1
 
-            QueueMessage("Detected: " .. detectedPlayerCount .. " - " .. playerName .. " is a " .. coloredClass .. " (" .. role .. ") using: " .. spell, "debugdetection")
+            QueueDebugMessage("Detected: " .. detectedPlayerCount .. " - " .. playerName .. " is a " .. coloredClass .. " (" .. role .. ") using: " .. spell, "debugdetection")
         end
     else
-        QueueMessage("INFO: Updated confidence for " .. playerName .. ": " .. data.roleConfidence, "debuginfo")
+        QueueDebugMessage("INFO: Updated confidence for " .. playerName .. ": " .. data.roleConfidence, "debuginfo")
     end
 
     playerData[normalizedPlayerName] = data
@@ -395,12 +401,12 @@ local function CheckRaidAuras()
                     end
                 end
 
-                if buffName == "Ice Armor" then
-                    if not detectedPlayers[unitName] then
-                        detectedPlayers[unitName] = true  
-                        updateRoleConfidence(unitName, "mage", "rangedps", 3, "Ice Armor")
-                    end
-                end
+                --if buffName == "Ice Armor" then
+                --    if not detectedPlayers[unitName] then
+                --        detectedPlayers[unitName] = true  
+                --        updateRoleConfidence(unitName, "mage", "rangedps", 3, "Ice Armor")
+                --    end
+                --end
             end
 
             if unitClass == "warrior" and not hasTankBuff and not detectedPlayers[unitName] then
@@ -481,7 +487,7 @@ RoleRemoverFrame:SetScript("OnEvent", function()
         ReplaceDeadBot = {}
         UpdateReFillButtonVisibility()
         resetData() 
-        QueueMessage("Cleared both lists", "debugdetection")
+        QueueDebugMessage("Cleared both lists", "debugdetection")
     end
 
     
@@ -495,14 +501,14 @@ RoleRemoverFrame:SetScript("OnEvent", function()
         if not groupMembers[normalizedName] then
             
             if detectedPlayers[normalizedName] then
-                QueueMessage("Removed: " .. normalizedName .. " from detected player list!", "debugremove")
+                QueueDebugMessage("Removed: " .. normalizedName .. " from detected player list!", "debugremove")
                 detectedPlayers[normalizedName] = nil
                 detectedPlayerCount = detectedPlayerCount - 1
             end
 
             
             if playerData[normalizedName] then
-                QueueMessage("Removed: " .. normalizedName .. " from active player list!", "debugremove")
+                QueueDebugMessage("Removed: " .. normalizedName .. " from active player list!", "debugremove")
                 playerData[normalizedName] = nil
             end
         end
@@ -514,30 +520,30 @@ end)
 function UninviteMember(name, reason)
     local normalizedName = normalizePlayerName(name)
     if not normalizedName then
-        QueueMessage("ERROR: Could not normalize name for UninviteMember", "debugerror")
+        QueueDebugMessage("ERROR: Could not normalize name for UninviteMember", "debugerror")
         return
     end
 
-    QueueMessage("INFO: Attempting to uninvite member: " .. normalizedName .. " Reason: " .. reason, "debugremove")
+    QueueDebugMessage("INFO: Attempting to uninvite member: " .. normalizedName .. " Reason: " .. reason, "debugremove")
 
     if playerData[normalizedName] then
-        QueueMessage("DEBUG: Player found in playerData and marked for removal: " .. normalizedName, "debugremove")
+        QueueDebugMessage("DEBUG: Player found in playerData and marked for removal: " .. normalizedName, "debugremove")
         ReplaceDeadBot[normalizedName] = playerData[normalizedName]
         playerData[normalizedName] = nil
     else
-        QueueMessage("WARNING: Player not found in playerData: " .. normalizedName, "debugremove")
+        QueueDebugMessage("WARNING: Player not found in playerData: " .. normalizedName, "debugremove")
     end
 
     UninviteUnit(normalizedName)  
 
     if reason == "dead" then
-        QueueMessage(normalizedName .. " has been uninvited because they are dead.", "debugremove")
+        QueueDebugMessage(normalizedName .. " has been uninvited because they are dead.", "debugremove")
     elseif reason == "firstBotRemoved" then
-        QueueMessage("10 bots added. Removing party bot: " .. normalizedName, "debugremove")
+        QueueDebugMessage("10 bots added. Removing party bot: " .. normalizedName, "debugremove")
         firstBotName = nil
         ReplaceDeadBot[normalizedName] = nil
     else
-        QueueMessage(normalizedName .. " has been uninvited.", "debugremove")
+        QueueDebugMessage(normalizedName .. " has been uninvited.", "debugremove")
     end
 end
 
@@ -545,17 +551,17 @@ function resetData()
     playerData = {}
     detectedPlayers = {}
     detectedPlayerCount = 0
-    QueueMessage("All player data has been reset.", "debuginfo")
+    QueueDebugMessage("INFO: All player data has been reset.", "debuginfo")
 end
 
 SLASH_ROLELIST1 = "/rolelist"
 SlashCmdList["ROLELIST"] = function()
-    QueueMessage("Player Role List:", "debuginfo")
+    QueueDebugMessage("Player Role List:", "debuginfo")
     local count = 0
 
     for playerName, data in pairs(playerData) do
         count = count + 1
-        QueueMessage(count .. ". " .. playerName .. " - Class: " .. data.classColored .. ", Role: " .. data.role, "debuginfo")
+        QueueDebugMessage(count .. ". " .. playerName .. " - Class: " .. data.classColored .. ", Role: " .. data.role, "debuginfo")
     end
 end
 
@@ -640,12 +646,13 @@ function RetryMessageQueueProcessing()
         lastTimeChecked = currentTime 
 
         if not IsAnyGroupMemberInCombat() then
-            QueueMessage("Resuming..", "none")
+            QueueDebugMessage("Resuming..", "none")
             isInCombat = false
             retryTimerRunning = false
 			incombatmessagesent = false	
             combatCheckFrame:SetScript("OnUpdate", nil) 
             ProcessMessageQueue() 
+			ProcessDebugMessageQueue()
         else
             --print("Still in combat, retrying...")
         end
@@ -653,37 +660,18 @@ function RetryMessageQueueProcessing()
 end
 
 function ProcessMessageQueue()
-    if next(messageQueue) ~= nil then 
-        local messageInfo = table.remove(messageQueue, 1)
-        local message = messageInfo.message
-        local recipient = messageInfo.recipient
-
-
-        local colors = {
-            Error = "|cFFFF0000",     
-			ERROR = "|cFFFF0000",
-            WARNING = "|cFFFFA500",  
-            INFO = "|cFFFFFF00",     
-            Detected = "|cFF00FF00", 
-            Added = "|cFF00FF00",     
-			Removing = "|cFFADD8E6",
-			Removed = "|cFFADD8E6",
-			Fixgroups = "|cFFDDA0DD"
-        }
-        local resetColor = "|r" 
-
-        
-        for keyword, color in pairs(colors) do
-            message = string.gsub(message, "(" .. keyword .. ")", color .. "%1" .. resetColor)
-        end
-
+	
+	if next(messageQueue) ~= nil then 
+		local messageInfo = table.remove(messageQueue, 1)
+		local message = messageInfo.message
+		local recipient = messageInfo.recipient
 
         
         if recipient == "SAY" then
             
             if IsAnyGroupMemberInCombat() then
 				if not incombatmessagesent then 
-					QueueMessage("Raid member in combat, waiting..", "none")
+					QueueDebugMessage("Raid member in combat, waiting..", "none")
 					incombatmessagesent = true	
 				end	
                 isInCombat = true
@@ -693,10 +681,60 @@ function ProcessMessageQueue()
                 end
                 
                 table.insert(messageQueue, 1, messageInfo)
-                return 
+                return
+			else 
+				if messageInfo.incrementBotCount then
+					botCount = botCount + 1
+					
+					if botCount == 5 and not initialBotRemoved and firstBotName then
+						
+						removeBotButton:Show()
+					end
+				end
+				if recipient == "none" then
+					
+					DEFAULT_CHAT_FRAME:AddMessage(message)
+				else
+						
+					SendChatMessage(message, recipient)
+				end					
             end
         end
+    end
+end
 
+
+function ProcessDebugMessageQueue()
+		if next(DebugMessageQueue) ~= nil then 
+		local messageInfo = table.remove(DebugMessageQueue, 1)
+		local message = messageInfo.message
+		local recipient = messageInfo.recipient
+
+		
+		local colors = {
+			["error"] = "|cFFFF0000",     
+			["warning"] = "|cFFFFA500",  
+			["info"] = "|cFFFFFF00",     
+			["detected"] = "|cFF00FF00", 
+			["added"] = "|cFF00FF00",  
+			["adding"] = "|cFF00FF00",  			
+			["removing"] = "|cFFADD8E6", 
+			["removed"] = "|cFFADD8E6",  
+			["fixgroups"] = "|cFFDDA0DD" 
+		}
+		local resetColor = "|r" 
+
+		
+		for keyword, color in pairs(colors) do
+			
+			message = string.gsub(message, "([%a]+)", function(word)
+				if string.lower(word) == keyword then
+					return color .. word .. resetColor
+				else
+					return word
+				end
+			end)
+		end
         
         if recipient == "debug" then
             if FillRaidBotsSavedSettings.debugMessagesEnabled then  
@@ -748,24 +786,11 @@ function ProcessMessageQueue()
             SendChatMessage(message, recipient)
         end
 
-        if messageInfo.incrementBotCount then
-            botCount = botCount + 1
-            
-            if botCount == 5 and not initialBotRemoved then
-                
-                removeBotButton:Show()
-            end
-        end
     end
 end
 
 
 
-
-
-
-
-local messagecantremove = false
 
 local function CreateRemoveDeadBotsButton()
     local removeDeadBotsButton = CreateFrame("Button", "RemoveDeadBotsButton", UIParent, "UIPanelButtonTemplate")
@@ -774,12 +799,10 @@ local function CreateRemoveDeadBotsButton()
     removeDeadBotsButton:SetText("Remove Dead Bots")
     removeDeadBotsButton:Hide()
 
-    
     removeDeadBotsButton:SetMovable(true)
     removeDeadBotsButton:EnableMouse(true)
     removeDeadBotsButton:RegisterForDrag("LeftButton")
 
-    
     removeDeadBotsButton:SetScript("OnDragStart", function(self)
         self:StartMoving()
     end)
@@ -788,72 +811,86 @@ local function CreateRemoveDeadBotsButton()
         self:StopMovingOrSizing()
     end)
 
-    
-    removeDeadBotsButton:SetScript("OnClick", function()
-        local deadBotsRemoved = false
-        local playerName = UnitName("player")
-        local activeMemberCount = 0
-        local totalMemberCount = GetNumGroupMembers()
+	function removeDeadBotsFunction()
+		local deadBotsRemoved = false
+		local playerName = UnitName("player")
+		local totalMemberCount = GetNumGroupMembers()
+		local activeMemberCount = 0
 
-        
-        for i = 1, totalMemberCount do
-            local unit = "raid"..i
-            if not UnitExists(unit) then
-                unit = "party"..i
-            end
-            local name = UnitName(unit)
+		
+		local guildMembers = {}
+		for i = 1, GetNumGuildMembers() do
+			local name, _, _, _, _, _, _, _, online = GetGuildRosterInfo(i)
+			if name and online then
+				local normalizedGuildName = name:match("([^%-]+)") 
+				guildMembers[normalizedGuildName:lower()] = true
+			end
+		end
 
-            if name and UnitExists(unit) and not UnitIsGhost(unit) then
-                activeMemberCount = activeMemberCount + 1
-            end
-        end
-        QueueMessage("Active members: " .. activeMemberCount, "debug")
+		
+		local friends = {}
+		local numFriends = C_FriendList.GetNumFriends()
+		for i = 1, numFriends do
+			local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
+			if friendInfo and friendInfo.name and friendInfo.connected then
+				local normalizedFriendName = friendInfo.name:match("([^%-]+)")
+				friends[normalizedFriendName:lower()] = true
+			end
+		end
 
-        
-        if totalMemberCount > 2 then
-            for i = 1, totalMemberCount do
-                local unit = "raid"..i
-                if not UnitExists(unit) then
-                    unit = "party"..i
-                end
-                local name = UnitName(unit)
+		
+		for i = 1, totalMemberCount do
+			local unit = IsInRaid() and "raid" .. tostring(i) or "party" .. tostring(i)
+			if UnitExists(unit) and not UnitIsGhost(unit) then
+				activeMemberCount = activeMemberCount + 1
+			end
+		end
 
-                if name and UnitIsDead(unit) and not UnitIsGhost(unit) and name ~= playerName then
-                    if totalMemberCount > 2 then
+		
+		QueueDebugMessage("Active members: " .. activeMemberCount .. ", Total members: " .. totalMemberCount, "debug")
 
-						local normalizedName = normalizePlayerName(name)
-						if not normalizedName then
-							return
-						end
+		
+		for i = 1, totalMemberCount do
+			local unit = IsInRaid() and "raid" .. tostring(i) or "party" .. tostring(i)
+			local name = UnitName(unit)
 
+			if name and UnitIsDead(unit) and not UnitIsGhost(unit) and name ~= playerName then
+				local normalizedName = name:match("([^%-]+)"):lower()
 
-
-						
+				if guildMembers[normalizedName] then
+					QueueDebugMessage("INFO: Skipped removing " .. name .. " (guild member).", "debugremove")
+				elseif friends[normalizedName] then
+					QueueDebugMessage("INFO: Skipped removing " .. name .. " (friend).", "debugremove")
+				else
+					if activeMemberCount > 2 then
 						if playerData[normalizedName] then
 							ReplaceDeadBot[normalizedName] = playerData[normalizedName]
-							playerData[normalizedName] = nil  
+							playerData[normalizedName] = nil
 						end
+						UninviteUnit(normalizedName)
+						deadBotsRemoved = true
+						activeMemberCount = activeMemberCount - 1
+						totalMemberCount = totalMemberCount - 1
+						QueueDebugMessage("REMOVED: " .. name .. " (not in guild or friends list).", "debugremove")
+					else
+						QueueDebugMessage("Cannot remove " .. name .. ": Not enough members left (minimum 2 required).", "debug")
+					end
+				end
+			end
+		end
 
-                        UninviteUnit(normalizedName)
-                        deadBotsRemoved = true
-                        totalMemberCount = totalMemberCount - 1
-				
-                    else
-                        QueueMessage("Cannot remove, need at least 2 members in the raid.", "debug")
-                    end
-                end
-            end
-        else
-            QueueMessage("Cannot remove dead bots, fewer than 2 members remain.", "debug")
-        end
+		
+		if not deadBotsRemoved then
+			QueueDebugMessage("No dead bots were removed.", "debug")
+		else
+			QueueDebugMessage("Dead bots removed. Button will now hide.", "debug")
+			removeDeadBotsButton:Hide()
+		end
+	end
 
-        if deadBotsRemoved then
-            removeDeadBotsButton:Hide()
-            QueueMessage("Dead bots removed. Button hidden.", "debug")
-        end
-    end)
+	removeDeadBotsButton:SetScript("OnClick", removeDeadBotsFunction)
 
-    
+
     removeDeadBotsButton:SetScript("OnEnter", function()
         GameTooltip:SetOwner(removeDeadBotsButton, "ANCHOR_RIGHT")
         GameTooltip:SetText("Click to remove dead bots from the raid or party. Drag to move.")
@@ -869,6 +906,7 @@ end
 
 local removeDeadBotsButton = CreateRemoveDeadBotsButton()
 
+
 local DeadBotsFrame = CreateFrame("Frame")
 
 local function CheckAndRemoveDeadBots()
@@ -877,42 +915,68 @@ local function CheckAndRemoveDeadBots()
     local hasDeadBots = false
     local activeMemberCount = 0
 
-	
-	if not UnitIsGroupLeader("player") and GetNumGroupMembers() > 0 and IsInRaid() then
-		QueueMessage("You must be a raid leader to remove bots.", "debug")
-		return
+    
+    if not UnitIsGroupLeader("player") and GetNumGroupMembers() > 0 and IsInRaid() then
+        QueueDebugMessage("You must be a raid leader to remove bots.", "debug")
+        return
+    end
 
-	end
+    
+    local guildMembers = {}
+    for i = 1, GetNumGuildMembers() do
+        local name, _, _, _, _, _, _, _, online = GetGuildRosterInfo(i)
+        if name and online then
+            local normalizedGuildName = name:match("([^%-]+)"):lower() 
+            guildMembers[normalizedGuildName] = true
+        end
+    end
 
+    
+    local friends = {}
+    local numFriends = C_FriendList.GetNumFriends()
+    for i = 1, numFriends do
+        local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
+        if friendInfo and friendInfo.name and friendInfo.name ~= "" and friendInfo.connected then
+            local normalizedFriendName = friendInfo.name:match("([^%-]+)"):lower() 
+            friends[normalizedFriendName] = true
+        end
+    end
 
+    
     if GetNumGroupMembers() > 0 then
         for i = 1, GetNumGroupMembers() do
-            local unit = "raid"..i 
-            if not UnitExists(unit) then 
-                unit = "party"..i
+            local unit = "raid" .. i
+            if not UnitExists(unit) then
+                unit = "party" .. i
             end
             local name = UnitName(unit)
             local health = UnitHealth(unit)
 
-            
-            if UnitExists(unit) and not UnitIsGhost(unit) and name ~= playerName then
-                activeMemberCount = activeMemberCount + 1
-            end
+            if name then
+                local normalizedUnitName = name:match("([^%-]+)"):lower() 
+                
+                
+                if normalizedUnitName ~= playerName:lower() and not guildMembers[normalizedUnitName] and not friends[normalizedUnitName] then
+                    if UnitExists(unit) and not UnitIsGhost(unit) then
+                        activeMemberCount = activeMemberCount + 1
+                    end
 
-            
-            if health == 0 and UnitExists(unit) and name ~= playerName then
-                hasDeadBots = true
+                    if health == 0 and UnitExists(unit) then
+                        hasDeadBots = true
+                    end
+                end
             end
         end
-        
+
         
         if hasDeadBots and activeMemberCount >= 2 then
-            removeDeadBotsButton:Show() 
+            removeDeadBotsButton:Show()
         else
-            removeDeadBotsButton:Hide() 
+            removeDeadBotsButton:Hide()
         end
     end
 end
+
 
 local function OnEvent(self, event, unit)
     if event == "UNIT_HEALTH" then
@@ -933,30 +997,54 @@ DeadBotsFrame:SetScript("OnEvent", OnEvent)
 
 function SaveRaidMembersAndSetFirstBot()
     local raidMembers = {}
-    local playerName = UnitName("player") 
+    local playerName = UnitName("player")
+    firstBotName = nil  
+
+    
+    local guildMembers = {}
+    for i = 1, GetNumGuildMembers() do
+        local name, _, _, _, _, _, _, _, online = GetGuildRosterInfo(i)
+        if name and online then
+            local normalizedGuildName = name:match("([^%-]+)"):lower() 
+            guildMembers[normalizedGuildName] = true
+        end
+    end
+
+    
+    local friends = {}
+    local numFriends = C_FriendList.GetNumFriends()
+    for i = 1, numFriends do
+        local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
+        if friendInfo and friendInfo.name and friendInfo.connected then
+            local normalizedFriendName = friendInfo.name:match("([^%-]+)"):lower() 
+            friends[normalizedFriendName] = true
+        end
+    end
 
     
     local numRaidMembers = GetNumRaidMembers and GetNumRaidMembers() or GetNumGroupMembers()
-
     for i = 1, numRaidMembers do
-        local unit = "raid" .. i
+        local unit = IsInRaid() and "raid" .. i or "party" .. i
         local name = UnitName(unit)
 
-        
         if name and name ~= playerName then
             table.insert(raidMembers, name)
+
             
-            if not firstBotName then
-                firstBotName = name 
+            local normalizedName = name:match("([^%-]+)"):lower()
+
+            
+            if not firstBotName and not guildMembers[normalizedName] and not friends[normalizedName] then
+                firstBotName = name
             end
         end
     end
 
     
     if firstBotName then
-        QueueMessage("First bot in raid set to: " .. firstBotName, "debuginfo")
+        QueueDebugMessage("INFO: First bot in raid set to: " .. firstBotName, "debuginfo")
     else
-        QueueMessage("Error: No bot found to set as the first bot in raid.", "debuginfo")
+        QueueDebugMessage("WARNING: No eligible bot found to set as the first bot in raid.", "debuginfo")
     end
 end
 
@@ -969,33 +1057,33 @@ local function SavePartyMembersAndSetFirstBot()
 
     
     if isInRaid then
-        QueueMessage("In a raid group.", "debug")
+        QueueDebugMessage("In a raid group.", "debug")
         for i = 1, GetNumGroupMembers() do
             local unit = "raid" .. i
             local name = UnitName(unit)
             if name then
                 table.insert(partyMembers, name)
-                QueueMessage("Found raid member: " .. name, "debug")
+                QueueDebugMessage("Found raid member: " .. name, "debug")
             else
-                QueueMessage("No name found for raid unit " .. i, "debug")
+                QueueDebugMessage("No name found for raid unit " .. i, "debug")
             end
         end
     else
-        QueueMessage("In a party group.", "debug")
+        QueueDebugMessage("In a party group.", "debug")
         for i = 1, GetNumGroupMembers() - 1 do  
             local unit = "party" .. i
             local name = UnitName(unit)
             if name then
                 table.insert(partyMembers, name)
             else
-                QueueMessage("No name found for party unit " .. i, "debug")
+                QueueDebugMessage("No name found for party unit " .. i, "debug")
             end
         end
     end
 
     
     local playerName = UnitName("player")
-    QueueMessage("Player name is: " .. playerName, "debug")
+    QueueDebugMessage("Player name is: " .. playerName, "debug")
 
     for _, member in ipairs(partyMembers) do
         if member ~= playerName then
@@ -1005,9 +1093,9 @@ local function SavePartyMembersAndSetFirstBot()
     end
 
     if firstBotName then
-        QueueMessage("First bot set to: " .. firstBotName, "debug")
+        QueueDebugMessage("First bot set to: " .. firstBotName, "debug")
     else
-        QueueMessage("Error: No bot found to set as the first bot.", "debug")
+        QueueDebugMessage("Error: No bot found to set as the first bot.", "debug")
     end
 end
 
@@ -1021,7 +1109,7 @@ function resetfirstbot_OnEvent(self, event)
             initialBotRemoved = false
             firstBotName = nil
             botCount = 0
-            QueueMessage("Bot state reset: No members in party or raid.", "debug")
+            QueueDebugMessage("Bot state reset: No members in party or raid.", "debug")
         end
     end
 end
@@ -1036,6 +1124,7 @@ resetBotFrame:SetScript("OnEvent", resetfirstbot_OnEvent)
 
 local function ProcessMessages()
     ProcessMessageQueue()
+	ProcessDebugMessageQueue()
     CheckAndRemoveDeadBots() 
     nextUpdateTime = GetTime() + delay 
 end
@@ -1061,7 +1150,7 @@ function FillRaid_OnLoad(self, event, ...)
         self:RegisterEvent('GROUP_ROSTER_UPDATE')
         self:RegisterEvent("CHAT_MSG_SYSTEM")
 
-        QueueMessage("FillRaidBots [" .. versionNumber .. "]|cff00FF00 loaded|cffffffff", "none")
+        QueueDebugMessage("FillRaidBots [" .. versionNumber .. "]|cff00FF00 loaded|cffffffff", "none")
     end
 end
 
@@ -1083,14 +1172,14 @@ local function FillRaid()
         
         if GetNumGroupMembers() == 2 then
             SaveRaidMembersAndSetFirstBot()
-            QueueMessage("SaveRaidMembersAndSetFirstBot called", "debugfilling")
+            QueueDebugMessage("SaveRaidMembersAndSetFirstBot called", "debugfilling")
         end
     else
         
         if GetNumGroupMembers() == 0 then
             
             QueueMessage(".partybot add warrior tank", "SAY", true)
-            QueueMessage("Inviting the first bot to start the party.", "none")
+            QueueDebugMessage("Inviting the first bot to start the party.", "none")
 
             
             local waitForPartyFrame = CreateFrame("Frame")
@@ -1109,9 +1198,9 @@ local function FillRaid()
         
         if GetNumGroupMembers() >= 2 then
             ConvertToRaid()
-            QueueMessage("Converted to raid.", "debugfilling")
+            QueueDebugMessage("Converted to raid.", "debugfilling")
         else
-            QueueMessage("You need at least 2 players in the group to convert to a raid.", "debugfilling")
+            QueueDebugMessage("You need at least 2 players in the group to convert to a raid.", "debugfilling")
             return
         end
     end
@@ -1141,9 +1230,9 @@ local function FillRaid()
     
     totaly = totalHealers + totalOthers
 
-    QueueMessage("Added: Going to add healers:" .. totalHealers, "debugfilling")
-    QueueMessage("Added: Going to add classes:" .. totalOthers, "debugfilling")
-    QueueMessage("Added: Totaly:" .. totaly, "debugfilling")
+    QueueDebugMessage("Adding: Going to add healers:" .. totalHealers, "debugfilling")
+    QueueDebugMessage("Adding: Going to add classes:" .. totalOthers, "debugfilling")
+    QueueDebugMessage("Adding: Totaly:" .. totaly, "debugfilling")
 
 
     
@@ -1174,26 +1263,26 @@ local function FillRaid()
 
         
         QueueMessage(".partybot add " .. plainClass, "SAY", true)
-        QueueMessage("Added " .. coloredClass, "debuginfo")
+        QueueDebugMessage("Added " .. coloredClass, "debugfilling")
     end
 
     
     local function addOthers()
-        QueueMessage("addOthers called", "debuginfo")
+        QueueDebugMessage("addOthers called", "debuginfo")
         if #others == 0 then
-            QueueMessage("No other classes to add.", "debugfilling")
+            QueueDebugMessage("No other classes to add.", "debugfilling")
             return
         end
 
         for _, otherClass in ipairs(others) do
             addBot(otherClass)
         end
-        QueueMessage("Raid filling complete.", "none")
+        QueueDebugMessage("Raid filling complete.", "none")
     end
 
     
     if totalHealers == 0 then
-        QueueMessage("No healers found. Skipping healer addition.", "debugfilling")
+        QueueDebugMessage("No healers found. Skipping healer addition.", "debugerror")
         addOthers()
         return
     end
@@ -1211,7 +1300,7 @@ local function FillRaid()
                 if GetNumGroupMembers() >= healersAdded + 1 then
                     waitForHealersFrame:SetScript("OnUpdate", nil)
                     waitForHealersFrame:Hide()
-                    QueueMessage("FixGroups: All healers are in the raid. Starting FixGroups.", "debuginfo")
+                    QueueDebugMessage("FixGroups: All healers are in the raid. Starting FixGroups.", "debuginfo")
 
                     
                     C_Timer.After(1, function()
@@ -1224,7 +1313,7 @@ local function FillRaid()
 
                         
                         C_Timer.After(5, function()
-                            QueueMessage("Added: Adding other classes after healers.", "debugfilling")
+                            QueueDebugMessage("Added: Adding other classes after healers.", "debugfilling")
                             addOthers()
                         end)
                     end)
@@ -1240,7 +1329,7 @@ end
 -------------------------fixgroups ------------------------------------------
 
 
-
+local b = "1"
 local function QueueMove(player, group)
     table.insert(moveQueue, {player = player, group = group})
 end
@@ -1269,12 +1358,12 @@ local function ProcessMoveQueue()
         --QueueMessage("Player index: " .. player.index .. ", Target Group: " .. group, "debuginfo")
 
         if not player.index or player.index <= 0 then
-            QueueMessage("Error: Invalid player index for " .. player.name, "debugerror")
+            QueueDebugMessage("Error: Invalid player index for " .. player.name, "debugerror")
             return
         end
 
         if group < 1 or group > MAX_GROUPS then
-            QueueMessage("Error: Invalid target group " .. group, "debugerror")
+            QueueDebugMessage("Error: Invalid target group " .. group, "debugerror")
             return
         end
 
@@ -1300,11 +1389,11 @@ local function ProcessMoveQueue()
     
     if #moveQueue == 0 then
         if currentPhase == 1 then
-            QueueMessage("FixGroups: Phase 1 complete, starting Phase 2", "debuginfo")
+            QueueDebugMessage("FixGroups: Phase 1 complete, starting Phase 2", "debuginfo")
             currentPhase = 2
             FixGroups()
         else
-            QueueMessage("FixGroups: Phase 2 complete, groups organized", "debuginfo")
+            QueueDebugMessage("FixGroups: Phase 2 complete, groups organized", "debuginfo")
             isFixingGroups = false
         end
     end
@@ -1341,16 +1430,16 @@ function FixGroups()
 			healerCount = healerCount + 1
 		elseif name ~= playerName then
 			
-			QueueMessage("Non-healer or non-player found: " .. name .. " (" .. (class or "Unknown") .. ")", "debuginfo")
+			QueueDebugMessage("Non-healer or non-player found: " .. name .. " (" .. (class or "Unknown") .. ")", "debuginfo")
 		end
 	end
 
 	
-	QueueMessage("Total healers found (excluding player): " .. healerCount, "debuginfo")
+	QueueDebugMessage("Total healers found (excluding player): " .. healerCount, "debuginfo")
 
 	
 	if healerCount == 0 then
-		QueueMessage("Error: No healers found in the group.", "debuginfo")
+		QueueDebugMessage("Error: No healers found in the group.", "debuginfo")
 	end
 
 
@@ -1359,7 +1448,7 @@ function FixGroups()
 	local maxGroups = (totaly <= 20) and 4 or MAX_GROUPS
 
 	
-	QueueMessage("Total healers: " .. totalHealers .. ", Max groups: " .. maxGroups, "debuginfo")
+	QueueDebugMessage("Total healers: " .. totalHealers .. ", Max groups: " .. maxGroups, "debuginfo")
 
 	if currentPhase == 1 then
 		
@@ -1371,7 +1460,7 @@ function FixGroups()
 
 		
 		for class, classHealers in pairs(healersByClass) do
-			QueueMessage("Class: " .. class .. " has " .. #classHealers .. " healers", "debuginfo")
+			QueueDebugMessage("Class: " .. class .. " has " .. #classHealers .. " healers", "debuginfo")
 		end
 
 		local groupIndex = 1
@@ -1383,14 +1472,14 @@ function FixGroups()
 					groupIndex = groupIndex % maxGroups + 1
 					attempts = attempts + 1
 					if attempts > 20 then
-						QueueMessage("Error: Too many attempts to find a group for healer " .. healer.name .. " (" .. healer.class .. ")", "debugerror")
+						QueueDebugMessage("Error: Too many attempts to find a group for healer " .. healer.name .. " (" .. healer.class .. ")", "debugerror")
 						break
 					end
 				end
 
 				
 				if attempts > 20 then
-					QueueMessage("Error: Unable to assign healer " .. healer.name .. " (" .. healer.class .. ") after 20 attempts.", "debugerror")
+					QueueDebugMessage("Error: Unable to assign healer " .. healer.name .. " (" .. healer.class .. ") after 20 attempts.", "debugerror")
 				else
 					
 					QueueMove(healer, groupIndex)
@@ -1400,7 +1489,7 @@ function FixGroups()
 					table.insert(groupClasses[groupIndex], healer.class)
 
 					
-					QueueMessage("Assigned healer " .. healer.name .. " to group " .. groupIndex, "debuginfo")
+					QueueDebugMessage("Assigned healer " .. healer.name .. " to group " .. groupIndex, "debuginfo")
 				end
 
 				
@@ -1441,7 +1530,7 @@ function FixGroups()
 					table.insert(groupClasses[groupIndex], healer.class)
 
 					
-					QueueMessage("Rebalanced healer " .. healer.name .. " to group " .. groupIndex, "debuginfo")
+					QueueDebugMessage("Rebalanced healer " .. healer.name .. " to group " .. groupIndex, "debuginfo")
 
 					
 					groupIndex = groupIndex % maxGroups + 1
@@ -1744,6 +1833,123 @@ function CreateFillRaidUI()
 	end)
 
 
+local CreditsFrame = CreateFrame("Frame", "CreditsFrame", UIParent)
+CreditsFrame:SetWidth(300)
+CreditsFrame:SetHeight(200)
+CreditsFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+CreditsFrame:SetFrameStrata("DIALOG")  
+CreditsFrame:SetFrameLevel(1)  
+
+CreditsFrame:EnableMouse(true)
+CreditsFrame:SetMovable(true)
+
+
+CreditsFrame:SetScript("OnMouseDown", function(self, button)
+    if button == "LeftButton" then
+        self:StartMoving()
+    end
+end)
+
+CreditsFrame:SetScript("OnMouseUp", function(self, button)
+    if button == "LeftButton" then
+        self:StopMovingOrSizing()
+    end
+end)
+
+
+CreditsFrame.background = CreditsFrame:CreateTexture(nil, "BACKGROUND")
+CreditsFrame.background:SetAllPoints(CreditsFrame)
+CreditsFrame.background:SetColorTexture(0, 0, 0, 0.9) 
+
+
+CreditsFrame.border = CreateFrame("Frame", nil, CreditsFrame, BackdropTemplateMixin and "BackdropTemplate")
+CreditsFrame.border:SetPoint("TOPLEFT", -4, 4)
+CreditsFrame.border:SetPoint("BOTTOMRIGHT", 4, -4)
+CreditsFrame.border:SetBackdrop({
+    edgeFile = "Interface/Tooltips/UI-Tooltip-Border", 
+    edgeSize = 16,
+})
+CreditsFrame.border:SetBackdropBorderColor(0.8, 0.8, 0.8)
+CreditsFrame.border:SetFrameLevel(CreditsFrame:GetFrameLevel() + 1)  
+
+
+CreditsFrame.header = CreateFrame("Frame", nil, CreditsFrame)
+CreditsFrame.header:SetWidth(250)
+CreditsFrame.header:SetHeight(64)
+CreditsFrame.header:SetPoint('TOP', CreditsFrame, 0, 18)
+CreditsFrame.header:SetFrameLevel(CreditsFrame:GetFrameLevel() + 2)  
+
+CreditsFrame.header.texture = CreditsFrame.header:CreateTexture(nil, 'ARTWORK')
+CreditsFrame.header.texture:SetAllPoints(CreditsFrame.header)
+CreditsFrame.header.texture:SetTexture("Interface\\DialogFrame\\UI-DialogBox-Header")
+CreditsFrame.header.texture:SetVertexColor(0.2, 0.2, 0.2)
+
+CreditsFrame.header.text = CreditsFrame.header:CreateFontString(nil, 'OVERLAY', 'GameFontNormal')
+CreditsFrame.header.text:SetPoint('TOP', CreditsFrame.header, 0, -14)
+CreditsFrame.header.text:SetText('Credits')
+
+
+local creditsData = {
+    {name = "|cffffd700Pumpan|r", contribution = "Creator of the addon"},  
+    {name = "|cffffd700Dedirtyone|r", contribution = "Special thanks to Dedirtyone for his incredible generosity\nin donating €50 to help me get VIP status.\nYour support means so much and has truly motivated me \nto keep contributing to the community. \nThis addon wouldn’t be the same without people like you!"},  
+	{name = "|cffffd700TheSamurai206|r", contribution = "A huge thank you to TheSamurai206 (Zugginator) for his generous donation of €20.\nYour support means a lot and helps me continue improving this addon.\nIt's supporters like you that keep this project going!"},
+    {name = "|cffffffffGemma|r", contribution = "Thanks for Beta testing, and bug reports!"},  
+    {name = "|cffffffffTO EVERYONE ELSE!|r", contribution = "To everyone who has been supporting! \nIf you are interested in contributing in any way, \nbug reporting, beta testing, or whatever, \nplease contact me on the forum, Discord, or in-game."},  
+}
+
+
+
+
+local yOffset = -40 
+for i, data in ipairs(creditsData) do
+    local nameButton = CreateFrame("Button", nil, CreditsFrame)
+    nameButton:SetSize(200, 20)
+    nameButton:SetPoint("TOP", CreditsFrame, "TOP", 0, yOffset)
+
+    
+    local nameText = nameButton:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    nameText:SetText(data.name)
+    nameText:SetPoint("CENTER", nameButton, "CENTER")
+
+    
+    nameButton:SetScript("OnEnter", function()
+        GameTooltip:SetOwner(nameButton, "ANCHOR_RIGHT")
+        GameTooltip:SetText(data.contribution, 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    nameButton:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+
+    yOffset = yOffset - 25 
+end
+
+
+local openCreditsButton = CreateFrame("Button", "OpenCreditsButton", FillRaidFrame, "UIPanelButtonTemplate")
+openCreditsButton:SetWidth(60)  
+openCreditsButton:SetHeight(15)  
+openCreditsButton:SetText("Credits")
+openCreditsButton:SetPoint("BOTTOMLEFT", FillRaidFrame, "BOTTOMLEFT", 0, 0)
+
+
+openCreditsButton:GetFontString():SetFont("Fonts\\FRIZQT__.TTF", 10)  
+
+
+openCreditsButton:SetScript("OnClick", function()
+    if CreditsFrame:IsShown() then
+        CreditsFrame:Hide()
+        ClickBlockerFrame:Hide()
+    else
+        CreditsFrame:Show()
+        ClickBlockerFrame:Show()
+    end
+end)
+
+
+CreditsFrame:Hide()
+
+
+
     
 	local InstanceButtonsFrame = CreateFrame("Frame", "InstanceButtonsFrame", UIParent)
 	InstanceButtonsFrame:SetWidth(200)
@@ -1792,7 +1998,7 @@ function CreateFillRaidUI()
             if frame then
                 frame:Show()
             else
-                QueueMessage("Error: Frame '" .. frameName .. "' not found.", "debugerror")
+                QueueDebugMessage("Error: Frame '" .. frameName .. "' not found.", "debugerror")
             end
         end)
         return button
@@ -1809,7 +2015,7 @@ function CreateFillRaidUI()
 	CreateInstanceButton("Other", -290, "PresetDungeounOther")
 
 
-    
+  
 function CreateInstanceFrame(name, presets)
 	local frame = CreateFrame("Frame", name, UIParent)
 	frame:SetWidth(200)
@@ -1979,6 +2185,7 @@ end
 		ClickBlockerFrame:Hide() 
 		InstanceButtonsFrame:Hide() 
 		UISettingsFrame:Hide()
+		CreditsFrame:Hide()
 		for frameName, frame in pairs(instanceFrames) do
 			if frame:IsShown() then
 				frame:Hide()
@@ -1989,64 +2196,86 @@ end
 
 
 		
-	local savedPositions = {}
+local savedPositions = {}
 
-	local openFillRaidButton = CreateFrame("Button", "OpenFillRaidButton", UIParent)
-	openFillRaidButton:SetWidth(40)  
-	openFillRaidButton:SetHeight(100) 
+local openFillRaidButton = CreateFrame("Button", "OpenFillRaidButton", PCPFrame)  
+openFillRaidButton:SetWidth(40)  
+openFillRaidButton:SetHeight(100)
+
+openFillRaidButton:SetNormalTexture("Interface\\AddOns\\fillraidbots\\img\\fillraid")
+openFillRaidButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")  
+openFillRaidButton:SetPushedTexture("Interface\\AddOns\\fillraidbots\\img\\fillraid")  
+openFillRaidButton:SetMovable(true)  
+openFillRaidButton:EnableMouse(true)  
+openFillRaidButton:RegisterForDrag("LeftButton")  
 
 
-	openFillRaidButton:SetNormalTexture("Interface\\AddOns\\fillraidbots\\img\\fillraid")
-	openFillRaidButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")  
-	openFillRaidButton:SetPushedTexture("Interface\\AddOns\\fillraidbots\\img\\fillraid")  
-	openFillRaidButton:SetMovable(true)
-	openFillRaidButton:EnableMouse(true)
-	openFillRaidButton:RegisterForDrag("LeftButton")
+local defaultPosition = {x = -20, y = 250}
 
-	
-	function InitializeButtonPosition()
-		local position = savedPositions["OpenFillRaidButton"] or {x = -20, y = 250}
-		openFillRaidButton:SetPoint("CENTER", PCPFrame, "LEFT", position.x, position.y) 
-	end
 
-	function ToggleButtonMovement(button)
-		if FillRaidBotsSavedSettings.moveButtonsEnabled then
-			openFillRaidButton:SetMovable(true)
-			QueueMessage("Movable enabled for OpenFillRaidButton", "debuginfo")
+function InitializeButtonPosition()
+    local position = savedPositions["OpenFillRaidButton"] or defaultPosition
+    openFillRaidButton:SetPoint("CENTER", PCPFrame, "LEFT", position.x, position.y)  
+end
 
-			openFillRaidButton:SetScript("OnDragStart", function()
-				this:StartMoving()
-				this.isMoving = true
-			end)
 
-			openFillRaidButton:SetScript("OnDragStop", function()
-				this:StopMovingOrSizing()
-				this.isMoving = false
-				local point, _, _, x, y = this:GetPoint()
-				savedPositions["OpenFillRaidButton"] = {x = x, y = y}
-				QueueMessage("Coordinates: x: " .. tostring(x) .. ", y: " .. tostring(y), "debuginfo") 
-			end)		
-		else
+function ToggleButtonMovement(button)
+    if FillRaidBotsSavedSettings.moveButtonsEnabled then
+        openFillRaidButton:SetMovable(true)
+        QueueDebugMessage("Movable enabled for OpenFillRaidButton", "debuginfo")
 
-			openFillRaidButton:SetScript("OnDragStart", nil)
-			openFillRaidButton:SetScript("OnDragStop", nil)
-			QueueMessage("Movable disabled for OpenFillRaidButton", "debuginfo")
-		end
-	end
+        openFillRaidButton:SetScript("OnDragStart", function(self)
+            self:StartMoving()
+            self.isMoving = true  
+        end)
 
-	
-	ToggleButtonMovement(openFillRaidButton)
+        openFillRaidButton:SetScript("OnDragStop", function(self)
+            self:StopMovingOrSizing()
+            self.isMoving = false  
+            local point, _, _, x, y = self:GetPoint()
+            savedPositions["OpenFillRaidButton"] = {x = x, y = y}
+            QueueDebugMessage("Coordinates saved: x = " .. tostring(x) .. ", y = " .. tostring(y), "debuginfo")
+        end)
+    else
+        
+        openFillRaidButton:SetScript("OnDragStart", nil)
+        openFillRaidButton:SetScript("OnDragStop", nil)
+        QueueDebugMessage("Movable disabled for OpenFillRaidButton", "debuginfo")
+    end
+end
 
-	
-	openFillRaidButton:SetScript("OnClick", function()
-		if FillRaidFrame:IsShown() then
-			FillRaidFrame:Hide()
-			fillRaidFrameManualClose = true
-		else
-			FillRaidFrame:Show()
-			fillRaidFrameManualClose = false
-		end
-	end)
+
+InitializeButtonPosition()
+ToggleButtonMovement(openFillRaidButton)
+
+
+
+
+
+SLASH_RFB1 = "/rfb"
+SlashCmdList["RFB"] = function()
+    savedPositions["OpenFillRaidButton"] = defaultPosition
+    InitializeButtonPosition()
+    QueueDebugMessage("OpenFillRaidButton position reset to default: x = " .. tostring(defaultPosition.x) .. ", y = " .. tostring(defaultPosition.y), "debuginfo")
+end
+
+
+
+ToggleButtonMovement(openFillRaidButton)
+
+
+function openFillRaid()
+    if FillRaidFrame:IsShown() then
+        FillRaidFrame:Hide()
+        fillRaidFrameManualClose = true
+    else
+        FillRaidFrame:Show()
+        fillRaidFrameManualClose = false
+    end
+end
+
+openFillRaidButton:SetScript("OnClick", openFillRaid)
+
 
 	openFillRaidButton:Hide()
 
@@ -2091,26 +2320,26 @@ function UpdateReFillButtonVisibility()
 end
 
 
-reFillButton:SetScript("OnClick", function()
+function RefillBots()
     if next(ReplaceDeadBot) == nil then
-        QueueMessage("Replaced Bot List is empty.", "debugfilling")
+        QueueDebugMessage("Replaced Bot List is empty.", "debugfilling")
     else
-        QueueMessage("Replaced Bot List:", "debugfilling")
+        QueueDebugMessage("Replaced Bot List:", "debugfilling")
         for playerName, data in pairs(ReplaceDeadBot) do
-            QueueMessage(playerName .. " - Class: " .. data.classColored .. ", Role: " .. data.role, "debugfilling")
+            QueueDebugMessage(playerName .. " - Class: " .. data.classColored .. ", Role: " .. data.role, "debugfilling")
             QueueMessage(".partybot add " .. data.ClassNoColor .. " " .. data.role, "SAY", true)
         end
         
         ReplaceDeadBot = {}
 		--resetData()
 
-        QueueMessage("Replaced Bot List has been cleared.", "debugfilling")
+        QueueDebugMessage("Replaced Bot List has been cleared.", "debugfilling")
 
         
         UpdateReFillButtonVisibility()
     end  
-end)
-
+end
+reFillButton:SetScript("OnClick", RefillBots)
 
 UpdateReFillButtonVisibility()
 
@@ -2119,9 +2348,8 @@ UpdateReFillButtonVisibility()
 	
 	local function UpdateButtonPosition()
 		if PCPFrame and PCPFrame:IsVisible() then
-			
-			openFillRaidButton:ClearAllPoints()
-			openFillRaidButton:SetPoint("RIGHT", PCPFrame, "LEFT", 0, 250)
+
+			InitializeButtonPosition()
 
 			
 			kickAllButton:ClearAllPoints()
@@ -2231,49 +2459,116 @@ end
 
 
 function UninviteAllRaidMembers()
+    local myName = UnitName("player") 
     initialBotRemoved = false
     firstBotName = nil
-    botCount = 0
-    local playerName = UnitName("player")
+    botCount = 0    
+
+    
+    local guildMembers = {}
+    for i = 1, GetNumGuildMembers() do
+        local name, _, _, _, _, _, _, _, online = GetGuildRosterInfo(i)
+        if name and name ~= myName and online then  
+            local playerName = name:match("([^%-]+)")  
+            guildMembers[playerName:lower()] = true  
+        end
+    end
+
+	
+	local friends = {}
+	local numFriends = C_FriendList.GetNumFriends()
+	for i = 1, numFriends do
+		local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
+		if friendInfo and friendInfo.name and friendInfo.connected then
+			local normalizedFriendName = friendInfo.name:match("([^%-]+)")
+			friends[normalizedFriendName:lower()] = true  
+
+			
+			QueueDebugMessage("INFO: Friends online: " .. friendInfo.name, "debugremove")
+		end
+	end
+
+
+    
     local remainingMembers = {}
-
-    
     for i = 1, GetNumGroupMembers() do
-        local unit = "raid"..i
-        if not UnitExists(unit) then
-            unit = "party"..i
-        end
+        local unit = IsInRaid() and "raid" .. tostring(i) or "party" .. tostring(i)
         local name = UnitName(unit)
-        if name and name ~= playerName then
-            table.insert(remainingMembers, name)
+
+        if name and name ~= myName then  
+            table.insert(remainingMembers, name)  
         end
     end
 
     
-    if #remainingMembers < 1 then
-        QueueMessage("Cannot remove members, only 1 member left.", "debug")
-        return
-    end
+    for i = #remainingMembers, 1, -1 do  
+        local name = remainingMembers[i]
+        if name then
+            local normalizedName = name:match("([^%-]+)"):lower()  
 
-    
-    for i = 2, #remainingMembers do
-        UninviteUnit(remainingMembers[i])
+            if name == myName then
+                QueueDebugMessage("INFO: Kept " .. name .. " because it's you.", "debugremove")
+            elseif guildMembers[normalizedName] then
+                QueueDebugMessage("INFO: Kept " .. name .. " because they are in your guild.", "debugremove")
+            elseif friends[normalizedName] then
+                QueueDebugMessage("INFO: Kept " .. name .. " because they are in your friends list.", "debugremove")
+            else
+                if #remainingMembers > 1 then
+                    QueueDebugMessage("REMOVING: " .. name .. " because they are not in your guild or friends list.", "debugremove")
+                    UninviteUnit(name)
+                    table.remove(remainingMembers, i)  
+                else
+                    QueueDebugMessage("INFO: Kept " .. name .. " because they are the last member.", "debugremove")
+                end
+            end
+        else
+            QueueDebugMessage("ERROR: Skipped uninviting an unknown or nil player in group.", "debugremove")
+        end
     end
-
-    
-    QueueMessage("Removed " .. (#remainingMembers - 1) .. " members. 1 remains.", "debug")
 end
 
+local c = 0
 
-SLASH_UNINVITE_RAID1 = "/uninviteraid"
-SlashCmdList["UNINVITE_RAID"] = function()
-    UninviteAllRaidMembers()
+
+SLASH_FRB1 = "/frb"
+SlashCmdList["FRB"] = function(cmd)
+
+
+    if cmd == "ua" or cmd == "uninvite all" then
+        UninviteAllRaidMembers()
+    elseif cmd == "fill" then
+        FillRaid()
+        ReplaceDeadBot = {}
+        resetData()
+    elseif cmd == "open" then
+        openFillRaid()
+    elseif cmd == "refill" then
+        RefillBots()
+	elseif cmd == "rdb" or cmd == "remove dead" then
+		removeDeadBotsFunction()
+    elseif cmd == "fixgroups" then
+        isFixingGroups = true
+        currentPhase = 1
+        lastMoveTime = 0
+        moveQueue = {}
+        FixGroups()
+    else
+        
+        DEFAULT_CHAT_FRAME:AddMessage("Usage: /frb [ua|fill|open|refill|fixgroups]", 1.0, 1.0, 0.0)
+        DEFAULT_CHAT_FRAME:AddMessage("/frb ua or /frb uninvite all - Uninvite all raid members", 1.0, 1.0, 0.0)
+        DEFAULT_CHAT_FRAME:AddMessage("/frb fill - Fill the raid", 1.0, 1.0, 0.0)
+        DEFAULT_CHAT_FRAME:AddMessage("/frb rdb - Remove dead bots", 1.0, 1.0, 0.0)		
+        DEFAULT_CHAT_FRAME:AddMessage("/frb open - Open the Fill Raid frame", 1.0, 1.0, 0.0)
+        DEFAULT_CHAT_FRAME:AddMessage("/frb refill - Refill the raid", 1.0, 1.0, 0.0)
+        DEFAULT_CHAT_FRAME:AddMessage("/frb fixgroups - Fix raid groups", 1.0, 1.0, 0.0)
+    end
 end
+
 
 --------------------------------------------------------------------------------------------------------------------
 
 
-
+local Guard = string.format("%d.%d.%d", a, b, c)
 
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("CHAT_MSG_ADDON")
@@ -2302,13 +2597,12 @@ end
 local function sendVersionMessage(version, userID)
     
     if not C_ChatInfo.IsAddonMessagePrefixRegistered(addonPrefix) then
-        QueueMessage("ERROR: Addon prefix not registered: " .. addonPrefix, "debugversion")
+        QueueDebugMessage("ERROR: Addon prefix not registered: " .. addonPrefix, "debugversion")
         return
     end
-
     
     if not IsInGuild() then
-        QueueMessage("ERROR: Cannot send version message. You are not in a guild.", "debugversion")
+        QueueDebugMessage("ERROR: Cannot send version message. You are not in a guild.", "debugversion")
         return
     end
 
@@ -2318,7 +2612,7 @@ local function sendVersionMessage(version, userID)
     C_ChatInfo.SendAddonMessage(addonPrefix, message, "GUILD")
 
     
-    QueueMessage("INFO: Version message sent successfully to GUILD. Message: " .. message, "debugversion")
+    QueueDebugMessage("INFO: Version message sent successfully to GUILD. Message: " .. message, "debugversion")
 end
 
 
@@ -2330,26 +2624,29 @@ local function OnEvent(self, event, ...)
         --print("CHAT_MSG_ADDON event triggered!")
        -- print("Prefix:", prefix, "Message:", message, "Channel:", channel, "Sender:", sender)
 
-        QueueMessage("Addon message received. Prefix: " .. prefix .. ", Sender: " .. sender .. ", Message: " .. message, "debugversion")
+        QueueDebugMessage("Addon message received. Prefix: " .. prefix .. ", Sender: " .. sender .. ", Message: " .. message, "debugversion")
 
         if prefix == addonPrefix then
-            QueueMessage("Received addon message from " .. sender .. ": " .. message, "debugversion")
+            QueueDebugMessage("Received addon message from " .. sender .. ": " .. message, "debugversion")
         else
-            QueueMessage("Received message with incorrect prefix: " .. prefix, "debugversion")
+            QueueDebugMessage("Received message with incorrect prefix: " .. prefix, "debugversion")
         end
     elseif event == "PLAYER_LOGIN" then
         --print("Player has logged in")
         registerAddonPrefix()  
         local userID = generateUserID()
-        local version = "2.0.0"
-        sendVersionMessage(version, userID)  
+			if versionNumber == Guard then
+				sendVersionMessage(versionNumber, userID)
+			else
+				QueueDebugMessage("ERROR: A, a, a, you didnt say the magic word.", "debugversion")
+			end
     end
 end
 
 
 
 C_ChatInfo.RegisterAddonMessagePrefix(addonPrefix)
-QueueMessage("INFO: Addon prefix registered:" .. addonPrefix, "debugversion")
+QueueDebugMessage("INFO: Addon prefix registered:" .. addonPrefix, "debugversion")
 
 local function strsplit(delimiter, input)
     local result = {}
@@ -2442,18 +2739,21 @@ frame:SetScript("OnEvent", function(self, event, ...)
         end
 
         
-        QueueMessage(addonName .. " loaded. Current version: " .. versionNumber, "debuginfo")
-        QueueMessage("INFO: Total unique users detected: " .. FillRaidBotsSavedSettings.userCount, "debuginfo")
-        QueueMessage("Userid: " .. SessionUserID, "debuginfo")
+        QueueDebugMessage(addonName .. " loaded. Current version: " .. versionNumber, "debuginfo")
+        QueueDebugMessage("INFO: Total unique users detected: " .. FillRaidBotsSavedSettings.userCount, "debuginfo")
+        QueueDebugMessage("Userid: " .. SessionUserID, "debuginfo")
         
         
         if isNewerVersion(versionNumber, FillRaidBotsSavedSettings.lastNotifiedVersion) then
-            QueueMessage("INFO: New update available: " .. FillRaidBotsSavedSettings.lastNotifiedVersion, "debuginfo")
+            QueueDebugMessage("INFO: New update available: " .. FillRaidBotsSavedSettings.lastNotifiedVersion, "debuginfo")
             sendVersionMessage(FillRaidBotsSavedSettings.lastNotifiedVersion, SessionUserID)  
             newversion(FillRaidBotsSavedSettings.lastNotifiedVersion) 
         else
-            newversion()
-            sendVersionMessage(versionNumber, SessionUserID)  
+			if versionNumber == Guard then
+				sendVersionMessage(versionNumber, SessionUserID)
+			else
+				QueueDebugMessage("ERROR: A, a, a, you didnt say the magic word.", "debugversion")
+			end
         end
 
     elseif event == "CHAT_MSG_ADDON" then
@@ -2463,7 +2763,7 @@ frame:SetScript("OnEvent", function(self, event, ...)
             if sender ~= UnitName("player") then
                 
                 if not message or message == "" then
-                    QueueMessage("ERROR: Received an empty or nil message", "debugversion")
+                    QueueDebugMessage("ERROR: Received an empty or nil message", "debugversion")
                     return
                 end
                 
@@ -2471,18 +2771,18 @@ frame:SetScript("OnEvent", function(self, event, ...)
                 local receivedVersion, userID = strsplit(";", message)
 
                 
-                QueueMessage("ReceivedVersion: [" .. receivedVersion .. "], from userID: [" .. tostring(userID) .. "]", "debugversion")
+                QueueDebugMessage("ReceivedVersion: [" .. receivedVersion .. "], from userID: [" .. tostring(userID) .. "]", "debugversion")
 
                 
                 if not tonumber(userID) then
-                    QueueMessage("ERROR: UserID is not a valid number: " .. tostring(userID), "debugversion")
+                    QueueDebugMessage("ERROR: UserID is not a valid number: " .. tostring(userID), "debugversion")
                     return
                 end
 
                 
                 local versionPattern = "^%d+%.%d+%.%d+$"
                 if not strfind(receivedVersion, versionPattern) then
-                    QueueMessage("ERROR: Version format is invalid: " .. tostring(receivedVersion), "debugversion")
+                    QueueDebugMessage("ERROR: Version format is invalid: " .. tostring(receivedVersion), "debugversion")
                     return
                 end
 
@@ -2491,22 +2791,22 @@ frame:SetScript("OnEvent", function(self, event, ...)
                     SessionUniqueUsers[userID] = true
                     FillRaidBotsSavedSettings.uniqueUsers[userID] = true
                     FillRaidBotsSavedSettings.userCount = FillRaidBotsSavedSettings.userCount + 1
-                    QueueMessage("INFO: New user detected. Total unique users: " .. FillRaidBotsSavedSettings.userCount, "debugversion")
+                    QueueDebugMessage("INFO: New user detected. Total unique users: " .. FillRaidBotsSavedSettings.userCount, "debugversion")
                 end
 
                 
                 if isNewerVersion(versionNumber, receivedVersion) then
                     local lastNotifiedVersion = FillRaidBotsSavedSettings.lastNotifiedVersion or ""
                     if isNewerVersion(lastNotifiedVersion, receivedVersion) then
-                        QueueMessage("INFO: New version detected: " .. receivedVersion, "debuginfo")
+                        QueueDebugMessage("INFO: New version detected: " .. receivedVersion, "debuginfo")
                         FillRaidBotsSavedSettings.lastNotifiedVersion = receivedVersion
                         sendVersionMessage(receivedVersion, SessionUserID)  
                         newversion(receivedVersion) 
                     else
-                        QueueMessage("INFO: Version " .. receivedVersion .. " already notified.", "debugversion")
+                        QueueDebugMessage("INFO: Version " .. receivedVersion .. " already notified.", "debugversion")
                     end
                 else
-                    QueueMessage("INFO: Your version is up to date.", "debugversion")
+                    QueueDebugMessage("INFO: Your version is up to date.", "debugversion")
                 end
             end
         end

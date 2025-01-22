@@ -463,7 +463,8 @@ local function SetFactionPresets(factionName, factionGroup)
 			values = {
 				["warrior tank"] = 2,
 				["paladin healer"] = 1,
-				["warrior meleedps"] = 36,
+				["rogue meleedps"] = 10,				
+				["warrior meleedps"] = 26,
 			},
 			fullname = "Princess Huhuran"
 		},
