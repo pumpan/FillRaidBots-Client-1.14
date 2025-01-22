@@ -2613,6 +2613,7 @@ local function sendVersionMessage(version, userID)
 
     
     QueueDebugMessage("INFO: Version message sent successfully to GUILD. Message: " .. message, "debugversion")
+	newversion()
 end
 
 
