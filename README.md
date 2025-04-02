@@ -1,75 +1,122 @@
 # FillRaidBots Client 1.14
 
-## Overview
+![Version](https://img.shields.io/badge/version-3.0.0-blue)
+![WoW Version](https://img.shields.io/badge/WoW-1.14-ff69b4)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-This addon is an extension for the **PartyBot Command Panel (PCP)** for **World of Warcraft (WoW) 1.14** helps users efficiently fill a raid with bots and manage them through an intuitive command panel. It includes features for setting up bot configurations, managing presets for various dungeons and raids, and a button that appears for bot removal when first bot (party bot) is added and a button to remove dead bots (when a dead bot is detected).
-**Good to know is that this addon is better on 1.12.1 client where bots are automaticaly removed**
-## Features
+## 📋 Table of Contents
+- [Overview](#overview)
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Presets](#presets)
+- [Editing Presets or Suppress Bot Messages](#editing-presets-or-suppress-bot-messages)
+- [Changelog](#changelog)
+- [License](#license)
+- [Contact](#contact)
+
+## 📝 Overview
+
+This addon is an extension for the **PartyBot Command Panel (PCP)** for **World of Warcraft (WoW) 1.14**. 
+It helps users efficiently fill a raid with bots and manage them through an intuitive command panel. The addon 
+includes features for setting up bot configurations, managing presets for various dungeons and raids, and automating 
+bot removal. **Note:** This addon works best on the **1.12.1 client**, where bots are automatically removed.
+
+## ✨ Features
 
 - **Automated Interface Creation:**
-  - Automatically creates and opens the "Fill Raid" and "Kick All" buttons when the PartyBot Command Panel is accessed.
-![Configuration Frame](ScreenShots/fillraidbots.png)
+  - Automatically creates and opens the "Fill Raid" and "Kick All" buttons when accessing the PartyBot Command Panel.
+
+<p align="center">
+   <img src="/ScreenShots/newbuttons.png" alt="Configuration Frame">
+  <img src="/ScreenShots/fillraidbots.png" alt="Configuration Frame" width="400">
+</p>
+
 - **Fill Raid Button:**
-  - Opens a frame where users can specify the number of bots they want to add.
-  - Allows users to choose from predefined presets for various raid instances, simplifying setup.
-![Preset Selection](ScreenShots/fillraidbots3.png)
-- **Refill Raid button:**
+  - Opens a configuration frame to specify the number of bots to add.
+  - Allows users to choose from predefined presets for different raid instances.
+
+<p align="center">
+  <img src="/ScreenShots/fillraidbots3.png" alt="Preset Selection" width="400">
+</p>
+
+- **Refill Raid Button:**
   - Replaces bots that die and are removed during gameplay.
+
 - **Kick All Button:**
   - Removes all bots from the raid while keeping one bot to avoid disbanding the raid.
-- **Remove first bot Button:**
+
+- **Remove First Bot Button:**
   - Removes the first bot (party bot with bad gear). The button appears when you start filling the raid.
 
-![Configuration Frame](ScreenShots/fillraidbots6.png)
-- **Remove Dead bots Button:**
-  - Removes the dead bots. The button appears when a bot dies/is dead.
-- **Settings Menu:**
-  - Provides options to enable remove dead bot button.
-  - Allows users to suppress bot messages for a cleaner interface.
-![Preset Selection](ScreenShots/fillraidbots4.png)
-## Installation
+- **Remove Dead Bots Button:**
+  - Removes the dead bots. The button appears when a bot dies.
 
-1. **Download the Addon:** 
+- **Fast Fill:**
+  - Quickly fills the raid with bots using optimized settings.
+    Add bots using `Ctrl + Alt + Mouse Click` on bosses to instantly load the preset raid setup.
+
+- **Loot Type Option:**
+  - Automatically changes the loot type on raid creation to the selected one.
+
+- **Settings Menu:**
+  - Provides options to enable the "Remove Dead Bots" button.
+  - Allows users to suppress bot messages for a cleaner interface.
+
+<p align="center">
+  <img src="/ScreenShots/sett.jpg" alt="Settings Menu">
+</p>
+
+## 🛠️ Installation
+
+1. **Download the Addon:**  
    - Clone this repository or download the ZIP file from GitHub.
 
-2. **Extract Files:**
-   - Extract the contents to your WoW addons directory, typically located at `World of Warcraft/Interface/AddOns`.
-   - Rename the map FillRaidBots-1.14--main to FillRaidBots
+2. **Extract Files:**  
+   - Extract the contents to your WoW addons directory, typically located at:
+     ```
+     World of Warcraft/Interface/AddOns
+     ```  
+   - Rename the folder `FillRaidBots-1.14--main` to `FillRaidBots`.
 
-3. **Enable the Addon:**
-   - Launch WoW and go to the AddOns menu from the character select screen.
+3. **Enable the Addon:**  
+   - Launch WoW and go to the AddOns menu from the character selection screen.  
    - Ensure that the addon is enabled in the list.
 
-## Usage
+## 🚀 Usage
 
-1. **Open the PartyBot Command Panel:**
+1. **Open the PartyBot Command Panel:**  
    - The addon automatically creates and opens the "Fill Raid" and "Kick All" buttons.
 
-2. **Configure the Raid:**
-   - Click the "Fill Raid" button to open a configuration frame.
-   - Set the number of bots for each role or use the "Presets" button to select from predefined raid setups.
+2. **Configure the Raid:**  
+   - Click the "Fill Raid" button to open a configuration frame.  
+   - Set the number of bots for each role or use the "Presets" button to choose from predefined raid setups.
 
-3. **Apply Presets:**
-   - Use the preset options to quickly fill the raid with optimized configurations for different dungeons and raids.
+3. **Apply Presets:**  
+   - Use the preset options to quickly fill the raid with optimized configurations for various dungeons and raids.
 
-4. **Kick All Bots:**
-   - Click the "Kick All" button to remove all bots from the raid, ensuring that at least one bot remains to prevent disbanding.
+4. **Kick All Bots:**  
+   - Click the "Kick All" button to remove all bots, while keeping one to prevent raid disbanding.
 
-5. **Refill Raid button:**
-    - Replaces bots that die and are removed during gameplay.
+5. **Refill Raid:**  
+   - Use the "Refill Raid" button to replace bots that have died and been removed.
 
-6. **Adjust Settings:**
-   - Access the settings menu to enable dead bot removal and suppress bot messages as needed.
-7. **Slash commands**
-You can now use slash commands so you can make macros
-    - /frb ua or /frb uninvite all – Uninvite all raid members but saves Friends and guild members.
-    - /frb fill – Automatically fill the raid.
-    - /frb open – Open the Fill Raid frame.
-    - /frb rdb - Removes dead bots
-    - /frb refill – Refill the raid.
-    - /frb fixgroups – Fix raid groups.
+6. **Adjust Settings:**  
+   - Access the settings menu to enable automatic dead bot removal and suppress bot messages as needed.
 
-## Presets
+7. **Slash Commands:**  
+   - You can create macros for the following commands:
+     ```
+     /frb - for avalible commands
+     /frb ua or /frb uninvite all – Uninvite all raid members but saves Friends and guild members.
+     /frb (preset) – Fills the raid with the preset.
+     /frb open – Open the Fill Raid frame.
+     /frb rdb - Removes dead bots.
+     /frb refill – Refill the raid.
+     /frb fixgroups – Fix raid groups.
+     ```
+
+## 🗺️ Presets
 
 The addon includes optimized presets for several dungeons and raids:
 
@@ -79,10 +126,28 @@ The addon includes optimized presets for several dungeons and raids:
 - **Zul'Gurub (ZG):** Specific presets for each boss, including tanks, healers, and DPS roles.
 - **Blackwing Lair (BWL) and AQ40:** Configurations for raid encounters.
 
-## Editing Presets or Suppress bot messages
-- **SuppressBotMsg.lua** edit this file to add or change how often a message should be displayed
-- **Presets.lua** edit this file to add or change a preset
+## 📝 Editing Presets or Suppress Bot Messages
 
+- To edit how often a message should be displayed, modify the `SuppressBotMsg.lua` file.
+- To add or change a preset, modify the `Presets.lua` file.
+
+## 📅 Changelog
+
+### **FillRaidBots 3.0.0**
+
+- **New Features:**
+  - Added boss-specific preset loading with `Ctrl + Alt + Mouse Click`.
+  - New settings for button size and loot type selection.
+  - Slash command `/frb (bossname)` to quickly fill the raid.
+
+- **Improvements:**
+  - Works with both PCP and PCPRemake.
+  - Added `/rl` `/reloadui` `/reload` commands.
+
+- **Bug Fixes:**
+  - Improved bot sorting and automatic raid management.
+
+### **Previous Versions**
 ## Changelog
 **FillRaidBots 2.1.0**
 
@@ -124,11 +189,11 @@ The addon includes optimized presets for several dungeons and raids:
     🛠 Added: The ability to move the 'fill raid' and 'kick all' buttons if this is enabled in the settings."
     🛠 Added: A version number to the FillRaidFrame so that it's easier to see which version you're using.
 
-
-## License
+## 📜 License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-## Contact
+## 📧 Contact
 
 For any questions or issues, please open an issue on GitHub or contact the repository owner.
+
