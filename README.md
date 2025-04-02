@@ -64,7 +64,7 @@ bot removal. **Note:** This addon works best on the **1.12.1 client**, where bot
   - Allows users to suppress bot messages for a cleaner interface.
 
 <p align="center">
-  <img src="/ScreenShots/sett.jpg" alt="Settings Menu">
+  <img src="/ScreenShots/frbsettings.png" alt="Settings Menu">
 </p>
 
 ## 🛠️ Installation
