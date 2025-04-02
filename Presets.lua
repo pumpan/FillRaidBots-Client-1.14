@@ -117,7 +117,8 @@ local function SetFactionPresets(factionName, factionGroup)
 				["priest healer"] = 0,
 				["druid healer"] = 0,
 			},
-			fullname = "4 Horsemen"
+			fullname = "4 Horsemen",
+			bosses = {"Baron Rivendare", "Thane Korth'azz", "Lady Blaumeux", "Sir Zeliek"}
 		},
 
 		{
@@ -425,7 +426,8 @@ local function SetFactionPresets(factionName, factionGroup)
 				["paladin healer"] = 8,
 				["warrior meleedps"] = 27,
 			},
-			fullname = "Bug Trio"
+			fullname = "Bug Trio",
+			bosses = {"Princess Yauj", "Vem", "Lord Kri"}
 		},
 		{
 			label = "Sartura",
@@ -433,7 +435,7 @@ local function SetFactionPresets(factionName, factionGroup)
 				["warrior tank"] = 1, 
 				["paladin healer"] = 6,
 				["druid healer"] = 2,
-				["mage rangedps"] = 30,
+				["hunter rangedps"] = 30,
 			},
 			fullname = "Battleguard Sartura"
 		},
@@ -471,13 +473,14 @@ local function SetFactionPresets(factionName, factionGroup)
 		{
 			label = "Twin Emperors",
 			values = {
-				["warrior tank"] = 4,
-				["paladin healer"] = 4,
-				["druid healer"] = 3,
-				["mage rangedps"] = 14,
-				["rogue meleedps"] = 14,
+				["warrior tank"] = 6,
+				["paladin healer"] = 9,
+				["druid healer"] = 0,
+				["mage rangedps"] = 0,
+				["rogue meleedps"] = 24,
 			},
-			fullname = "The Twin Emperors"
+			fullname = "The Twin Emperors",
+			bosses = {"Emperor Vek'lor", "Emperor Vek'nilash"}
 		},
 		{
 			label = "Ouro",
@@ -753,7 +756,8 @@ local function SetFactionPresets(factionName, factionGroup)
 				["priest healer"] = 1,
 				["druid healer"] = 0,
 			},
-			fullname = "4 Horsemen"
+			fullname = "4 Horsemen",
+			bosses = {"Baron Rivendare", "Thane Korth'azz", "Lady Blaumeux", "Sir Zeliek"}
 		},
 
 		{
@@ -1061,7 +1065,8 @@ local function SetFactionPresets(factionName, factionGroup)
 				["shaman healer"] = 8,
 				["warrior meleedps"] = 27,
 			},
-			fullname = "Bug Trio"
+			fullname = "Bug Trio",
+			bosses = {"Princess Yauj", "Vem", "Lord Kri"}
 		},
 		{
 			label = "Sartura",
@@ -1069,7 +1074,7 @@ local function SetFactionPresets(factionName, factionGroup)
 				["warrior tank"] = 1, 
 				["priest healer"] = 6,
 				["druid healer"] = 2,
-				["mage rangedps"] = 30,
+				["hunter rangedps"] = 30,
 			},
 			fullname = "Battleguard Sartura"
 		},
@@ -1112,7 +1117,8 @@ local function SetFactionPresets(factionName, factionGroup)
 				["mage rangedps"] = 14,
 				["rogue meleedps"] = 14,
 			},
-			fullname = "The Twin Emperors"
+			fullname = "The Twin Emperors",
+			bosses = {"Emperor Vek'lor", "Emperor Vek'nilash"}
 		},
 		{
 			label = "Ouro",
