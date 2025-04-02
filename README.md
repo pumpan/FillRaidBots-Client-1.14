@@ -71,6 +71,7 @@ bot removal. **Note:** This addon works best on the **1.12.1 client**, where bot
 
 1. **Download the Addon:**  
    - Clone this repository or download the ZIP file from GitHub.
+     https://github.com/pumpan/FillRaidBots-Client-1.14/releases/tag/v3.0.0
 
 2. **Extract Files:**  
    - Extract the contents to your WoW addons directory, typically located at:
@@ -133,19 +134,20 @@ The addon includes optimized presets for several dungeons and raids:
 
 ## 📅 Changelog
 
-### **FillRaidBots 3.0.0**
+  ### **FillRaidBots 3.0.0**
 
-- **New Features:**
-  - Added boss-specific preset loading with `Ctrl + Alt + Mouse Click`.
-  - New settings for button size and loot type selection.
-  - Slash command `/frb (bossname)` to quickly fill the raid.
 
-- **Improvements:**
-  - Works with both PCP and PCPRemake.
-  - Added `/rl` `/reloadui` `/reload` commands.
-
-- **Bug Fixes:**
-  - Improved bot sorting and automatic raid management.
+    🔄 Version updated: to 3.0.0, Since FillRaidBots now introduces multiple usability upgrades, UI options, new commands, 
+    and extended compatibility, it’s a big leap forward, making 3.0.0 the right version number.
+    🆕 Edited: you can now use /frb (bossname or part of bossname eg: ony or /frb mage group) (suggestion by Gemma)
+    🆕 Added: A new feature to add preset bots with ctrl+alt+mouse click on bosses
+    🆕 Added: Settings to chose if you want big or small (round) Buttons (fill raid, Kick all etc)
+    🆕 Added: You can now Select automatic loot type on raid creation in the settings menu.
+    🆕 Added: Works with both PCP and PCPRemake
+    🆕 Added: You can now reload ui with /rl /reloadui /reload    
+🛠 Improvements:
+  
+    🆕 Edited: you can now use /frb (bossname or part of bossname eg: ony) instead of /frb fill
 
 ### **Previous Versions**
 ## Changelog
