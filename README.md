@@ -28,6 +28,23 @@ It helps users efficiently fill a raid with bots and manage them through an intu
 includes features for setting up bot configurations, managing presets for various dungeons and raids, and automating 
 bot removal. **Note:** This addon works best on the **1.12.1 client**, where bots are automatically removed.
 
+## 🛠️ Installation
+
+1. **Download the Addon:**  
+   -Download the ZIP file from GitHub.
+     https://github.com/pumpan/FillRaidBots-Client-1.14/releases/tag/v3.0.0
+
+2. **Extract Files:**  
+   - Extract the contents to your WoW addons directory, typically located at:
+     ```
+     World of Warcraft/Interface/AddOns
+     ```  
+   - Rename the folder `FillRaidBots-1.14--main` to `FillRaidBots`.
+
+3. **Enable the Addon:**  
+   - Launch WoW and go to the AddOns menu from the character selection screen.  
+   - Ensure that the addon is enabled in the list.
+
 ## ✨ Features
 
 - **Automated Interface Creation:**
@@ -73,22 +90,6 @@ bot removal. **Note:** This addon works best on the **1.12.1 client**, where bot
   <img src="/ScreenShots/frbsettings.png" alt="Settings Menu">
 </p>
 
-## 🛠️ Installation
-
-1. **Download the Addon:**  
-   - Clone this repository or download the ZIP file from GitHub.
-     https://github.com/pumpan/FillRaidBots-Client-1.14/releases/tag/v3.0.0
-
-2. **Extract Files:**  
-   - Extract the contents to your WoW addons directory, typically located at:
-     ```
-     World of Warcraft/Interface/AddOns
-     ```  
-   - Rename the folder `FillRaidBots-1.14--main` to `FillRaidBots`.
-
-3. **Enable the Addon:**  
-   - Launch WoW and go to the AddOns menu from the character selection screen.  
-   - Ensure that the addon is enabled in the list.
 
 ## 🚀 Usage
 
