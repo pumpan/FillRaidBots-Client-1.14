@@ -1,8 +1,10 @@
 # FillRaidBots Client 1.14
 
-![Version](https://img.shields.io/badge/version-3.0.0-blue)
-![WoW Version](https://img.shields.io/badge/WoW-1.14-ff69b4)
+[![Version](https://img.shields.io/github/v/release/pumpan/FillRaidBots-Client-1.14?color=blue&label=version)](https://github.com/pumpan/FillRaidBots-Client-1.14/releases)
+![WoW Version](https://img.shields.io/badge/WoW-1.14.2-ff69b4)
 ![License](https://img.shields.io/badge/license-MIT-green)
+[![Total Downloads](https://img.shields.io/github/downloads/pumpan/FillRaidBots-Client-1.14/total?color=blue)](https://github.com/pumpan/FillRaidBots-Client-1.14/releases)
+[![Latest ZIP](https://img.shields.io/badge/dynamic/json?color=success&label=Latest&query=$.assets[0].download_count&url=https://api.github.com/repos/pumpan/FillRaidBots-Client-1.14/releases/latest)](https://github.com/pumpan/FillRaidBots-Client-1.14/releases/latest)
 <a href="https://www.paypal.com/donate/?hosted_button_id=JCVW2JFJMBPKE" target="_blank">
     <img src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif" 
          alt="Donate with PayPal" style="border: 0;">
@@ -32,16 +34,18 @@ bot removal. **Note:** This addon works best on the **1.12.1 client**, where bot
 
 1. **Download the Addon:**  
    -Download the ZIP file from GitHub.
-     https://github.com/pumpan/FillRaidBots-Client-1.14/releases/tag/v3.0.0
+   
+     [![⬇ DOWNLOAD](https://img.shields.io/github/downloads/pumpan/FillRaidBots-Client-1.14/total?style=for-the-badge&color=00b4d8&label=⬇+DOWNLOAD)](https://github.com/pumpan/FillRaidBots-Client-1.14/releases)
 
-2. **Extract Files:**  
+
+3. **Extract Files:**  
    - Extract the contents to your WoW addons directory, typically located at:
      ```
      World of Warcraft/Interface/AddOns
      ```  
    - Rename the folder `FillRaidBots-1.14--main` to `FillRaidBots`.
 
-3. **Enable the Addon:**  
+4. **Enable the Addon:**  
    - Launch WoW and go to the AddOns menu from the character selection screen.  
    - Ensure that the addon is enabled in the list.
 
