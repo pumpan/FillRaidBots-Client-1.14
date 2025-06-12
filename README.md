@@ -28,7 +28,7 @@
 This addon is an extension for the **PartyBot Command Panel (PCP)** for **World of Warcraft (WoW) 1.14**. 
 It helps users efficiently fill a raid with bots and manage them through an intuitive command panel. The addon 
 includes features for setting up bot configurations, managing presets for various dungeons and raids, and automating 
-bot removal. **Note:** This addon works best on the **1.12.1 client**, where bots are automatically removed.
+bot removal. **Note:** This addon works best on the **1.12.1 client**.
 
 ## 🛠️ Installation
 
@@ -144,6 +144,23 @@ The addon includes optimized presets for several dungeons and raids:
 - To add or change a preset, modify the `Presets.lua` file.
 
 ## 📅 Changelog
+
+  ### **FillRaidBots 4.0.0**
+    
+    🔄 Version updated to 4.0.0 — This update introduces major UI enhancements, in-game editing features, export/import options, and improved bot handling. It's a substantial quality-of-life release deserving of a full version bump.
+    
+    🆕 Added: Editable raid composition presets directly within the in-game UI.
+    🆕 Added: In-game UI for managing suppressed bot messages.
+    🆕 Added: Export/import support for presets and suppressed messages across accounts.
+    🆕 Added: Auto Repair feature (VIP only). Repairs your gear automatically at vendors.
+    🆕 Added: Option to auto-join the SoloCraft guild.
+    🆕 Added: Simplified reload command — use /reload, /rl, or /reloadui.
+    🆕 Added: Party bot logic—groups with fewer than 5 bots stay as a party, ideal for leveling.
+    🆕 Added: More accurate "Raid Filling Complete" message, reflecting the true raid state.
+    🆕 Added: Escape key now properly closes the FillRaid UI.
+    🆕 Added: Faction-based class filtering (e.g., hides Paladins for Horde, Shamans for Alliance).
+    🆕 Added: Class headers in the UI for better visual organization (e.g., Warriors, Mages).
+    🆕 Added: Auto-remove bot option — can remove first and/or dead bots automatically. (Now available for WoW 1.14 clients as well.)
 
   ### **FillRaidBots 3.0.0**
 
