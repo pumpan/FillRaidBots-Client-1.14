@@ -73,11 +73,21 @@ bot removal. **Note:** This addon works best on the **1.12.1 client**.
 - **Kick All Button:**
   - Removes all bots from the raid while keeping one bot to avoid disbanding the raid.
 
-- **Remove First Bot Button:**
-  - Removes the first bot (party bot with bad gear). The button appears when you start filling the raid.
+- **Editable Presets (In-Game UI)**  
+  Raid composition presets can now be customized directly within the game.
+
+- **Editable Suppressed Bot Messages (In-Game UI)**  
+  Suppressed bot messages can now be managed and edited through the in-game interface.
+
+- **Auto Remove First Bot:**
+  - Removes the first bot (party bot with bad gear). 
 
 - **Remove Dead Bots Button:**
   - Removes the dead bots. The button appears when a bot dies.
+
+- **Auto-Remove Bots Option**  
+  New toggle to automatically remove the first and/or dead bots in your group.  
+  Now available for WoW 1.14 clients.
 
 - **Fast Fill:**
   - Quickly fills the raid with bots using optimized settings.
@@ -86,9 +96,17 @@ bot removal. **Note:** This addon works best on the **1.12.1 client**.
 - **Loot Type Option:**
   - Automatically changes the loot type on raid creation to the selected one.
 
-- **Settings Menu:**
-  - Provides options to enable the "Remove Dead Bots" button.
-  - Allows users to suppress bot messages for a cleaner interface.
+- **Export/Import Settings Between Accounts**  
+  You can now export and import your presets and suppressed messages across different accounts.
+
+- **Auto Repair (VIP Only)**  
+  Automatically repairs your gear when visiting a vendor — available exclusively to VIP users.
+
+- **Auto Join Guild Option**  
+  Optionally join the *SoloCraft* guild automatically on login.
+
+- **Simplified Reload Command**  
+  Use `/reload`, `/rl`, or `/reloadui` to reload the UI — no need for `/console reloadui`.
 
 <p align="center">
   <img src="/ScreenShots/frbsettings.png" alt="Settings Menu">
