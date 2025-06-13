@@ -1,7 +1,7 @@
 ## Interface: 11402
 ## Title: |cFF006699Optional -|r FillRaidBots
 ## Notes: Fill raid with bots
-## SavedVariables: FillRaidBotsSavedSettings
+## SavedVariables: FillRaidBotsSavedSettings, FillRaidPresets, FillRaidSuppressBotMsg
 Debugger.lua
 SuppressBotMsg.lua
 UISettings.lua
