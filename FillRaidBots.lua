@@ -21,7 +21,7 @@ local classes = {
 
 local addonName = "FillRaidBots"
 local addonPrefix = "FillRaid1142"
-local versionNumber = "4.0.0"
+local versionNumber = "4.0.1"
 local a = "4"
 local botCount = 0
 local initialBotRemoved = false
@@ -30,7 +30,7 @@ local messageQueue = {}
 local DebugMessageQueue = {}
 local delay = 0.1 
 local nextUpdateTime = 0 
-
+local verifiedRealPlayers = {}
 local classCounts = {}
 local FillRaidFrame 
 local fillRaidFrameManualClose = false 
@@ -472,15 +472,21 @@ local function normalizePlayerName(playerName)
     if type(playerName) ~= "string" then
         return nil
     end
+
     local cleanName = ""
-    for i = 1, string.len(playerName) do
-        local char = string.sub(playerName, i, i) 
-        if (char >= "a" and char <= "z") or (char >= "A" and char <= "Z") or (char >= "0" and char <= "9") then
-            cleanName = cleanName .. string.lower(char) 
+    for i = 1, #playerName do
+        local char = string.sub(playerName, i, i)
+        if (char >= "a" and char <= "z") or
+           (char >= "A" and char <= "Z") or
+           (char >= "0" and char <= "9") or
+           char == "*" then
+            cleanName = cleanName .. string.lower(char)
         end
     end
+
     return cleanName
 end
+
 
 local function updateRoleConfidence(playerName, class, role, confidenceIncrease, spell)
     local normalizedPlayerName = normalizePlayerName(playerName)
@@ -656,9 +662,23 @@ local ReplaceDeadBot = {}
 
 
 local function normalizePlayerName(name)
-    return name and name:lower() or nil
-end
+    if type(name) ~= "string" then
+        return nil
+    end
 
+    local cleanName = ""
+    for i = 1, #name do
+        local char = string.sub(name, i, i)
+        if (char >= "a" and char <= "z") or
+           (char >= "A" and char <= "Z") or
+           (char >= "0" and char <= "9") or
+           char == "*" then
+            cleanName = cleanName .. string.lower(char)
+        end
+    end
+
+    return cleanName
+end
 
 local function UpdateGroupMembers()
     
@@ -736,45 +756,55 @@ local function GetRealGroupSize()
     end
     return count + 1
 end
+local alreadyRemoved = {}
+
+local function markAsRemoved(name, timeout)
+	alreadyRemoved[name] = true
+	C_Timer.After(timeout or 15, function()
+		alreadyRemoved[name] = nil
+		--QueueDebugMessage("DEBUG: Reset skipping removal flag for " .. name, "debugremove")
+	end)
+end
 
 function UninviteMember(name, reason)
-    local normalizedName = normalizePlayerName(name)
-    if not normalizedName then
-        QueueDebugMessage("ERROR: Could not normalize name for UninviteMember", "debugerror")
-        return
-    end
+	local normalizedName = normalizePlayerName(name)
+	if not normalizedName then
+		QueueDebugMessage("ERROR: Could not normalize name for UninviteMember", "debugerror")
+		return
+	end
 
-    QueueDebugMessage("INFO: Attempting to uninvite member: " .. normalizedName .. " Reason: " .. reason, "debugremove")
+	if alreadyRemoved[normalizedName] then
+		return
+	end
 
-    if playerData[normalizedName] then
-        QueueDebugMessage("DEBUG: Player found in playerData and marked for removal: " .. normalizedName, "debugremove")
-        ReplaceDeadBot[normalizedName] = playerData[normalizedName]
-        playerData[normalizedName] = nil
-    else
-        QueueDebugMessage("WARNING: Player not found in playerData: " .. normalizedName, "debugremove")
-    end
-	
-	
+	markAsRemoved(normalizedName)
+
+	QueueDebugMessage("INFO: Attempting to uninvite member: " .. normalizedName .. " Reason: " .. reason, "debugremove")
 
 
-			if GetRealGroupSize() > 2 then
+	if playerData[normalizedName] then
+		QueueDebugMessage("DEBUG: Player found in playerData and marked for removal: " .. normalizedName, "debugremove")
+		ReplaceDeadBot[normalizedName] = playerData[normalizedName]
+		playerData[normalizedName] = nil
+	else
+		QueueDebugMessage("WARNING: Player not found in playerData: " .. normalizedName, "debugremove")
+	end
 
-						SendChatMessage(".partybot remove " .. normalizedName, "GUILD")
+	if GetRealGroupSize() > 2 then
+		SendChatMessage(".partybot remove " .. normalizedName, "GUILD")
+	else
+		DEFAULT_CHAT_FRAME:AddMessage("Saving last")
+	end
 
-			else
-				DEFAULT_CHAT_FRAME:AddMessage("Saving last")
-			end
-
-
-    if reason == "dead" then
-        QueueDebugMessage(normalizedName .. " has been uninvited because they are dead.", "debugremove")
-    elseif reason == "firstBotRemoved" then
-        QueueDebugMessage("10 bots added. Removing party bot: " .. normalizedName, "debugremove")
-        firstBotName = nil
-        ReplaceDeadBot[normalizedName] = nil
-    else
-        QueueDebugMessage(normalizedName .. " has been uninvited.", "debugremove")
-    end
+	if reason == "dead" then
+		QueueDebugMessage(normalizedName .. " has been uninvited because they are dead.", "debugremove")
+	elseif reason == "firstBotRemoved" then
+		QueueDebugMessage("10 bots added. Removing party bot: " .. normalizedName, "debugremove")
+		firstBotName = nil
+		ReplaceDeadBot[normalizedName] = nil
+	else
+		QueueDebugMessage(normalizedName .. " has been uninvited.", "debugremove")
+	end
 end
 
 function resetData()
@@ -1037,6 +1067,8 @@ function ProcessDebugMessageQueue()
     end
 end
 
+local verifiedRealPlayers = {}
+
 local function CreateRemoveDeadBotsButton()
     local removeDeadBotsButton = CreateFrame("Button", "RemoveDeadBotsButton", UIParent, "UIPanelButtonTemplate")
     removeDeadBotsButton:SetSize(120, 30)
@@ -1047,99 +1079,67 @@ local function CreateRemoveDeadBotsButton()
     removeDeadBotsButton:SetMovable(true)
     removeDeadBotsButton:EnableMouse(true)
     removeDeadBotsButton:RegisterForDrag("LeftButton")
+    removeDeadBotsButton:SetScript("OnDragStart", function(self) self:StartMoving() end)
+    removeDeadBotsButton:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
 
-    removeDeadBotsButton:SetScript("OnDragStart", function(self)
-        self:StartMoving()
-    end)
+    local function isBotName(name)
+        return name and string.find(name, "%*") ~= nil
+    end
 
-    removeDeadBotsButton:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
-    end)
+    function removeDeadBotsFunction()
+        local playerName = UnitName("player")
+        local totalMemberCount = GetNumGroupMembers()
+        local activeMemberCount = 0
+        local deadBotsRemoved = false
 
-	function removeDeadBotsFunction()
-		local deadBotsRemoved = false
-		local playerName = UnitName("player")
-		local totalMemberCount = GetNumGroupMembers()
-		local activeMemberCount = 0
+        for i = 1, totalMemberCount do
+            local unit = IsInRaid() and "raid" .. i or (i == 1 and "player" or "party" .. (i - 1))
+            if UnitExists(unit) and not UnitIsGhost(unit) then
+                activeMemberCount = activeMemberCount + 1
+            end
+        end
 
-		
-		local guildMembers = {}
-		for i = 1, GetNumGuildMembers() do
-			local name, _, _, _, _, _, _, _, online = GetGuildRosterInfo(i)
-			if name and online then
-				local normalizedGuildName = name:match("([^%-]+)") 
-				guildMembers[normalizedGuildName:lower()] = true
-			end
-		end
+        QueueDebugMessage("Active members: " .. activeMemberCount .. ", Total members: " .. totalMemberCount, "debuginfo")
 
-		
-		local friends = {}
-		local numFriends = C_FriendList.GetNumFriends()
-		for i = 1, numFriends do
-			local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
-			if friendInfo and friendInfo.name and friendInfo.connected then
-				local normalizedFriendName = friendInfo.name:match("([^%-]+)")
-				friends[normalizedFriendName:lower()] = true
-			end
-		end
+        for i = totalMemberCount, 1, -1 do
+            local unit = IsInRaid() and "raid" .. i or (i == 1 and "player" or "party" .. (i - 1))
+            local name = UnitName(unit)
 
-		
-		for i = 1, totalMemberCount do
-			local unit = IsInRaid() and "raid" .. tostring(i) or "party" .. tostring(i)
-			if UnitExists(unit) and not UnitIsGhost(unit) then
-				activeMemberCount = activeMemberCount + 1
-			end
-		end
+            if name and UnitIsDead(unit) and not UnitIsGhost(unit) and name ~= playerName then
+                if UnitIsUnit(unit, "player") then
+                    QueueDebugMessage("INFO: CANNOT KICK YOURSELF", "debuginfo")
+                elseif not UnitIsConnected(unit) then
+                    QueueDebugMessage("INFO: CANNOT KICK OFFLINE UNIT: " .. name, "none")
+                elseif not isBotName(name) then
+                    if not verifiedRealPlayers[name] then
+                        QueueDebugMessage("INFO: Skipped real player (no *): " .. name, "debugremove")
+                        verifiedRealPlayers[name] = true
+                    end
+                elseif activeMemberCount > 2 then
+                    local shortName = name:match("([^%-]+)"):lower()
+                    if playerData[shortName] then
+                        ReplaceDeadBot[shortName] = playerData[shortName]
+                        playerData[shortName] = nil
+                    end
+                    UninviteUnit(name)
+                    deadBotsRemoved = true
+                    activeMemberCount = activeMemberCount - 1
+                    QueueDebugMessage("REMOVED: " .. name .. " (bot).", "debugremove")
+                else
+                    QueueDebugMessage("Cannot remove " .. name .. ": Not enough members left (minimum 2 required).", "debuginfo")
+                end
+            end
+        end
 
-		
-		QueueDebugMessage("Active members: " .. activeMemberCount .. ", Total members: " .. totalMemberCount, "debuginfo")
+        if deadBotsRemoved then
+            QueueDebugMessage("Dead bots removed. Button will now hide.", "debuginfo")
+            removeDeadBotsButton:Hide()
+        else
+            QueueDebugMessage("No dead bots were removed.", "debuginfo")
+        end
+    end
 
-		
-		for i = 1, totalMemberCount do
-			local unit = IsInRaid() and "raid" .. tostring(i) or "party" .. tostring(i)
-			local name = UnitName(unit)
-
-			if name and UnitIsDead(unit) and not UnitIsGhost(unit) and name ~= playerName then
-				local normalizedName = name:match("([^%-]+)"):lower()
-
-				if guildMembers[normalizedName] then
-					QueueDebugMessage("INFO: Skipped removing " .. name .. " (guild member).", "debugremove")
-				elseif friends[normalizedName] then
-					QueueDebugMessage("INFO: Skipped removing " .. name .. " (friend).", "debugremove")
-				elseif UnitIsUnit(unit, "player") then
-					QueueDebugMessage("INFO: CANNOT KICK YOURSELF", "debuginfo")
-
-				elseif not UnitIsConnected(unit) then
-					QueueDebugMessage("INFO: CANNOT KICK OFFLINE UNIT: " .. name, "none")					
-				else
-					if activeMemberCount > 2 then
-						if playerData[normalizedName] then
-							ReplaceDeadBot[normalizedName] = playerData[normalizedName]
-							playerData[normalizedName] = nil
-						end
-						UninviteUnit(normalizedName)
-						deadBotsRemoved = true
-						activeMemberCount = activeMemberCount - 1
-						totalMemberCount = totalMemberCount - 1
-						QueueDebugMessage("REMOVED: " .. name .. " (not in guild or friends list).", "debugremove")
-					else
-						QueueDebugMessage("Cannot remove " .. name .. ": Not enough members left (minimum 2 required).", "debuginfo")
-					end
-				end
-			end
-		end
-
-		
-		if not deadBotsRemoved then
-			QueueDebugMessage("No dead bots were removed.", "debuginfo")
-		else
-			QueueDebugMessage("Dead bots removed. Button will now hide.", "debuginfo")
-			removeDeadBotsButton:Hide()
-		end
-	end
-
-	removeDeadBotsButton:SetScript("OnClick", removeDeadBotsFunction)
-
+    removeDeadBotsButton:SetScript("OnClick", removeDeadBotsFunction)
 
     removeDeadBotsButton:SetScript("OnEnter", function()
         GameTooltip:SetOwner(removeDeadBotsButton, "ANCHOR_RIGHT")
@@ -1153,6 +1153,7 @@ local function CreateRemoveDeadBotsButton()
 
     return removeDeadBotsButton
 end
+
 
 local removeDeadBotsButton = CreateRemoveDeadBotsButton()
 
@@ -1303,10 +1304,16 @@ end
 
 local function CheckAndRemoveDeadBots()
 	if InCombatLockdown() then return end
+
 	local settings = FillRaidBotsSavedSettings or {}
 	local autoRemoveEnabled = settings.isCheckAndRemoveEnabled
 	local showButtonEnabled = settings.isremoveDeadBotsButtonEnabled
-	local guildMembers, friends = getCachedGuildRoster()	
+
+	local function isBotName(name)
+		return name and string.find(name, "%*") ~= nil
+	end
+
+
 	if autoRemoveEnabled then
 		if not (UnitIsGroupLeader("player") or UnitIsGroupAssistant("player")) and IsInGroup() then
 			if not hasWarnedNoPermission then
@@ -1318,16 +1325,16 @@ local function CheckAndRemoveDeadBots()
 		hasWarnedNoPermission = false
 
 		local now = GetTime()
-		if now - lastKickTime < KICK_COOLDOWN then
-			QueueDebugMessage("Throttled: waiting for kick cooldown.", "debuginfo")
-			return
-		end
+		--if now - lastKickTime < KICK_COOLDOWN then
+		--	QueueDebugMessage("Throttled: waiting for kick cooldown.", "debuginfo")
+		--	return
+		--end
 
 		local isInRaid = IsInRaid()
 		local membersRemaining = CountRealGroupMembers()
-		local minimumAllowed = isInRaid and 2 or 2
 		if membersRemaining == 0 then return end
 
+		local minimumAllowed = 2
 		local maxGroupSize = isInRaid and 40 or 5
 		local maxKicks = (membersRemaining > 5) and 3 or 1
 		local kicks = 0
@@ -1337,86 +1344,58 @@ local function CheckAndRemoveDeadBots()
 
 			local unit = isInRaid and ("raid" .. i) or (i == 1 and "player" or "party" .. (i - 1))
 			if UnitExists(unit) then
-				local name = Ambiguate(UnitName(unit), "short")
-				if name then
-					if UnitIsDead(unit) and not UnitIsGhost(unit) then
-
-						if guildMembers[name] then
-							if not guildDeadStatus[name] then
-								QueueDebugMessage("INFO: STOPPED FROM KICKING GUILD MEMBER: " .. name, "debuginfo")
-								guildDeadStatus[name] = true
-							end
-
-						elseif friends[name] then
-							if not guildDeadStatus[name] then
-								QueueDebugMessage("INFO: STOPPED FROM KICKING FRIEND: " .. name, "debuginfo")
-								guildDeadStatus[name] = true
-							end
-
-						elseif UnitIsUnit(unit, "player") then
-							QueueDebugMessage("INFO: CANNOT KICK YOURSELF", "debuginfo")
-
-						elseif not UnitIsConnected(unit) then
-							QueueDebugMessage("INFO: CANNOT KICK OFFLINE UNIT: " .. name, "debuginfo")
-
-						elseif membersRemaining > minimumAllowed then
-							UninviteMember(name, "dead")
-							membersRemaining = membersRemaining - 1
-							kicks = kicks + 1
-							
-
-						else
-							if not messagecantremove then
-								QueueDebugMessage("INFO: Stopped kicking. Members left: " .. membersRemaining .. ". Preventing group disband.", "debuginfo")
-								messagecantremove = true
-							end
-							break
-						end
+				local name = UnitName(unit)
+				if name and UnitIsDead(unit) and not UnitIsGhost(unit) then
+					if UnitIsUnit(unit, "player") then
+						QueueDebugMessage("INFO: CANNOT KICK YOURSELF", "debuginfo")
+					elseif not UnitIsConnected(unit) then
+						QueueDebugMessage("INFO: CANNOT KICK OFFLINE UNIT: " .. name, "debuginfo")
+					elseif isBotName(name) and membersRemaining > minimumAllowed then
+						UninviteMember(name, "dead")
+						membersRemaining = membersRemaining - 1
+						kicks = kicks + 1
+					elseif verifiedRealPlayers[name] then
+					
+					elseif not isBotName(name) then
+						QueueDebugMessage("INFO: Skipped real player (no *): " .. name, "debuginfo")
+						verifiedRealPlayers[name] = true
 					else
-						guildDeadStatus[name] = nil
+						if not messagecantremove then
+							QueueDebugMessage("INFO: Stopped kicking. Members left: " .. membersRemaining .. ". Preventing group disband.", "debuginfo")
+							messagecantremove = true
+						end
+						break
 					end
-				else
-					QueueDebugMessage("DEBUG: Name is nil for unit: " .. unit, "debugerror")
 				end
 			end
 		end
 
 		if kicks > 0 then
-			lastKickTime = now
+			lastKickTime = GetTime()
 		end
 	end
 
-   
-	if removeDeadBotsEnabled then
-		local hasDeadBots = false
-		local activeMemberCount = 0
-		local groupType = IsInRaid() and "raid" or "party"
 
+	local hasDeadBots = false
+	local activeMemberCount = 0
+	local groupType = IsInRaid() and "raid" or "party"
 
-
-		for i = 1, GetNumGroupMembers() do
-			local unit = (groupType == "party" and i == 1) and "player" or (groupType .. i)
-
-			if UnitExists(unit) and not UnitIsUnit(unit, "player") then
-				if UnitIsConnected(unit) then
-					local name = UnitName(unit)
-					if name then
-						local baseName = Ambiguate(name, "short"):lower()
-
-						if not guildMembers[baseName] and not friends[baseName] then
-						
-							if not UnitIsGhost(unit) then
-								activeMemberCount = activeMemberCount + 1
-							end
-							if UnitHealth(unit) == 0 then
-								hasDeadBots = true
-							end
-						end
-					end
+	for i = 1, GetNumGroupMembers() do
+		local unit = (groupType == "party" and i == 1) and "player" or (groupType .. i)
+		if UnitExists(unit) and not UnitIsUnit(unit, "player") and UnitIsConnected(unit) then
+			local name = UnitName(unit)
+			if name and isBotName(name) then
+				if not UnitIsGhost(unit) then
+					activeMemberCount = activeMemberCount + 1
+				end
+				if UnitHealth(unit) == 0 then
+					hasDeadBots = true
 				end
 			end
 		end
+	end
 
+	if showButtonEnabled then
 		if hasDeadBots and activeMemberCount >= 2 then
 			removeDeadBotsButton:Show()
 		else
@@ -1424,9 +1403,9 @@ local function CheckAndRemoveDeadBots()
 		end
 	end
 
-
-    isProcessing = false
+	isProcessing = false
 end
+
 
 
 
@@ -1620,7 +1599,7 @@ function ToggleSoundEffectsVolume(action)
 				SetCVar("Sound_SFXVolume", "0.1")
 				QueueDebugMessage("Sound effects volume lowered.", "debuginfo")
 			else
-				--print("Sound already lowered.")
+			
 			end
 		elseif action == "restore" then
 			if originalSFXVolume then
@@ -3823,6 +3802,7 @@ local creditsData = {
     {name = "|cffffd700Pumpan|r", contribution = "Creator of the addon"},  
     {name = "|cffffd700Dedirtyone|r", contribution = "Special thanks to Dedirtyone for his incredible generosity\nin donating €50 to help me get VIP status.\nYour support means so much and has truly motivated me \nto keep contributing to the community. \nThis addon wouldn’t be the same without people like you!"},  
 	{name = "|cffffd700TheSamurai206|r", contribution = "A huge thank you to TheSamurai206 (Zugginator) for his generous donation of €20.\nYour support means a lot and helps me continue improving this addon.\nIt's supporters like you that keep this project going!"},
+	{name = "|cffffd700Spinach|r", contribution = "A heartfelt thank you to Spinach for the generous €20 donation.\nYour support truly means a lot and motivates me to keep improving this addon.\nAmazing supporters like you are what keep this project alive!"},
     {name = "|cffffffffGemma|r", contribution = "Thanks for Beta testing, and bug reports!"},  
     {name = "|cffffffffTO EVERYONE ELSE!|r", contribution = "To everyone who has been supporting! \nIf you are interested in contributing in any way, \nbug reporting, beta testing, or whatever, \nplease contact me on the forum, Discord, or in-game."},  
 }
@@ -4682,75 +4662,47 @@ end
 
 
 function UninviteAllRaidMembers()
-    local myName = UnitName("player") 
-    initialBotRemoved = false
-    firstBotName = nil
-    botCount = 0    
+	local myName = UnitName("player")
+	initialBotRemoved = false
+	firstBotName = nil
+	botCount = 0
 
-    
-    local guildMembers = {}
-    for i = 1, GetNumGuildMembers() do
-        local name, _, _, _, _, _, _, _, online = GetGuildRosterInfo(i)
-        if name and name ~= myName and online then  
-            local playerName = name:match("([^%-]+)")  
-            guildMembers[playerName:lower()] = true  
-        end
-    end
+	local function isBotName(name)
+		return name and string.find(name, "%*") ~= nil
+	end
 
-	
-	local friends = {}
-	local numFriends = C_FriendList.GetNumFriends()
-	for i = 1, numFriends do
-		local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
-		if friendInfo and friendInfo.name and friendInfo.connected then
-			local normalizedFriendName = friendInfo.name:match("([^%-]+)")
-			friends[normalizedFriendName:lower()] = true  
 
-			
-			QueueDebugMessage("INFO: Friends online: " .. friendInfo.name, "debugremove")
+	local remainingMembers = {}
+	for i = 1, GetNumGroupMembers() do
+		local unit = IsInRaid() and "raid" .. tostring(i) or "party" .. tostring(i)
+		local name = UnitName(unit)
+		if name and name ~= myName then
+			table.insert(remainingMembers, name)
 		end
 	end
 
 
-    
-    local remainingMembers = {}
-    for i = 1, GetNumGroupMembers() do
-        local unit = IsInRaid() and "raid" .. tostring(i) or "party" .. tostring(i)
-        local name = UnitName(unit)
-
-        if name and name ~= myName then  
-            table.insert(remainingMembers, name)  
-        end
-    end
-
-    
-    for i = #remainingMembers, 1, -1 do  
-        local name = remainingMembers[i]
-        if name then
-            local normalizedName = name:match("([^%-]+)"):lower()  
-
-            if name == myName then
-                QueueDebugMessage("INFO: Kept " .. name .. " because it's you.", "debugremove")
-            elseif guildMembers[normalizedName] then
-                QueueDebugMessage("INFO: Kept " .. name .. " because they are in your guild.", "debugremove")
-            elseif friends[normalizedName] then
-                QueueDebugMessage("INFO: Kept " .. name .. " because they are in your friends list.", "debugremove")
-            else
-                if #remainingMembers > 1 then
-                    QueueDebugMessage("REMOVING: " .. name .. " because they are not in your guild or friends list.", "debugremove")
-                    UninviteUnit(name)
-                    table.remove(remainingMembers, i)  
-                else
-                    QueueDebugMessage("INFO: Kept " .. name .. " because they are the last member.", "debugremove")
-                end
-            end
-        else
-            QueueDebugMessage("ERROR: Skipped uninviting an unknown or nil player in group.", "debugremove")
-        end
-    end
+	for i = #remainingMembers, 1, -1 do
+		local name = remainingMembers[i]
+		if name then
+			if isBotName(name) then
+				if #remainingMembers > 1 then
+					QueueDebugMessage("REMOVING BOT: " .. name, "debugremove")
+					UninviteUnit(name)
+					table.remove(remainingMembers, i)
+				else
+					QueueDebugMessage("INFO: Kept " .. name .. " to prevent disband.", "debugremove")
+				end
+			else
+				QueueDebugMessage("SKIPPED REAL PLAYER: " .. name .. " (no *)", "debugremove")
+			end
+		else
+			QueueDebugMessage("ERROR: Unknown or nil player in group slot " .. i, "debugremove")
+		end
+	end
 end
 
-local c = 0
+local c = 1
 
 
 SLASH_FRB1 = "/frb"
