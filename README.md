@@ -35,7 +35,7 @@ bot removal. **Note:** This addon works best on the **1.12.1 client**.
 1. **Download the Addon:**  
    -Download the ZIP file from GitHub.
    
-     [![⬇ DOWNLOAD](https://img.shields.io/github/downloads/pumpan/FillRaidBots-Client-1.14/total?style=for-the-badge&color=00b4d8&label=⬇+DOWNLOAD)](https://github.com/pumpan/FillRaidBots-Client-1.14/releases)
+    👉👉👉 [![⬇ DOWNLOAD](https://img.shields.io/github/downloads/pumpan/FillRaidBots-Client-1.14/total?style=for-the-badge&color=00b4d8&label=⬇+DOWNLOAD)](https://github.com/pumpan/FillRaidBots-Client-1.14/releases) 👈👈👈
 
 
 3. **Extract Files:**  
@@ -49,6 +49,8 @@ bot removal. **Note:** This addon works best on the **1.12.1 client**.
    - Launch WoW and go to the AddOns menu from the character selection screen.  
    - Ensure that the addon is enabled in the list.
 
+5. **IF YOU ARE HAVING TROUBLES**
+   - 📘 [How to install addons](https://github.com/pumpan/howtoinstalladdons/wiki)
 ## ✨ Features
 
 - **Automated Interface Creation:**
