@@ -165,6 +165,18 @@ The addon includes optimized presets for several dungeons and raids:
 
 ## 📅 Changelog
 
+
+  ### **FillRaidBots 4.0.2**
+    🔄 Version updated to 4.0.2 — This update introduces bug fixes  
+    🐞 Fixed a critical localization bug where SendChatMessage could fail on non-English clients.
+    Chat messages now always use locale-independent chat type tokens, ensuring full compatibility with all languages.
+
+   ### **FillRaidBots 4.0.1**
+    🔄 Version updated to 4.0.1 — This update introduces bug fixes.
+    🆕 Fixed handling of new bot names containing an asterisk (“*”).
+    🔍 Improved detection of raid members as bots based on the asterisk in their names.
+
+
   ### **FillRaidBots 4.0.0**
     
     🔄 Version updated to 4.0.0 — This update introduces major UI enhancements, in-game editing features, export/import options, and improved bot handling. It's a substantial quality-of-life release deserving of a full version bump.
