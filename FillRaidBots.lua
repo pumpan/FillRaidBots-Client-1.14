@@ -21,7 +21,7 @@ local classes = {
 
 local addonName = "FillRaidBots"
 local addonPrefix = "FillRaid1142"
-local versionNumber = "4.0.1"
+local versionNumber = "4.0.2"
 local a = "4"
 local botCount = 0
 local initialBotRemoved = false
@@ -65,14 +65,14 @@ local vipFrame = CreateFrame("Frame", "VIPDetectorFrame")
 local isVIP = false
 local vipTimer = 0
 local vipListening = true
-
+
 local VIP_KEYWORDS = {
     "repaired.",
 }
-
+
 vipFrame:RegisterEvent("CHAT_MSG_SYSTEM")
 vipFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-
+
 local function IsVIPMessage(msg)
     for _, keyword in ipairs(VIP_KEYWORDS) do
         if string.find(msg, keyword) then
@@ -122,12 +122,12 @@ end)
 
 
 
----------------------------------------------------- auto repair ----------------------------------------------
+---------------------------------------------------- auto repair ----------------------------------------------
 local durabilityFrame = CreateFrame("Frame", "DurabilityRepairFrame")
 durabilityFrame:RegisterEvent("PLAYER_UNGHOST")
 durabilityFrame:RegisterEvent("PLAYER_ALIVE")
 durabilityFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-
+
 local DURABLE_SLOTS = {
     "HeadSlot", "ShoulderSlot", "ChestSlot", "WaistSlot", "LegsSlot",
     "FeetSlot", "WristSlot", "HandsSlot", "MainHandSlot", "SecondaryHandSlot", "RangedSlot"
@@ -172,7 +172,7 @@ local function ColorPercent(pct)
         return "|cffff0000" .. string.format("%.0f%%", pct) .. "|r"
     end
 end
-
+
 local lastRepairTime = 0
 
 local function CheckAndRepair()
@@ -916,7 +916,7 @@ function RetryMessageQueueProcessing()
         end
     end
 end
-
+
 local firstBotRemovalFrame = CreateFrame("Frame")
 firstBotRemovalFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
 
@@ -975,7 +975,7 @@ function ProcessMessageQueue()
                     DEFAULT_CHAT_FRAME:AddMessage(message)
                 else
                    
-                    SendChatMessage(message, GUILD)
+                    SendChatMessage(message, "GUILD")
                 end					
             end
         end
@@ -1186,12 +1186,12 @@ local function RefreshRaidFrames()
     end
 end
 
-
+
 local removedDeadBots = {}
 local messagecantremove = false
 local hasWarnedNoPermission = false
 local isProcessing = false
-
+
 local function RefreshRaidFrames()
    
     if InCombatLockdown() then
@@ -1410,7 +1410,7 @@ end
 
 
 
-
+
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 eventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
@@ -1577,7 +1577,7 @@ function FillRaid_OnLoad(self, event, ...)
         QueueDebugMessage("FillRaidBots [" .. versionNumber .. "]|cff00FF00 loaded|cffffffff", "none")
     end
 end
-
+
 local function GetSelectedLootMethod()
     if AutoFFACheckButton:GetChecked() then
         return "freeforall"
@@ -2534,7 +2534,7 @@ function CreateFillRaidUI()
 
 local KEY_ESCAPE = 27
 local KEY_ENTER = 13
-
+
 local PresetPopup = CreateFrame("Frame", "PresetPopupFrame", UIParent, "BackdropTemplate")
 PresetPopup:SetSize(200, 250)
 PresetPopup:SetPoint("CENTER", UIParent, "CENTER")
@@ -2550,14 +2550,14 @@ PresetPopup:Hide()
 PresetPopup:SetMovable(true)
 PresetPopup:EnableMouse(true)
 PresetPopup:RegisterForDrag("LeftButton")
-
+
 PresetPopup:SetScript("OnDragStart", function(self)
     self:StartMoving()
 end)
-
+
 PresetPopup:SetScript("OnDragStop", function(self)
     self:StopMovingOrSizing()
-end)
+end)
 local function CreateButton(parent, width, height, point, text)
     local button = CreateFrame("Button", nil, parent)
     button:SetWidth(width)
@@ -2593,7 +2593,7 @@ local function CreateButton(parent, width, height, point, text)
     
     return button
 end
-
+
 local function CreateInputBox(parent, point, autoFocus)
     local inputBox = CreateFrame("EditBox", nil, parent, "BackdropTemplate")
     inputBox:SetSize(180, 20)
@@ -2613,15 +2613,15 @@ local function CreateInputBox(parent, point, autoFocus)
     return inputBox
 end
 
-
+
 local popupLabel = PresetPopup:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 popupLabel:SetPoint("TOP", PresetPopup, "TOP", 0, -10)
-
+
 local helpButton = CreateHelpButton(PresetPopup, popupLabel, 10, 0, "Enter name:\n  - Preset name to save the current setup\n\nBoss names:\n  - Name of the boss or mob for the Ctrl+Alt+Click function\n\nTip:\n  - Hold Alt and click a mob to add it to the list.", "Preset Help")
-
+
 local presetInput = CreateInputBox(PresetPopup, "TOP", true)
 presetInput:SetPoint("TOP", popupLabel, "BOTTOM", 0, -5)
-
+
 local bossInput = CreateInputBox(PresetPopup, "TOP", false)
 bossInput:SetWidth(120)
 bossInput:SetPoint("TOP", presetInput, "BOTTOM", -30, -10)
@@ -2629,10 +2629,10 @@ bossInput:SetPoint("TOP", presetInput, "BOTTOM", -30, -10)
 local bossInputLabel = PresetPopup:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 bossInputLabel:SetPoint("TOP", bossInput, "TOP", 0, 10)
 bossInputLabel:SetText("Boss Names: (optional)")
-
+
 local addBossButton = CreateButton(PresetPopup, 60, 20, "LEFT", "Add")
 addBossButton:SetPoint("LEFT", bossInput, "RIGHT", 5, 0)
-
+
 local bossListScrollFrame = CreateFrame("ScrollFrame", "BossListScrollFrame", PresetPopup, "UIPanelScrollFrameTemplate")
 bossListScrollFrame:SetPoint("TOPLEFT", 10, -80)
 bossListScrollFrame:SetPoint("BOTTOMRIGHT", -30, 40)
@@ -2644,7 +2644,7 @@ bossListScrollFrame:SetScrollChild(bossListScrollChild)
 
 local currentBosses = {}
 local bossListItems = {}
-
+
 local function tableSize(t)
     local count = 0
     for _ in pairs(t) do
@@ -2652,7 +2652,7 @@ local function tableSize(t)
     end
     return count
 end
-
+
 function RefreshBossList()
    
     for i = 1, tableSize(bossListItems) do
@@ -2727,7 +2727,7 @@ function RefreshBossList()
     bossListScrollFrame:UpdateScrollChildRect()
     bossListScrollFrame:SetVerticalScroll(0)
 end
-
+
 local function AddBossDirectly(bossName)
     if not PresetPopup:IsVisible() then return end
     
@@ -2746,7 +2746,7 @@ local function AddBossDirectly(bossName)
     RefreshBossList()
     DEFAULT_CHAT_FRAME:AddMessage(bossName.." added to list!")
 end
-
+
 addBossButton:SetScript("OnClick", function()
     local name = strtrim(bossInput:GetText())
     if name ~= "" then
@@ -2760,7 +2760,7 @@ addBossButton:SetScript("OnClick", function()
         RefreshBossList()
     end
 end)
-
+
 local targetScanFrame = CreateFrame("Frame")
 targetScanFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
 targetScanFrame:SetScript("OnEvent", function()
@@ -2771,7 +2771,7 @@ targetScanFrame:SetScript("OnEvent", function()
         end
     end
 end)
-
+
 local keyboardFrame = CreateFrame("Frame")
 keyboardFrame:RegisterEvent("MODIFIER_STATE_CHANGED")
 keyboardFrame:SetScript("OnEvent", function(_, _, key, state)
@@ -2784,14 +2784,14 @@ keyboardFrame:SetScript("OnEvent", function(_, _, key, state)
         end
     end
 end)
-
+
 local saveButtonPresetPopup = CreateButton(PresetPopup, 80, 22, "BOTTOMLEFT", "Save")
 saveButtonPresetPopup:SetPoint("BOTTOMLEFT", PresetPopup, "BOTTOMLEFT", 10, 10)
 
 local cancelButton = CreateButton(PresetPopup, 80, 22, "BOTTOMRIGHT", "Cancel")
 cancelButton:SetPoint("BOTTOMRIGHT", PresetPopup, "BOTTOMRIGHT", -10, 10)
 cancelButton:SetScript("OnClick", function() PresetPopup:Hide() end)
-
+
 saveButtonPresetPopup:SetScript("OnClick", function()
     local name = presetInput:GetText()
     local bosses = currentBosses
@@ -2878,7 +2878,7 @@ saveButtonPresetPopup:SetScript("OnClick", function()
         currentPresetName = name
     end
 end)
-
+
 presetInput:SetScript("OnEnterPressed", function()
     saveButtonPresetPopup:GetScript("OnClick")()
 end)
@@ -2892,7 +2892,7 @@ PresetPopup:SetScript("OnKeyDown", function()
         PresetPopup:Hide()
     end
 end)
-
+
 function OpenSaveAsPopup()
     PresetPopup.mode = "save"
     popupLabel:SetText("Enter preset name:")
@@ -3005,7 +3005,7 @@ function ShowConfirmDeletePopup(presetName)
         ReloadUI()
     end)
 end
-
+
 local saveAsButton = CreateButton(FillRaidFrame, 80, 20, "LEFT", "Save As")
 saveAsButton:SetPoint("LEFT", saveButton, "RIGHT", 10, 0)
 saveAsButton:SetScript("OnClick", OpenSaveAsPopup)
@@ -3034,8 +3034,9 @@ end)
 editButton2:SetScript("OnLeave", function()
     GameTooltip:Hide()
 end)
-
-
+
+
+
 local removeButton = CreateButton(FillRaidFrame, 80, 20, "LEFT", "Remove")
 removeButton:SetPoint("TOPLEFT", editButton2, "BOTTOMLEFT", 0, -10)
 removeButton:Hide()
@@ -3057,7 +3058,7 @@ end)
 removeButton:SetScript("OnLeave", function()
     GameTooltip:Hide()
 end)
-
+
 function OpenEditPopup()
     if not currentPresetName then
         ShowStaticPopup("No preset selected to edit.", "Error")
@@ -3101,7 +3102,9 @@ function OpenEditPopup()
     PresetPopup:Show()
     presetInput:SetFocus()
 end
-
+
+
+
 local function OnPresetSelected(presetName)
     currentPresetName = presetName
     if presetName then
@@ -3111,7 +3114,7 @@ local function OnPresetSelected(presetName)
     end
    
 end
-
+
 PresetPopup:SetScript("OnHide", function()
     if not currentPresetName then
         removeButton:Show()
@@ -3316,26 +3319,26 @@ SuppressEditor:SetScript("OnDragStop", SuppressEditor.StopMovingOrSizing)
 SuppressEditor:Show()
 table.insert(UISpecialFrames, "SuppressEditorFrame")
 
-
+
 local title = SuppressEditor:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 title:SetPoint("TOP", 0, -10)
 title:SetText("SuppressBotMsg Editor")
 local helpButton = CreateHelpButton(SuppressEditorFrame, title, 10, 0, "Enter a message pattern to suppress.\n\nCooldown:\n - Time (in seconds) to wait before showing the same message again.\n - Set to 0 to fully suppress that message.\n\nTip:\n - Partial matches are supported. For example, 'joins the party' matches \nmessages like 'Bot123 joins the party.", "Suppress Message Help")
-
+
 local patternLabel = SuppressEditor:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 patternLabel:SetPoint("TOPLEFT", 20, -40)
 patternLabel:SetText("Message Pattern:")
-
+
 local patternInput = CreateFrame("EditBox", nil, SuppressEditor, "InputBoxTemplate")
 patternInput:SetSize(260, 20)
 patternInput:SetAutoFocus(false)
 patternInput:SetPoint("TOPLEFT", patternLabel, "BOTTOMLEFT", 0, -5)
 patternInput:SetScript("OnEscapePressed", patternInput.ClearFocus)
-
+
 local cooldownLabel = SuppressEditor:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 cooldownLabel:SetPoint("TOPLEFT", patternInput, "BOTTOMLEFT", 0, -10)
 cooldownLabel:SetText("Cooldown (seconds):")
-
+
 local cooldownInput = CreateFrame("EditBox", nil, SuppressEditor, "InputBoxTemplate")
 cooldownInput:SetSize(80, 20)
 cooldownInput:SetAutoFocus(false)
@@ -3343,12 +3346,12 @@ cooldownInput:SetPoint("TOPLEFT", cooldownLabel, "BOTTOMLEFT", 0, -5)
 cooldownInput:SetNumeric(true)
 cooldownInput:SetScript("OnEscapePressed", cooldownInput.ClearFocus)
 
-CreateSeparatorLine(SuppressEditor, 0, -6, 336, cooldownInput)
+CreateSeparatorLine(SuppressEditor, 0, -6, 336, cooldownInput)
 local addButton = CreateFrame("Button", nil, SuppressEditor, "UIPanelButtonTemplate")
 addButton:SetSize(100, 24)
 addButton:SetText("Add/Update")
 addButton:SetPoint("LEFT", cooldownInput, "RIGHT", 10, 0)
-
+
 local scrollFrame = CreateFrame("ScrollFrame", nil, SuppressEditor, "UIPanelScrollFrameTemplate")
 scrollFrame:SetPoint("TOPLEFT", 20, -140)
 scrollFrame:SetPoint("BOTTOMRIGHT", -45, 60)
@@ -3390,7 +3393,7 @@ function RefreshSuppressList()
 
     scrollChild:SetHeight(y + 10)
 end
-CreateSeparatorLine(SuppressEditor, 0, -6, 336, scrollFrame)
+CreateSeparatorLine(SuppressEditor, 0, -6, 336, scrollFrame)
 addButton:SetScript("OnClick", function()
     local pattern = patternInput:GetText()
     local cooldown = tonumber(cooldownInput:GetText()) or 0
@@ -3404,7 +3407,7 @@ addButton:SetScript("OnClick", function()
     cooldownInput:SetText("")
     RefreshSuppressList()
 end)
-
+
 local saveButtonSuppressEditor = CreateFrame("Button", nil, SuppressEditor, "GameMenuButtonTemplate")
 saveButtonSuppressEditor:SetSize(80, 24)
 saveButtonSuppressEditor:SetText("Save")
@@ -3452,7 +3455,7 @@ openSuppressButton:SetHeight(24)
 openSuppressButton:SetPoint("LEFT", restoreSuppressDefaultsButton, "RIGHT", 10, 0)
 openSuppressButton:SetScript("OnClick", OpenSuppressExportFrame)
 openSuppressButton:Show()
-
+
 local cancelButtonSuppressEditor = CreateFrame("Button", nil, SuppressEditor, "GameMenuButtonTemplate")
 cancelButtonSuppressEditor:SetSize(80, 24)
 cancelButtonSuppressEditor:SetText("Cancel")
@@ -3505,7 +3508,7 @@ end)
 
 
 
--------------------------export/import................................
+-------------------------export/import................................
 local ExportFrame = CreateFrame("Frame", "FillRaidExportFrame", UIParent, "BackdropTemplate")
 ExportFrame:SetBackdrop({
     bgFile = "Interface/Tooltips/UI-Tooltip-Background",
@@ -3519,19 +3522,19 @@ ExportFrame:SetWidth(400)
 ExportFrame:SetHeight(300)
 ExportFrame:SetFrameStrata("DIALOG")
 ExportFrame:Hide()
-
+
 local title = ExportFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 title:SetPoint("TOP", ExportFrame, "TOP", 0, -10)
 title:SetText("Export / Import FillRaidPresets")
-local helpexport = CreateHelpButton(ExportFrame, title, 10, 0, "To export Select all and ctrl+c to copy to a document\n To import remove everything and paste your saved settings", "Another Help")
+local helpexport = CreateHelpButton(ExportFrame, title, 10, 0, "To export Select all and ctrl+c to copy to a document\n To import remove everything and paste your saved settings", "Another Help")
 local scrollFrame = CreateFrame("ScrollFrame", "FillRaidExportScrollFrame", ExportFrame, "UIPanelScrollFrameTemplate")
 scrollFrame:SetPoint("TOPLEFT", ExportFrame, "TOPLEFT", 16, -40)
 scrollFrame:SetPoint("BOTTOMRIGHT", ExportFrame, "BOTTOMRIGHT", -30, 50)
-
+
 local scrollChild = CreateFrame("Frame", nil, scrollFrame)
 scrollChild:SetWidth(scrollFrame:GetWidth()) 
 scrollFrame:SetScrollChild(scrollChild)
-
+
 local editBox = CreateFrame("EditBox", "FillRaidExportEditBox", scrollChild)
 editBox:SetMultiLine(true)
 editBox:SetWidth(340)
@@ -3540,7 +3543,7 @@ editBox:SetFontObject(GameFontHighlight)
 editBox:SetAutoFocus(false)
 editBox:SetScript("OnEscapePressed", function() editBox:ClearFocus() end)
 editBox:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 0, 0)
-
+
 local function SerializeTable(tbl, indent)
     indent = indent or ""
     local str = "{\n"
@@ -3569,7 +3572,7 @@ local function SerializeTable(tbl, indent)
     return str .. indent .. "}"
 end
 
-
+
 local function OpenExportFrame()
     if FillRaidPresets then
         editBox:SetText("FillRaidPresets = " .. SerializeTable(FillRaidPresets))
@@ -3597,7 +3600,7 @@ local function OpenExportFrame()
     ExportFrame:Show()
     editBox:SetFocus()
 end
-
+
 local openExportButton = CreateFrame("Button", nil, FillRaidFrame, "GameMenuButtonTemplate")
 openExportButton:SetText("Export")
 openExportButton:SetWidth(80)
@@ -3605,12 +3608,30 @@ openExportButton:SetHeight(20)
 openExportButton:SetPoint("LEFT", restoreDefaultsButton, "RIGHT", 10, 0)
 openExportButton:SetScript("OnClick", OpenExportFrame)
 openExportButton:Hide()
-
-
----SuppressEditorButton:SetScript("OnEnter", function()
 
 
-
+
+
+
+
+---SuppressEditorButton:SetScript("OnEnter", function()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 local copyButton = CreateFrame("Button", nil, ExportFrame, "GameMenuButtonTemplate")
 copyButton:SetText("Select All")
 copyButton:SetWidth(100)
@@ -3620,7 +3641,7 @@ copyButton:SetScript("OnClick", function()
     editBox:HighlightText()
     editBox:SetFocus()
 end)
-
+
 local importButton = CreateFrame("Button", nil, ExportFrame, "GameMenuButtonTemplate")
 importButton:SetText("Import")
 importButton:SetWidth(80)
@@ -3670,7 +3691,7 @@ importButton:SetScript("OnClick", function()
         ShowStaticPopup("Import failed: "..(result or "Execution error"), "import")
     end
 end)
-
+
 local closeButton4 = CreateFrame("Button", nil, ExportFrame, "GameMenuButtonTemplate")
 closeButton4:SetText("Close")
 closeButton4:SetWidth(80)
@@ -4182,9 +4203,9 @@ local function CheckAndEnableDetection()
     end
 end
 
-
+
 detectBossFrame:SetScript("OnUpdate", DetectBossAndFillRaid)
-
+
 local detectBossEventFrame = CreateFrame("Frame")
 detectBossEventFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
 detectBossEventFrame:RegisterEvent("UPDATE_MOUSEOVER_UNIT")
@@ -4702,7 +4723,7 @@ function UninviteAllRaidMembers()
 	end
 end
 
-local c = 1
+local c = 2
 
 
 SLASH_FRB1 = "/frb"
@@ -4779,7 +4800,7 @@ local function ShowVersionPopupOnce()
         FillRaidBotsSavedSettings.lastPopupVersionSeen = versionNumber
     end
 end
-
+
 local popupFrame = CreateFrame("Frame")
 popupFrame:RegisterEvent("PLAYER_LOGIN")
 popupFrame:SetScript("OnEvent", function()
