@@ -370,7 +370,7 @@ Ctrl + Alt (no target) → Instance preset
 ## 📅 Changelog
 
 See full changelog here:  
-👉 `/CHANGELOG.md`
+[Changelog](CHANGELOG.md)
 
 ---
 
