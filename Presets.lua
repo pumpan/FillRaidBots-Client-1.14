@@ -12,6 +12,32 @@ local function generateTooltip(values)
     return table.concat(tooltipParts, ", ")
 end
 
+local function clonePresetValues(values)
+    local copy = {}
+
+    if not values then
+        return copy
+    end
+
+    for role, count in pairs(values) do
+        copy[role] = count
+    end
+
+    return copy
+end
+
+local function applyVipValuesToPresetList(presetList)
+    if not presetList then
+        return
+    end
+
+    for _, preset in ipairs(presetList) do
+        if preset.values and not preset.vipValues then
+            preset.vipValues = clonePresetValues(preset.values)
+        end
+    end
+end
+
 
 local function regenerateTooltips()
     
@@ -26,11 +52,13 @@ local function regenerateTooltips()
     end
 end
 
-
+
+
 if not FillRaidPresets then
     FillRaidPresets = {}
 end
-
+
+
 naxxramasPresets = {}
 bwlPresets = {}
 mcPresets = {}
@@ -40,7 +68,8 @@ aq20Presets = {}
 ZGPresets = {}
 otherPresets = {}
 
--------------------------------------------------------
+-------------------------------------------------------
+
 -------------------------------------------------------
 local function generateTooltip(values)
     local tooltipParts = {}
@@ -48,6 +77,32 @@ local function generateTooltip(values)
         table.insert(tooltipParts, count .. " " .. role)
     end
     return table.concat(tooltipParts, ", ")
+end
+
+local function clonePresetValues(values)
+    local copy = {}
+
+    if not values then
+        return copy
+    end
+
+    for role, count in pairs(values) do
+        copy[role] = count
+    end
+
+    return copy
+end
+
+local function applyVipValuesToPresetList(presetList)
+    if not presetList then
+        return
+    end
+
+    for _, preset in ipairs(presetList) do
+        if preset.values and not preset.vipValues then
+            preset.vipValues = clonePresetValues(preset.values)
+        end
+    end
 end
 
 local function regenerateTooltips()
@@ -70,7 +125,208 @@ local function regenerateTooltips()
     end
 end
 
--------------------------------------------------------
+-- Pumpan:(20260402)
+-- Standalone SavedVariables migration system for FillRaidPresets.
+-- Runs on load, upgrades older preset data in place, and supports future migrations.
+local FILLRAID_PRESET_DATA_VERSION = 2
+
+local function EnsurePresetMigrationMeta()
+    if not FillRaidBotsSavedSettings then
+        FillRaidBotsSavedSettings = {}
+    end
+
+    if FillRaidBotsSavedSettings.presetDataVersion == nil then
+        FillRaidBotsSavedSettings.presetDataVersion = 0
+    end
+end
+
+local function GetPresetDataVersion()
+    EnsurePresetMigrationMeta()
+    return FillRaidBotsSavedSettings.presetDataVersion or 0
+end
+
+local function SetPresetDataVersion(version)
+    EnsurePresetMigrationMeta()
+    FillRaidBotsSavedSettings.presetDataVersion = version
+end
+
+local function CloneTableShallow(source)
+    local copy = {}
+    local key, value
+
+    if type(source) ~= "table" then
+        return copy
+    end
+
+    for key, value in pairs(source) do
+        copy[key] = value
+    end
+
+    return copy
+end
+
+local function EnsurePresetDefaults(preset)
+    local changed = false
+
+    if type(preset) ~= "table" then
+        return false
+    end
+
+    if preset.values == nil or type(preset.values) ~= "table" then
+        preset.values = {}
+        changed = true
+    end
+
+    if preset.vipValues == nil and type(preset.values) == "table" then
+        preset.vipValues = CloneTableShallow(preset.values)
+        changed = true
+    end
+
+    return changed
+end
+
+local function MigratePresetList(presetList, migratePresetFunc)
+    local changed = false
+    local i
+    local preset
+
+    if type(presetList) ~= "table" then
+        return false
+    end
+
+    for i = 1, table.getn(presetList) do
+        preset = presetList[i]
+        if type(preset) == "table" then
+            if EnsurePresetDefaults(preset) then
+                changed = true
+            end
+
+            if migratePresetFunc and migratePresetFunc(preset) then
+                changed = true
+            end
+        end
+    end
+
+    return changed
+end
+
+local function MigrateFactionPresetBuckets(factionData, migratePresetFunc)
+    local changed = false
+
+    if type(factionData) ~= "table" then
+        return false
+    end
+
+    if MigratePresetList(factionData.naxxramasPresets, migratePresetFunc) then changed = true end
+    if MigratePresetList(factionData.bwlPresets, migratePresetFunc) then changed = true end
+    if MigratePresetList(factionData.mcPresets, migratePresetFunc) then changed = true end
+    if MigratePresetList(factionData.onyxiaPresets, migratePresetFunc) then changed = true end
+    if MigratePresetList(factionData.aq40Presets, migratePresetFunc) then changed = true end
+    if MigratePresetList(factionData.aq20Presets, migratePresetFunc) then changed = true end
+    if MigratePresetList(factionData.ZGPresets, migratePresetFunc) then changed = true end
+    if MigratePresetList(factionData.otherPresets, migratePresetFunc) then changed = true end
+
+    return changed
+end
+
+local function MigrateAllFactionPresets(migratePresetFunc)
+    local changed = false
+    local factionName, factionData
+
+    if type(FillRaidPresets) ~= "table" then
+        return false
+    end
+
+    for factionName, factionData in pairs(FillRaidPresets) do
+        if MigrateFactionPresetBuckets(factionData, migratePresetFunc) then
+            changed = true
+        end
+    end
+
+    return changed
+end
+
+local OLD_FULLNAME_MAP = {
+    ["AbominationWing PatchWerk"] = "Patchwerk",
+    ["AbominationWing Grobbulus"] = "Grobbulus",
+    ["AbominationWing Gluth"] = "Gluth",
+    ["AbominationWing Thaddius"] = "Thaddius",
+    ["4 Horsemen"] = "The Four Horsemen",
+    ["Frostwyrm Lair Sapphiron"] = "Sapphiron",
+    ["Frostwyrm Lair Kel'Thuzad"] = "Kel'Thuzad",
+    ["Golemagg"] = "Golemagg the Incinerator",
+    ["Golemagg the incinerator"] = "Golemagg the Incinerator",
+    ["Ossirian"] = "Ossirian the Unscarred",
+    ["Melee group."] = "Melee group",
+    ["Bug Trio (Princess Yauj, Vem, Lord Kri)"] = "Bug Trio",
+}
+
+local function MigrationV1_FixOldFullnames()
+    return MigrateAllFactionPresets(function(preset)
+        local newName
+
+        if not preset.fullname then
+            return false
+        end
+
+        newName = OLD_FULLNAME_MAP[preset.fullname]
+        if newName and newName ~= preset.fullname then
+            preset.fullname = newName
+            return true
+        end
+
+        return false
+    end)
+end
+
+local function MigrationV2_NormalizeBossesField()
+    return MigrateAllFactionPresets(function(preset)
+        if preset.bosses ~= nil and type(preset.bosses) ~= "table" then
+            preset.bosses = { tostring(preset.bosses) }
+            return true
+        end
+
+        return false
+    end)
+end
+
+local function RunPresetMigrations()
+    local currentVersion
+    local changed = false
+
+    EnsurePresetMigrationMeta()
+
+    if type(FillRaidPresets) ~= "table" then
+        FillRaidPresets = {}
+    end
+
+    currentVersion = GetPresetDataVersion()
+
+    if currentVersion < 1 then
+        if MigrationV1_FixOldFullnames() then
+            changed = true
+        end
+        SetPresetDataVersion(1)
+        currentVersion = 1
+    end
+
+    if currentVersion < 2 then
+        if MigrationV2_NormalizeBossesField() then
+            changed = true
+        end
+        SetPresetDataVersion(2)
+        currentVersion = 2
+    end
+
+    if changed and QueueDebugMessage then
+        QueueDebugMessage("INFO: Preset SavedVariables migrated to version " .. currentVersion, "debuginfo")
+    end
+
+    return changed
+end
+
+-------------------------------------------------------
+
 -------------------------------------------------------
 local function SetFactionPresets(factionName, factionGroup)
     DEFAULT_CHAT_FRAME:AddMessage("Your faction: " .. factionGroup)
@@ -79,6 +335,8 @@ local function SetFactionPresets(factionName, factionGroup)
     if FillRaidPresets == nil then
         FillRaidPresets = {}
     end
+
+    RunPresetMigrations()
 
    
     if not FillRaidPresets[factionName] then
@@ -97,7 +355,16 @@ local function SetFactionPresets(factionName, factionGroup)
 						["priest healer"] = factionName == "Horde" and 6 or 2,
 						["druid healer"] = 2,
 					},
-					fullname = "AbominationWing PatchWerk"
+					vipValues = {
+						["warrior tank"] = 1,
+						["warrior meleedps"] = 10,
+						["rogue meleedps"] = 12,
+						["paladin healer"] = factionName == "Alliance" and 6 or nil,
+						["shaman healer"] = factionName == "Horde" and 2 or nil,
+						["priest healer"] = factionName == "Horde" and 6 or 2,
+						["druid healer"] = 2,
+					},
+					fullname = "Patchwerk"
 				},
 				{
 					label = "GrobB",
@@ -109,7 +376,15 @@ local function SetFactionPresets(factionName, factionGroup)
 						["priest healer"] = factionName == "Alliance" and 2 or nil,
 						["druid healer"] = factionName == "Alliance" and 1 or nil,
 					},
-					fullname = "AbominationWing Grobbulus"
+					vipValues = {
+						["warrior tank"] = 2,
+						["rogue meleedps"] = 29,
+						["paladin healer"] = factionName == "Alliance" and 5 or nil,
+						["shaman healer"] = factionName == "Horde" and 8 or nil,
+						["priest healer"] = factionName == "Alliance" and 2 or nil,
+						["druid healer"] = factionName == "Alliance" and 1 or nil,
+					},
+					fullname = "Grobbulus"
 				},
 				{
 					label = "Gluth",
@@ -122,24 +397,50 @@ local function SetFactionPresets(factionName, factionGroup)
 						["priest healer"] = factionName == "Horde" and 5 or 2,
 						["druid healer"] = 1,
 					},
-					fullname = "AbominationWing Gluth"
+					vipValues = {
+						["warrior tank"] = 8,
+						["rogue meleedps"] = 22,
+						["mage rangedps"] = 1,
+						["paladin healer"] = factionName == "Alliance" and 5 or nil,
+						["shaman healer"] = factionName == "Horde" and 2 or nil,
+						["priest healer"] = factionName == "Horde" and 5 or 2,
+						["druid healer"] = 1,
+					},
+					fullname = "Gluth"
 				},
 				{
 					label = "Thadd",
 					values = {
 						["warrior tank"] = 3,
-						["rogue meleedps"] = 27,
+						["rogue meleedps"] = 28,
 						["paladin healer"] = factionName == "Alliance" and 5 or nil,
 						["shaman healer"] = factionName == "Horde" and 8 or nil,
 						["priest healer"] = factionName == "Alliance" and 2 or nil,
 						["druid healer"] = factionName == "Alliance" and 2 or nil,
 					},
-					fullname = "AbominationWing Thaddius",
+					vipValues = {
+						["warrior tank"] = 3,
+						["rogue meleedps"] = 28,
+						["paladin healer"] = factionName == "Alliance" and 5 or nil,
+						["shaman healer"] = factionName == "Horde" and 8 or nil,
+						["priest healer"] = factionName == "Alliance" and 2 or nil,
+						["druid healer"] = factionName == "Alliance" and 2 or nil,
+					},
+					fullname = "Thaddius",
 					bosses = {"Stalagg", "Feugen", "Thaddius"}            
 				},
 				{
 					label = "Razzuv",
 					values = {
+						["warrior tank"] = 10,
+						["warrior meleedps"] = 10,
+						["rogue meleedps"] = 10,
+						["paladin healer"] = factionName == "Alliance" and 9 or nil,
+						["shaman healer"] = factionName == "Horde" and 4 or nil,
+						["priest healer"] = factionName == "Horde" and 5 or nil,
+						["druid healer"] = 0,
+					},
+					vipValues = {
 						["warrior tank"] = 10,
 						["warrior meleedps"] = 10,
 						["rogue meleedps"] = 10,
@@ -162,6 +463,16 @@ local function SetFactionPresets(factionName, factionGroup)
 						["priest healer"] = factionName == "Horde" and 4 or 2,
 						["druid healer"] = 0,
 					},
+					vipValues = {
+						["warrior tank"] = 4,
+						["warrior meleedps"] = 26,
+						["mage rangedps"] = 1,
+						["rogue meleedps"] = 0,
+						["paladin healer"] = factionName == "Alliance" and 6 or nil,
+						["shaman healer"] = factionName == "Horde" and 4 or nil,
+						["priest healer"] = factionName == "Horde" and 4 or 2,
+						["druid healer"] = 0,
+					},
 					fullname = "Gothik the Harvester"
 				},
 				{
@@ -174,12 +485,30 @@ local function SetFactionPresets(factionName, factionGroup)
 						["priest healer"] = factionName == "Horde" and 1 or nil,
 						["druid healer"] = 0,
 					},
-					fullname = "4 Horsemen",
+					vipValues = {
+						["warrior tank"] = 3,
+						["warrior meleedps"] = 35,
+						["rogue meleedps"] = 0,
+						["paladin healer"] = factionName == "Alliance" and 1 or nil,
+						["priest healer"] = factionName == "Horde" and 1 or nil,
+						["druid healer"] = 0,
+					},
+					fullname = "The Four Horsemen",
 					bosses = {"Baron Rivendare", "Thane Korth'azz", "Lady Blaumeux", "Sir Zeliek"}
 				},
 				{
 					label = "Anub'Rekhan",
 					values = {
+						["warrior tank"] = 3,
+						["warrior meleedps"] = 25,
+						["mage rangedps"] = 0,
+						["paladin healer"] = factionName == "Alliance" and 5 or nil,
+						["shaman healer"] = factionName == "Horde" and 5 or nil,
+						["rogue meleedps"] = 4,
+						["priest healer"] = 1,
+						["druid healer"] = 1,
+					},
+					vipValues = {
 						["warrior tank"] = 3,
 						["warrior meleedps"] = 25,
 						["mage rangedps"] = 0,
@@ -202,11 +531,30 @@ local function SetFactionPresets(factionName, factionGroup)
 						["priest healer"] = factionName == "Horde" and 6 or 2,
 						["druid healer"] = 4,
 					},
+					vipValues = {
+						["warrior tank"] = 3,
+						["mage rangedps"] = 25,
+						["paladin healer"] = factionName == "Alliance" and 5 or nil,
+						["shaman healer"] = factionName == "Horde" and 1 or nil,
+						["rogue meleedps"] = 0,
+						["priest healer"] = factionName == "Horde" and 6 or 2,
+						["druid healer"] = 4,
+					},
 					fullname = "Grand Widow Faerlina"
 				},
 				{
 					label = "Maexxna",
 					values = {
+						["warrior tank"] = 9,
+						["mage rangedps"] = 15,
+						["paladin healer"] = factionName == "Alliance" and 5 or nil,
+						["shaman healer"] = factionName == "Horde" and 2 or nil,
+						["rogue meleedps"] = 3,
+						["priest healer"] = factionName == "Horde" and 5 or 2,
+						["priest rangedps"] = 3,
+						["druid healer"] = 2,
+					},
+					vipValues = {
 						["warrior tank"] = 9,
 						["mage rangedps"] = 15,
 						["paladin healer"] = factionName == "Alliance" and 5 or nil,
@@ -229,6 +577,15 @@ local function SetFactionPresets(factionName, factionGroup)
 						["priest healer"] = 0,
 						["druid healer"] = 4,
 					},
+					vipValues = {
+						["warrior tank"] = 6,
+						["mage rangedps"] = 16,
+						["paladin healer"] = factionName == "Alliance" and 4 or nil,
+						["shaman healer"] = factionName == "Horde" and 4 or nil,
+						["rogue meleedps"] = 9,
+						["priest healer"] = 0,
+						["druid healer"] = 4,
+					},
 					fullname = "Noth the Plaguebringer"
 				},
 				{
@@ -239,14 +596,29 @@ local function SetFactionPresets(factionName, factionGroup)
 						["paladin healer"] = factionName == "Alliance" and 4 or nil,
 						["shaman healer"] = factionName == "Horde" and 1 or nil,
 						["rogue meleedps"] = 16,
-						["priest healer"] = factionName == "Horde" and 0 or 2,
-						["druid healer"] = factionName == "Horde" and 0 or 2,
+						["priest healer"] = factionName == "Horde" and 5 or 2,
+						["druid healer"] = factionName == "Horde" and 2 or 2,
+					},
+					vipValues = {
+						["warrior tank"] = 5,
+						["warrior meleedps"] = 10,
+						["paladin healer"] = factionName == "Alliance" and 4 or nil,
+						["shaman healer"] = factionName == "Horde" and 1 or nil,
+						["rogue meleedps"] = 16,
+						["priest healer"] = factionName == "Horde" and 5 or 2,
+						["druid healer"] = factionName == "Horde" and 2 or 2,
 					},
 					fullname = "Heigan the Unclean"
 				},
 				{
 					label = "Loatheb",
 					values = {
+						["warrior tank"] = 4,
+						["paladin healer"] = factionName == "Alliance" and 2 or nil,
+						["shaman healer"] = factionName == "Horde" and 2 or nil,
+						["rogue meleedps"] = 33,
+					},
+					vipValues = {
 						["warrior tank"] = 4,
 						["paladin healer"] = factionName == "Alliance" and 2 or nil,
 						["shaman healer"] = factionName == "Horde" and 2 or nil,
@@ -265,19 +637,36 @@ local function SetFactionPresets(factionName, factionGroup)
 						["priest healer"] = factionName == "Horde" and 6 or nil,
 						["druid healer"] = 2,
 					},
-					fullname = "Frostwyrm Lair Sapphiron"
+					vipValues = {
+						["warrior tank"] = 4,
+						["warrior meleedps"] = 8,
+						["paladin healer"] = factionName == "Alliance" and 8 or nil,
+						["shaman healer"] = factionName == "Horde" and 2 or nil,
+						["rogue meleedps"] = 17,
+						["priest healer"] = factionName == "Horde" and 6 or nil,
+						["druid healer"] = 2,
+					},
+					fullname = "Sapphiron"
 				},
 				{
 					label = "Kel'Thuzad",
 					values = {
-						["warrior tank"] = 8,
+						["warrior tank"] = 10,
 						["mage rangedps"] = 3,
 						["paladin healer"] = factionName == "Alliance" and 8 or nil,
 						["shaman healer"] = factionName == "Horde" and 4 or nil,
-						["rogue meleedps"] = 16,
-						["priest healer"] = factionName == "Horde" and 6 or 4,
+						["rogue meleedps"] = 14,
+						["priest healer"] = factionName == "Horde" and 8 or 4,
 					},
-					fullname = "Frostwyrm Lair Kel'Thuzad"
+					vipValues = {
+						["warrior tank"] = 10,
+						["mage rangedps"] = 3,
+						["paladin healer"] = factionName == "Alliance" and 8 or nil,
+						["shaman healer"] = factionName == "Horde" and 4 or nil,
+						["rogue meleedps"] = 14,
+						["priest healer"] = factionName == "Horde" and 8 or 4,
+					},
+					fullname = "Kel'Thuzad"
 				}
 			},
 
@@ -285,6 +674,12 @@ local function SetFactionPresets(factionName, factionGroup)
 				{
 					label = "Razorgore",
 					values = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 8 or nil,
+						["priest healer"] = factionName == "Horde" and 8 or nil,
+						["mage rangedps"] = 29,
+					},
+					vipValues = {
 						["warrior tank"] = 2,
 						["paladin healer"] = factionName == "Alliance" and 8 or nil,
 						["priest healer"] = factionName == "Horde" and 8 or nil,
@@ -298,7 +693,16 @@ local function SetFactionPresets(factionName, factionGroup)
 						["warrior tank"] = 2,
 						["warrior meleedps"] = 10,
 						["paladin healer"] = factionName == "Alliance" and 8 or nil, 
-						["shaman healer"] = factionName == "Horde" and 8 or nil,
+						["shaman healer"] = factionName == "Horde" and 7 or nil,
+						["rogue meleedps"] = 17,
+						["druid healer"] = 2,
+						["priest healer"] = factionName == "Horde" and 1 or nil,
+					},
+					vipValues = {
+						["warrior tank"] = 2,
+						["warrior meleedps"] = 10,
+						["paladin healer"] = factionName == "Alliance" and 8 or nil, 
+						["shaman healer"] = factionName == "Horde" and 7 or nil,
 						["rogue meleedps"] = 17,
 						["druid healer"] = 2,
 						["priest healer"] = factionName == "Horde" and 1 or nil,
@@ -310,7 +714,14 @@ local function SetFactionPresets(factionName, factionGroup)
 					values = {
 						["warrior tank"] = 2,
 						["paladin healer"] = factionName == "Alliance" and 6 or nil, 
-						["shaman healer"] = factionName == "Horde" and 8 or nil,
+						["shaman healer"] = factionName == "Horde" and 6 or nil,
+						["druid healer"] = 2,              
+						["rogue meleedps"] = 29,
+					},
+					vipValues = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 6 or nil, 
+						["shaman healer"] = factionName == "Horde" and 6 or nil,
 						["druid healer"] = 2,              
 						["rogue meleedps"] = 29,
 					},
@@ -319,6 +730,12 @@ local function SetFactionPresets(factionName, factionGroup)
 				{
 					label = "Firemaw",
 					values = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 2 or nil,
+						["shaman healer"] = factionName == "Horde" and 2 or nil,
+						["warrior meleedps"] = 35,
+					},
+					vipValues = {
 						["warrior tank"] = 2,
 						["paladin healer"] = factionName == "Alliance" and 2 or nil,
 						["shaman healer"] = factionName == "Horde" and 2 or nil,
@@ -334,11 +751,23 @@ local function SetFactionPresets(factionName, factionGroup)
 						["shaman healer"] = factionName == "Horde" and 8 or nil,
 						["warrior meleedps"] = 29,
 					},
+					vipValues = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 8 or nil,
+						["shaman healer"] = factionName == "Horde" and 8 or nil,
+						["warrior meleedps"] = 29,
+					},
 					fullname = "Ebonroc"
 				},
 				{
 					label = "Flamegor",
 					values = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 8 or nil,
+						["shaman healer"] = factionName == "Horde" and 8 or nil,
+						["warrior meleedps"] = 29,
+					},
+					vipValues = {
 						["warrior tank"] = 2,
 						["paladin healer"] = factionName == "Alliance" and 8 or nil,
 						["shaman healer"] = factionName == "Horde" and 8 or nil,
@@ -351,7 +780,15 @@ local function SetFactionPresets(factionName, factionGroup)
 					values = {
 						["warrior tank"] = 4,
 						["druid healer"] = 8,
-						["priest healer"] = 2,
+						["priest healer"] = factionName == "Alliance" and 2 or 8,
+						["paladin healer"] = factionName == "Alliance" and 8 or nil,
+						["shaman healer"] = factionName == "Horde" and 2 or nil,
+						["rogue meleedps"] = 17,
+					},
+					vipValues = {
+						["warrior tank"] = 4,
+						["druid healer"] = 8,
+						["priest healer"] = factionName == "Alliance" and 2 or 8,
 						["paladin healer"] = factionName == "Alliance" and 8 or nil,
 						["shaman healer"] = factionName == "Horde" and 2 or nil,
 						["rogue meleedps"] = 17,
@@ -361,6 +798,13 @@ local function SetFactionPresets(factionName, factionGroup)
 				{
 					label = "Nefarian",
 					values = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 8 or nil,
+						["shaman healer"] = factionName == "Horde" and 8 or nil,
+						["priest healer"] = factionName == "Horde" and 1 or nil,
+						["rogue meleedps"] = factionName == "Alliance" and 29 or 28,
+					},
+					vipValues = {
 						["warrior tank"] = 2,
 						["paladin healer"] = factionName == "Alliance" and 8 or nil,
 						["shaman healer"] = factionName == "Horde" and 8 or nil,
@@ -380,6 +824,12 @@ local function SetFactionPresets(factionName, factionGroup)
 						["shaman healer"] = factionName == "Horde" and 2 or nil,
 						["warrior meleedps"] = 35,
 					},
+					vipValues = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 2 or nil,
+						["shaman healer"] = factionName == "Horde" and 2 or nil,
+						["warrior meleedps"] = 35,
+					},
 					fullname = "Lucifron"
 				},
 				{
@@ -390,11 +840,24 @@ local function SetFactionPresets(factionName, factionGroup)
 						["priest healer"] = factionName == "Horde" and 4 or nil,
 						["mage rangedps"] = 33,
 					},
+					vipValues = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 4 or nil,
+						["priest healer"] = factionName == "Horde" and 4 or nil,
+						["mage rangedps"] = 33,
+					},
 					fullname = "Magmadar"
 				},
 				{
 					label = "Gehennas",
 					values = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 4 or nil,
+						["shaman healer"] = factionName == "Horde" and 4 or nil,
+						["druid healer"] = 1,
+						["warrior meleedps"] = 32,
+					},
+					vipValues = {
 						["warrior tank"] = 2,
 						["paladin healer"] = factionName == "Alliance" and 4 or nil,
 						["shaman healer"] = factionName == "Horde" and 4 or nil,
@@ -412,6 +875,13 @@ local function SetFactionPresets(factionName, factionGroup)
 						["druid healer"] = 1,
 						["mage rangedps"] = 24,
 					},
+					vipValues = {
+						["warrior tank"] = 8,
+						["paladin healer"] = factionName == "Alliance" and 6 or nil,
+						["priest healer"] = factionName == "Horde" and 6 or nil,
+						["druid healer"] = 1,
+						["mage rangedps"] = 24,
+					},
 					fullname = "Garr"
 				},
 				{
@@ -422,11 +892,21 @@ local function SetFactionPresets(factionName, factionGroup)
 						["priest healer"] = factionName == "Horde" and 2 or nil,
 						["mage rangedps"] = 35,
 					},
+					vipValues = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 2 or nil,
+						["priest healer"] = factionName == "Horde" and 2 or nil,
+						["mage rangedps"] = 35,
+					},
 					fullname = "Baron Geddon"
 				},
 				{
 					label = "Shazzrah",
 					values = {
+						["warrior tank"] = 2,
+						["mage rangedps"] = 37,
+					},
+					vipValues = {
 						["warrior tank"] = 2,
 						["mage rangedps"] = 37,
 					},
@@ -441,6 +921,13 @@ local function SetFactionPresets(factionName, factionGroup)
 						["druid healer"] = 1,
 						["warrior meleedps"] = 34,
 					},
+					vipValues = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 2 or nil,
+						["shaman healer"] = factionName == "Horde" and 2 or nil,
+						["druid healer"] = 1,
+						["warrior meleedps"] = 34,
+					},
 					fullname = "Sulfuron Harbinger"
 				},
 				{
@@ -449,15 +936,30 @@ local function SetFactionPresets(factionName, factionGroup)
 						["warrior tank"] = 3,
 						["paladin healer"] = factionName == "Alliance" and 4 or nil,
 						["shaman healer"] = factionName == "Horde" and 1 or nil,
-						["priest healer"] = factionName == "Horde" and 4 or nil,
+						["priest healer"] = factionName == "Horde" and 3 or nil,
 						["druid healer"] = 1,
 						["mage rangedps"] = 31,
 					},
-					fullname = "Golemagg"
+					vipValues = {
+						["warrior tank"] = 3,
+						["paladin healer"] = factionName == "Alliance" and 4 or nil,
+						["shaman healer"] = factionName == "Horde" and 1 or nil,
+						["priest healer"] = factionName == "Horde" and 3 or nil,
+						["druid healer"] = 1,
+						["mage rangedps"] = 31,
+					},
+					fullname = "Golemagg the Incinerator"
 				},
 				{
 					label = "Majordomo",
 					values = {
+						["warrior tank"] = 4,
+						["paladin healer"] = factionName == "Alliance" and 4 or nil,
+						["priest healer"] = factionName == "Horde" and 4 or nil,
+						["shaman healer"] = factionName == "Horde" and 1 or nil,
+						["mage rangedps"] = factionName == "Alliance" and 31 or 30,
+					},
+					vipValues = {
 						["warrior tank"] = 4,
 						["paladin healer"] = factionName == "Alliance" and 4 or nil,
 						["priest healer"] = factionName == "Horde" and 4 or nil,
@@ -469,6 +971,13 @@ local function SetFactionPresets(factionName, factionGroup)
 				{
 					label = "Ragnaros",
 					values = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 4 or nil,
+						["priest healer"] = factionName == "Horde" and 8 or 4,
+						["warlock rangedps"] = 2,
+						["mage rangedps"] = 27,
+					},
+					vipValues = {
 						["warrior tank"] = 2,
 						["paladin healer"] = factionName == "Alliance" and 4 or nil,
 						["priest healer"] = factionName == "Horde" and 8 or 4,
@@ -489,7 +998,15 @@ local function SetFactionPresets(factionName, factionGroup)
 						["priest healer"] = factionName == "Horde" and 2 or nil,
 						["mage rangedps"] = factionName == "Alliance" and 35 or 34,
 					},
-					fullname = "Onyxia"
+					vipValues = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 2 or nil,
+						["shaman healer"] = factionName == "Horde" and 1 or nil,
+						["priest healer"] = factionName == "Horde" and 2 or nil,
+						["mage rangedps"] = factionName == "Alliance" and 35 or 34,
+					},
+					fullname = "Onyxia",
+					bosses = {"Onyxia's Lair"}
 				}
 			},
 
@@ -497,6 +1014,10 @@ local function SetFactionPresets(factionName, factionGroup)
 				{
 					label = "Skeram",
 					values = {
+						["warrior tank"] = 2,
+						["warrior meleedps"] = 37,
+					},
+					vipValues = {
 						["warrior tank"] = 2,
 						["warrior meleedps"] = 37,
 					},
@@ -510,12 +1031,25 @@ local function SetFactionPresets(factionName, factionGroup)
 						["shaman healer"] = factionName == "Horde" and 8 or nil,
 						["warrior meleedps"] = 27,
 					},
-					fullname = "Bug Trio (Princess Yauj, Vem, Lord Kri)",
+					vipValues = {
+						["warrior tank"] = 4,
+						["paladin healer"] = factionName == "Alliance" and 8 or nil, 
+						["shaman healer"] = factionName == "Horde" and 8 or nil,
+						["warrior meleedps"] = 27,
+					},
+					fullname = "Bug Trio",
 					bosses = {"Princess Yauj", "Vem", "Lord Kri"}
 				},
 				{
 					label = "Sartura",
 					values = {
+						["warrior tank"] = 1, 
+						["paladin healer"] = factionName == "Alliance" and 6 or nil,
+						["priest healer"] = factionName == "Horde" and 6 or nil,
+						["druid healer"] = 2,
+						["hunter rangedps"] = 30,
+					},
+					vipValues = {
 						["warrior tank"] = 1, 
 						["paladin healer"] = factionName == "Alliance" and 6 or nil,
 						["priest healer"] = factionName == "Horde" and 6 or nil,
@@ -531,7 +1065,16 @@ local function SetFactionPresets(factionName, factionGroup)
 						["paladin healer"] = factionName == "Alliance" and 4 or nil,
 						["shaman healer"] = factionName == "Horde" and 4 or nil,
 						["priest healer"] = factionName == "Horde" and 3 or nil,
-						["druid healer"] = 3,
+						["druid healer"] = factionName == "Alliance" and 3 or nil,
+						["warrior meleedps"] = 15,
+						["mage rangedps"] = 15,
+					},
+					vipValues = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 4 or nil,
+						["shaman healer"] = factionName == "Horde" and 4 or nil,
+						["priest healer"] = factionName == "Horde" and 3 or nil,
+						["druid healer"] = factionName == "Alliance" and 3 or nil,
 						["warrior meleedps"] = 15,
 						["mage rangedps"] = 15,
 					},
@@ -540,6 +1083,13 @@ local function SetFactionPresets(factionName, factionGroup)
 				{
 					label = "Viscidus",
 					values = {
+						["warrior tank"] = 1,
+						["paladin healer"] = factionName == "Alliance" and 3 or nil,
+						["priest healer"] = factionName == "Horde" and 3 or nil,
+						["warrior meleedps"] = 15,
+						["mage rangedps"] = 20,
+					},
+					vipValues = {
 						["warrior tank"] = 1,
 						["paladin healer"] = factionName == "Alliance" and 3 or nil,
 						["priest healer"] = factionName == "Horde" and 3 or nil,
@@ -557,6 +1107,13 @@ local function SetFactionPresets(factionName, factionGroup)
 						["rogue meleedps"] = 10,              
 						["warrior meleedps"] = 26,
 					},
+					vipValues = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 1 or nil,
+						["priest healer"] = factionName == "Horde" and 1 or nil,
+						["rogue meleedps"] = 10,              
+						["warrior meleedps"] = 26,
+					},
 					fullname = "Princess Huhuran"
 				},
 				{
@@ -565,9 +1122,16 @@ local function SetFactionPresets(factionName, factionGroup)
 						["warrior tank"] = 6,
 						["paladin healer"] = factionName == "Alliance" and 9 or nil,
 						["priest healer"] = factionName == "Horde" and 4 or nil,
-						["shaman healer"] = factionName == "Horde" and 3 or nil,
+						["shaman healer"] = factionName == "Horde" and 5 or nil,
 						["druid healer"] = 0,
-						["mage rangedps"] = factionName == "Horde" and 14 or 0,
+						["rogue meleedps"] = 24,
+					},
+					vipValues = {
+						["warrior tank"] = 6,
+						["paladin healer"] = factionName == "Alliance" and 9 or nil,
+						["priest healer"] = factionName == "Horde" and 4 or nil,
+						["shaman healer"] = factionName == "Horde" and 5 or nil,
+						["druid healer"] = 0,
 						["rogue meleedps"] = 24,
 					},
 					fullname = "The Twin Emperors",
@@ -582,6 +1146,13 @@ local function SetFactionPresets(factionName, factionGroup)
 						["priest healer"] = factionName == "Horde" and 2 or nil,
 						["warrior meleedps"] = factionName == "Alliance" and 32 or 30,
 					},
+					vipValues = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 5 or nil,
+						["shaman healer"] = factionName == "Horde" and 5 or nil,
+						["priest healer"] = factionName == "Horde" and 2 or nil,
+						["warrior meleedps"] = factionName == "Alliance" and 32 or 30,
+					},
 					fullname = "Ouro"
 				},
 				{
@@ -590,7 +1161,13 @@ local function SetFactionPresets(factionName, factionGroup)
 						["paladin healer"] = factionName == "Alliance" and 8 or nil,
 						["shaman healer"] = factionName == "Horde" and 8 or nil,
 						["priest healer"] = factionName == "Horde" and 4 or nil,
-						["rogue meleedps"] = factionName == "Alliance" and 32 or 27,
+						["rogue meleedps"] = factionName == "Alliance" and 31 or 27,
+					},
+					vipValues = {
+						["paladin healer"] = factionName == "Alliance" and 8 or nil,
+						["shaman healer"] = factionName == "Horde" and 8 or nil,
+						["priest healer"] = factionName == "Horde" and 4 or nil,
+						["rogue meleedps"] = factionName == "Alliance" and 31 or 27,
 					},
 					fullname = "C'Thun"
 				}
@@ -600,6 +1177,12 @@ local function SetFactionPresets(factionName, factionGroup)
 				{
 					label = "Kurinnaxx",
 					values = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 2 or nil,
+						["priest healer"] = factionName == "Horde" and 2 or nil,
+						["mage rangedps"] = 15,
+					},
+					vipValues = {
 						["warrior tank"] = 2,
 						["paladin healer"] = factionName == "Alliance" and 2 or nil,
 						["priest healer"] = factionName == "Horde" and 2 or nil,
@@ -615,11 +1198,23 @@ local function SetFactionPresets(factionName, factionGroup)
 						["shaman healer"] = factionName == "Horde" and 5 or nil,
 						["rogue meleedps"] = 12,
 					},
+					vipValues = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 5 or nil,
+						["shaman healer"] = factionName == "Horde" and 5 or nil,
+						["rogue meleedps"] = 12,
+					},
 					fullname = "General Rajaxx"
 				},
 				{
 					label = "Moam",
 					values = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 2 or nil,
+						["shaman healer"] = factionName == "Horde" and 2 or nil,
+						["warrior meleedps"] = 15,
+					},
+					vipValues = {
 						["warrior tank"] = 2,
 						["paladin healer"] = factionName == "Alliance" and 2 or nil,
 						["shaman healer"] = factionName == "Horde" and 2 or nil,
@@ -635,11 +1230,24 @@ local function SetFactionPresets(factionName, factionGroup)
 						["shaman healer"] = factionName == "Horde" and 5 or nil,
 						["rogue meleedps"] = 12,
 					},
-					fullname = "Ossirian"
+					vipValues = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 5 or nil,
+						["shaman healer"] = factionName == "Horde" and 5 or nil,
+						["rogue meleedps"] = 12,
+					},
+					fullname = "Ossirian the Unscarred"
 				},
 				{
 					label = "Ayamiss",
 					values = {
+						["warrior tank"] = 2, 
+						["paladin healer"] = factionName == "Alliance" and 3 or nil,
+						["shaman healer"] = factionName == "Horde" and 3 or nil,
+						["priest healer"] = 2,
+						["mage rangedps"] = 12,
+					},
+					vipValues = {
 						["warrior tank"] = 2, 
 						["paladin healer"] = factionName == "Alliance" and 3 or nil,
 						["shaman healer"] = factionName == "Horde" and 3 or nil,
@@ -651,6 +1259,12 @@ local function SetFactionPresets(factionName, factionGroup)
 				{
 					label = "Buru",
 					values = {
+						["warrior tank"] = 2, 
+						["paladin healer"] = factionName == "Alliance" and 2 or nil,
+						["priest healer"] = factionName == "Horde" and 2 or nil,
+						["mage rangedps"] = 15,
+					},
+					vipValues = {
 						["warrior tank"] = 2, 
 						["paladin healer"] = factionName == "Alliance" and 2 or nil,
 						["priest healer"] = factionName == "Horde" and 2 or nil,
@@ -668,11 +1282,23 @@ local function SetFactionPresets(factionName, factionGroup)
 						["shaman healer"] = factionName == "Horde" and 2 or nil,
 						["warrior meleedps"] = 15,
 					},
+					vipValues = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 2 or nil,
+						["shaman healer"] = factionName == "Horde" and 2 or nil,
+						["warrior meleedps"] = 15,
+					},
 					fullname = "High Priestess Jeklik"
 				},
 				{
 					label = "Venoxis",
 					values = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 2 or nil,
+						["priest healer"] = factionName == "Horde" and 2 or nil,
+						["mage rangedps"] = 15,
+					},
+					vipValues = {
 						["warrior tank"] = 2,
 						["paladin healer"] = factionName == "Alliance" and 2 or nil,
 						["priest healer"] = factionName == "Horde" and 2 or nil,
@@ -688,11 +1314,23 @@ local function SetFactionPresets(factionName, factionGroup)
 						["shaman healer"] = factionName == "Horde" and 2 or nil,
 						["warrior meleedps"] = 15,
 					},
+					vipValues = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 2 or nil,
+						["shaman healer"] = factionName == "Horde" and 2 or nil,
+						["warrior meleedps"] = 15,
+					},
 					fullname = "High Priestess Mar'li"
 				},
 				{
 					label = "Mandokir",
 					values = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 7 or nil,
+						["priest healer"] = factionName == "Horde" and 7 or nil,
+						["mage rangedps"] = 10,
+					},
+					vipValues = {
 						["warrior tank"] = 2,
 						["paladin healer"] = factionName == "Alliance" and 7 or nil,
 						["priest healer"] = factionName == "Horde" and 7 or nil,
@@ -708,11 +1346,23 @@ local function SetFactionPresets(factionName, factionGroup)
 						["shaman healer"] = factionName == "Horde" and 2 or nil,
 						["warrior meleedps"] = 15,
 					},
+					vipValues = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 2 or nil,
+						["shaman healer"] = factionName == "Horde" and 2 or nil,
+						["warrior meleedps"] = 15,
+					},
 					fullname = "High Priest Thekal"
 				},
 				{
 					label = "Arlokk",
 					values = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 4 or nil,
+						["shaman healer"] = factionName == "Horde" and 4 or nil,
+						["warrior meleedps"] = 13,
+					},
+					vipValues = {
 						["warrior tank"] = 2,
 						["paladin healer"] = factionName == "Alliance" and 4 or nil,
 						["shaman healer"] = factionName == "Horde" and 4 or nil,
@@ -728,11 +1378,23 @@ local function SetFactionPresets(factionName, factionGroup)
 						["shaman healer"] = factionName == "Horde" and 5 or nil,
 						["warrior meleedps"] = 12,
 					},
+					vipValues = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 5 or nil,
+						["shaman healer"] = factionName == "Horde" and 5 or nil,
+						["warrior meleedps"] = 12,
+					},
 					fullname = "Jin'do the Hexxer"
 				},
 				{
 					label = "Hakkar",
 					values = {
+						["warrior tank"] = 2,
+						["paladin healer"] = factionName == "Alliance" and 5 or nil,
+						["shaman healer"] = factionName == "Horde" and 5 or nil,
+						["rogue meleedps"] = 12,
+					},
+					vipValues = {
 						["warrior tank"] = 2,
 						["paladin healer"] = factionName == "Alliance" and 5 or nil,
 						["shaman healer"] = factionName == "Horde" and 5 or nil,
@@ -752,7 +1414,14 @@ local function SetFactionPresets(factionName, factionGroup)
 						["paladin healer"] = factionName == "Alliance" and 4 or nil,
 						["shaman healer"] = factionName == "Horde" and 4 or nil,
 					},
-					fullname = "Melee group."
+					vipValues = {
+						["warrior tank"] = 4,
+						["warrior meleedps"] = 18,
+						["rogue meleedps"] = 13,
+						["paladin healer"] = factionName == "Alliance" and 4 or nil,
+						["shaman healer"] = factionName == "Horde" and 4 or nil,
+					},
+					fullname = "Melee group"
 				},
 				{
 					label = "Warrior group",
@@ -763,7 +1432,21 @@ local function SetFactionPresets(factionName, factionGroup)
 						["paladin healer"] = factionName == "Alliance" and 2 or nil,
 						["shaman healer"] = factionName == "Horde" and 2 or nil,
 					},
-					fullname = "Warrior group"
+					vipValues = {
+						["warrior tank"] = 2,
+						["warrior meleedps"] = 35,
+						["rogue meleedps"] = 0,
+						["paladin healer"] = factionName == "Alliance" and 2 or nil,
+						["shaman healer"] = factionName == "Horde" and 2 or nil,
+					},
+					fullname = "Warrior group",
+					bosses = {
+						"Molten Core",
+						"Blackwing Lair",
+						"Temple of Ahn'Qiraj",
+						"Naxxramas",
+						"Onyxia's Lair",
+					},					
 				},      
 				{
 					label = "Mage group",
@@ -773,11 +1456,26 @@ local function SetFactionPresets(factionName, factionGroup)
 						["paladin healer"] = factionName == "Alliance" and 5 or nil,
 						["priest healer"] = factionName == "Horde" and 5 or nil,
 					},
-					fullname = "Mage group"
+					vipValues = {
+						["warrior tank"] = 4,
+						["mage rangedps"] = 30,
+						["paladin healer"] = factionName == "Alliance" and 5 or nil,
+						["priest healer"] = factionName == "Horde" and 5 or nil,
+					},
+					fullname = "Mage group",
+					bosses = {
+						"Molten Core",
+						"Blackwing Lair",
+						"Temple of Ahn'Qiraj",
+						"Naxxramas",
+						"Onyxia's Lair",
+					},					
 				},
 			}
 		}
 
+
+        RunPresetMigrations()
     else
         QueueDebugMessage("INFO: Loaded saved presets for " .. factionName .. " from SavedVariables.", "debuginfo")
 
@@ -793,10 +1491,19 @@ local function SetFactionPresets(factionName, factionGroup)
     ZGPresets = FillRaidPresets[factionName].ZGPresets or {}
     otherPresets = FillRaidPresets[factionName].otherPresets or {}
 
+	applyVipValuesToPresetList(FillRaidPresets[factionName].naxxramasPresets)
+	applyVipValuesToPresetList(FillRaidPresets[factionName].bwlPresets)
+	applyVipValuesToPresetList(FillRaidPresets[factionName].mcPresets)
+	applyVipValuesToPresetList(FillRaidPresets[factionName].onyxiaPresets)
+	applyVipValuesToPresetList(FillRaidPresets[factionName].aq40Presets)
+	applyVipValuesToPresetList(FillRaidPresets[factionName].aq20Presets)
+	applyVipValuesToPresetList(FillRaidPresets[factionName].ZGPresets)
+	applyVipValuesToPresetList(FillRaidPresets[factionName].otherPresets)
 	regenerateTooltips()
 end
 
--------------------------------------------------------
+-------------------------------------------------------
+
 -------------------------------------------------------
 local function CheckFaction()
     local factionName, factionGroup = UnitFactionGroup("player")
@@ -816,7 +1523,8 @@ local function CheckFaction()
     instanceFrames["PresetDungeounOther"] = CreateInstanceFrame("PresetDungeounOther", otherPresets)
 end
 
--------------------------------------------------------
+-------------------------------------------------------
+
 -------------------------------------------------------
 SLASH_CHECKFACTION1 = "/checkfaction"
 SlashCmdList["CHECKFACTION"] = function()

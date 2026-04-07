@@ -1,71 +1,577 @@
-
-local function FillRaidBots_OnEvent(self, event, ...)
-    if event == "ADDON_LOADED" and ... == "FillRaidBots" then
-        FillRaidBots_LoadSettings()
-    elseif event == "PLAYER_LOGOUT" then
-        FillRaidBots_SaveSettings()
-    end
-end
+--==================================================
+-- FillRaidBots - Dynamic Settings System 
+-- With Headers + Separators
+--==================================================
 
 local settingsLoaded = false
-
-
-function FillRaidBots_SaveSettings()
-    if ToggleCheckAndRemoveCheckButton then
-        FillRaidBotsSavedSettings.isCheckAndRemoveEnabled = ToggleCheckAndRemoveCheckButton:GetChecked() and true or false
-    end
-    if BotMessagesCheckButton then
-        FillRaidBotsSavedSettings.isBotMessagesEnabled = BotMessagesCheckButton:GetChecked() and true or false
-    end
-    if DebugMessagesCheckButton then
-        FillRaidBotsSavedSettings.debugMessagesEnabled = DebugMessagesCheckButton:GetChecked() and true or false
-    end
-    if moveButtonsCheckButton then
-        FillRaidBotsSavedSettings.moveButtonsEnabled = moveButtonsCheckButton:GetChecked() and true or false
-    end
-    if RefillButtonCheckButton then
-        FillRaidBotsSavedSettings.isRefillEnabled = RefillButtonCheckButton:GetChecked() and true or false
-    end
-    if SmallButtonCheckButton then
-        FillRaidBotsSavedSettings.isSmallEnabled = SmallButtonCheckButton:GetChecked() and true or false
-    end
-
-    if AutoFFACheckButton then
-        FillRaidBotsSavedSettings.isFFAEnabled = AutoFFACheckButton:GetChecked() and true or false
-    end
-    if AutoGroupLootCheckButton then
-        FillRaidBotsSavedSettings.isGroupLootEnabled = AutoGroupLootCheckButton:GetChecked() and true or false
-    end	
-    if AutoMasterLootCheckButton then
-        FillRaidBotsSavedSettings.isMasterLootEnabled = AutoMasterLootCheckButton:GetChecked() and true or false
-    end
-    if ClickToFillCheckButton then
-        FillRaidBotsSavedSettings.isClickToFillEnabled = ClickToFillCheckButton:GetChecked() and true or false
-    end
-    if AutoRepairCheckButton then
-        FillRaidBotsSavedSettings.isAutoRepairEnabled = AutoRepairCheckButton:GetChecked() and true or false
-    end
-    if AutoJoinGuildCheckButton then
-        FillRaidBotsSavedSettings.isAutoJoinGuildEnabled = AutoJoinGuildCheckButton:GetChecked() and true or false
-    end
-    if AutoMuteSoundCheckButton then
-        FillRaidBotsSavedSettings.isAutoMuteSoundEnabled = AutoMuteSoundCheckButton:GetChecked() and true or false
-    end	
-    if removeDeadBotsButtonCheckButton then
-        FillRaidBotsSavedSettings.isremoveDeadBotsButtonEnabled = removeDeadBotsButtonEnabled:GetChecked() and true or false
-    end		
-end
-
 
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("ADDON_LOADED")
 frame:RegisterEvent("PLAYER_LOGOUT")
-frame:SetScript("OnEvent", FillRaidBots_OnEvent)
+frame:SetScript("OnEvent", function(self, event, ...)
+    if event == "ADDON_LOADED" then
+        local addonName = ...
+        if addonName == "FillRaidBots" then
+            FillRaidBots_LoadSettings()
+        end
+    elseif event == "PLAYER_LOGOUT" then
+        FillRaidBots_SaveSettings()
+    end
+end)
 
 
-function CreateUISectionHeader(parentFrame, anchorTo, label, offsetX, offsetY)
+--==================================================
+-- SETTINGS CONFIG 
+--==================================================
+function SetLootOption(isFFA, isGroup, isMaster)
+
+    if isFFA then
+        SetLootMethod("freeforall")
+    elseif isGroup then
+        SetLootMethod("group")
+    elseif isMaster then
+        SetLootMethod("master", UnitName("player"))
+    end
+end
+
+local ADDON_PATH = "Interface\\AddOns\\FillRaidBots\\"
+local IMG_PATH = ADDON_PATH.."img\\"
+local HIGHLIGHT = "Interface\\Buttons\\UI-Common-MouseHilight"
+local function CreateThemeButtons(folder, width, height)
+
+    local path = IMG_PATH..folder.."\\"
+
+    return {
+
+        openFillRaidButton = {
+            width = width,
+            height = height,
+            normal = path.."fillraid",
+            highlight = HIGHLIGHT,
+            pushed = path.."fillraid"
+        },
+
+        kickAllButton = {
+            width = width,
+            height = height,
+            normal = path.."kickall",
+            highlight = HIGHLIGHT,
+            pushed = path.."kickall"
+        },
+
+        reFillButton = {
+            width = width,
+            height = height,
+            normal = path.."refill",
+            highlight = HIGHLIGHT,
+            pushed = path.."refill"
+        }
+
+    }
+
+end
+
+SettingsConfig = {
+
+    sections = {
+
+        --------------------------------------------------
+        -- GENERAL
+        --------------------------------------------------
+        {
+            name = "General",
+            items = {
+
+                {
+                    type = "checkbox",
+                    key = "isCheckAndRemoveEnabled",
+                    toggle = "removeDeadBotsEnabled",
+                    label = "Auto Remove Dead Bots",
+                    tooltip = "Automatically removes dead bots from raid/party.",
+                    default = true
+                },
+
+                {
+                    type = "checkbox",
+                    key = "isBotMessagesEnabled",
+                    toggle = "BotMessagesEnabled",
+                    label = "Suppress Messages",
+                    tooltip = "Suppress bot messages.",
+                    default = true
+                },
+
+                {
+                    type = "button",
+                    label = "Suppress",
+                    tooltip = "Add/Edit Messages to be Suppressed",
+                    width = 80,
+                    onClick = function()
+                        if SuppressEditor:IsShown() then
+                            SuppressEditor:Hide()
+                        else
+                            RefreshSuppressList()
+                            SuppressEditor:Show()
+                            SuppressEditor:SetFrameLevel(200)
+                        end
+                    end
+                },
+
+                {
+                    type = "checkbox",
+                    key = "isDailyTipEnabled",
+                    toggle = "DailyTipEnabled",
+                    label = "Daily Tip",
+                    tooltip = "Shows a daily tip.",
+                    default = true,
+                    onApply = function(value) ToggleDailyTip(value) end
+                },
+				{
+					type = "checkbox",
+					key = "showTutorialLinks",
+					label = "Tutorial Links",
+					tooltip = "Shows a small tutorial link button beside default presets when a link exists.",
+					default = false,
+					onApply = function(value)
+						if ToggleTutorialLinks then
+							ToggleTutorialLinks(value)
+						end
+
+						if UpdateTutorialLinkButtons then
+							UpdateTutorialLinkButtons()
+						end
+					end
+				},				
+            }
+        },
+
+        --------------------------------------------------
+        -- AUTOMATION
+        --------------------------------------------------
+        {
+            name = "Automation",
+            items = {
+
+                {
+                    type = "checkbox",
+                    key = "isClickToFillEnabled",
+                    toggle = "ClickToFillEnabled",
+                    label = "Click-To-Fill",
+                    tooltip = "Hold ctrl+alt+click boss to fill raid.",
+                    default = true,
+                    onApply = function(value) ToggleClickToFill(value) end
+                },
+
+                {
+                    type = "checkbox",
+                    key = "isZonePresetsEnabled",
+                    toggle = "ZonePresetsEnabled",
+                    label = "Zone Presets",
+                    tooltip = "Checks what zone you are in and opens the correct preset list.",
+                    default = true,
+                    onApply = function(value) ToggleZonePresets(value) end
+                },
+
+                {
+                    type = "checkbox",
+                    key = "isAutoRepairEnabled",
+                    toggle = "AutoRepairEnabled",
+                    label = "Auto Repair",
+                    tooltip = "Automatically repair after resurrection.",
+                    default = false,
+                    onApply = function(value) ToggleAutoRepair(value) end
+                },
+
+                {
+                    type = "checkbox",
+                    key = "useVipPresets",
+                    label = "Use VIP Presets",
+                    tooltip = "Uses vip preset values when available. Falls back to normal preset values if no VIP version exists.",
+                    default = false,
+                    onApply = function(value)
+                        QueueDebugMessage("VIP presets " .. (value and "enabled" or "disabled"), "debuginfo")
+                        if ReapplyCurrentPreset then
+                            ReapplyCurrentPreset()
+                        end
+                    end
+                },
+
+                {
+                    type = "checkbox",
+                    key = "isAutoJoinGuildEnabled",
+                    toggle = "AutoJoinGuildEnabled",
+                    label = "Auto Join Guild",
+                    tooltip = "Automatically join the guild.",
+                    default = true,
+                    onApply = function(value) ToggleAutoJoinGuild(value) end
+                },
+
+                {
+                    type = "checkbox",
+                    key = "isAutoMuteSoundEnabled",
+                    toggle = "AutoMuteSoundEnabled",
+                    label = "Auto Mute Sound",
+                    tooltip = "Automatically lower sound while filling raid.",
+                    default = true,
+                    onApply = function(value) ToggleAutoMuteSound(value) end
+                },
+
+
+            }
+        },
+
+        --------------------------------------------------
+        -- ADVANCED
+        --------------------------------------------------
+        {
+            name = "Advanced",
+            items = {
+
+                {
+                    type = "checkbox",
+                    key = "debugMessagesEnabled",
+                    toggle = "debugMessagesEnabled",
+                    label = "Enable Debug Messages",
+                    tooltip = "Shows debug messages in chat for development.",
+                    default = false,
+                    onApply = function(value)
+                        if value then
+                            debuggerFrame:Show()
+                            DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00Debug messages enabled|r")
+                        else
+                            debuggerFrame:Hide()
+                            DEFAULT_CHAT_FRAME:AddMessage("|cFFFF0000Debug messages disabled|r")
+                        end
+                    end
+                },
+
+                {
+                    type = "button",
+                    label = "Factory Reset",
+                    tooltip = "Shows a warning popup and wipes all FillRaidBots saved data except UserID, UserCount, and UniqueUsers.",
+                    onClick = function()
+                        if ShowFactoryResetPopup then
+                            ShowFactoryResetPopup()
+                        end
+                    end
+                },
+            }
+        },
+
+        --------------------------------------------------
+        -- BUTTONS
+        --------------------------------------------------
+        {
+            name = "Buttons",
+            items = {
+
+                {
+                    type = "checkbox",
+                    key = "OthersButtonsEnabled",
+                    toggle = "OthersButtonEnabled",
+                    label = "Enable Others button",
+                    tooltip = "Enables Others button on all instance frames.",
+                    default = false,
+                    onApply = function(value) ToggleOthersButton(value) end
+                },
+
+                -- Nymz: ButtonSettingsReorder (20260317) moved Enable Refill Button here so both
+                -- enable/disable button checkboxes are grouped together.
+                {
+                    type = "checkbox",
+                    key = "isRefillEnabled",
+                    toggle = "RefillEnabled",
+                    label = "Enable Refill Button",
+                    tooltip = "The Refill Button will be available.",
+                    default = true,
+                    onApply = function()
+                        UpdateReFillButtonVisibility()
+                    end
+                },
+
+                --Nymz: MoveButtons 3-option radio group replacing the old single "Enable moving buttons" checkbox.
+                -- Fixed    = buttons locked to PCP window, move with it automatically.
+                -- Free     = drag anywhere, absolute screen position saved in physical pixels.
+                -- Relative = drag freely, position saved as physical-pixel offset from PCP window.
+                {
+                    type = "radio",
+                    group = "buttonMoveMode",
+                    layout = "vertical",
+                    options = {
+                        {
+                            key = "buttonMoveModeFixed",
+                            label = "Fixed Buttons",
+                            tooltip = "Buttons are locked to the PCP window position.",
+                            default = true,
+                        },
+                        {
+                            key = "buttonModeMoveFree",
+                            label = "Move Buttons (Free)",
+                            tooltip = "Drag buttons freely. Position saved in absolute screen coords.",
+                            default = false,
+                            showLockButton = true,  -- Nymz: render the red/green lock toggle beside this option
+                        },
+                        {
+                            key = "buttonMoveModeRelative",
+                            label = "Move Buttons (Relative)",
+                            tooltip = "Drag buttons freely. Position saved relative to the PCP window.",
+                            default = false,
+                        },
+                    },
+                    onApply = function(selectedKey)
+                        --Nymz: MoveButtons onApply fires when a radio option is selected.
+                        -- Updates SavedVariables mode flags then delegates to ToggleButtonMovement.
+                        FillRaidBotsSavedSettings.moveButtonsEnabled = (selectedKey == "buttonModeMoveFree")
+                        FillRaidBotsSavedSettings.moveButtonsRelative = (selectedKey == "buttonMoveModeRelative")
+                        -- Nymz: clear the lock state whenever leaving Free mode so it never
+                        -- bleeds into Fixed/Relative (the guard in ToggleButtonMovement is now
+                        -- scoped to isFree, but clearing here keeps SavedVariables clean too).
+                        if selectedKey ~= "buttonModeMoveFree" then
+                            FillRaidBotsSavedSettings.buttonMoveLocked = false
+                        end
+                        ToggleButtonMovement()
+                    end
+                },
+
+				-- pumpan: added checkbox for horizontal buttons
+				{
+					type = "checkbox",
+					label = "Horizontal layout",
+					key = "ButtonLayout",
+					tooltip = "Enables the buttons to be aligned Horizontaly.",
+
+					get = function()
+						return FillRaidBotsSavedSettings.ButtonLayout == "horizontal"
+					end,
+
+					set = function(value)
+						if value then
+							ApplyButtonLayout("horizontal")
+						else
+							ApplyButtonLayout("vertical")
+						end
+					end
+				},
+
+				-- pumpan: added sliders for spacing and button size
+				{
+					type = "slider",
+					key = "ButtonSpacing",
+					label = "Button Spacing",
+					tooltip = "Adjust spacing between the FillRaid buttons.\nNegative values move buttons closer together.", -- Pumpan: added tooltip (20260317)
+					min = -50, -- Nymz: ButtonSpacing (20260317) allow negative spacing
+					max = 50,
+					step = 1,
+					precision = 0,
+					default = 4,
+
+					onPreview = function()
+						RepositionButtonsFromOffset()
+					end,
+
+					onApply = function(value)
+						RepositionButtonsFromOffset()
+					end
+				},
+				{
+					type = "slider",
+					key = "ButtonSize",
+					label = "Button Size",
+					tooltip = "Adjust the size of the FillRaid buttons.", -- Pumpan: added tooltip (20260317)
+					-- Nymz: (20260318) MoveButtons ButtonSize now stored as %, range 10-500, default 100%.
+					min = 10,
+					max = 500,
+					step = 1,
+					precision = 0,
+					default = 100, -- 100% = theme default size
+
+					onPreview = function(value)
+						if not FillRaidBotsSavedSettings then return end
+						FillRaidBotsSavedSettings.ButtonSize = value
+						UpdateButtonSizes()
+					end,
+
+					onApply = function(value)
+						if not FillRaidBotsSavedSettings then return end
+						FillRaidBotsSavedSettings.ButtonSize = value
+						UpdateButtonSizes()
+					end
+				},
+                {
+                    type = "button",
+                    label = "Button Themes",
+                    tooltip = "Button Themes",
+                    width = 80,
+                    createFrame = true,
+                    frameWidth = 270,
+                    frameTitle = "Button Themes"
+                },
+
+                {
+                    type = "button",
+                    label = "Reset Buttons",
+                    tooltip = "Reset button positions to default.",
+                    onClick = function()
+                        FillRaidBots_ResetButtonPositions()
+                    end
+                },
+			
+            }
+        },
+
+        --------------------------------------------------
+        -- LOOT TYPE
+        --------------------------------------------------
+        {
+            name = "Loot Type",
+            items = {
+
+				{
+					type = "checkbox",
+					key = "isLootTypeEnabled",
+					toggle = "LootType",
+					label = "Loot type",
+					tooltip = "Enables auto change loot type.",
+					default = true,
+					onApply = function(value) ToggleLootType(value) end
+				},
+
+
+                {
+                    type = "radio",
+                    group = "lootType",
+                    textposition = "over",
+
+                    options = {
+                        { key = "isFFAEnabled", label = "FFA", default = false, tooltip = "Automatically set to \nFree For All loot" },
+                        { key = "isGroupLootEnabled", label = "Group", default = true, tooltip = "Automatically set to \nGroup loot" },
+                        { key = "isMasterLootEnabled", label = "Master", default = false, tooltip = "Automatically set to \nMaster loot" },
+                    },
+
+                    onApply = function(selectedKey)
+                        SetLootOption(
+                            selectedKey == "isFFAEnabled",
+                            selectedKey == "isGroupLootEnabled",
+                            selectedKey == "isMasterLootEnabled"
+                        )
+                    end
+                },
+
+                
+				{
+					type = "radio",
+					group = "buttonTheme",
+					framename = "FillRaidBots_ButtonThemes_Frame",
+					layout = "vertical",
+				
+					options = {
+						
+						{
+							key = "Mini",
+							label = "Mini",
+							tooltip = "Small compact buttons",
+							default = true,
+							buttons = CreateThemeButtons("Mini", 32, 32)
+						},
+						{
+							key = "Classic",
+							label = "Classic",
+							tooltip = "Vertical tall buttons",
+							default = false,
+							buttons = CreateThemeButtons("Classic", 40, 100)
+						},
+						{
+							key = "AI",
+							label = "AI",
+							tooltip = "AI Generated Buttons",
+							default = false,
+							buttons = CreateThemeButtons("AI", 40, 100)
+						},
+						{
+							key = "AISmall",
+							label = "AISmall",
+							tooltip = "Small AI buttons",
+							default = false,
+							buttons = CreateThemeButtons("AISmall", 32, 32)
+						},
+						{
+							key = "AIHorizontal",
+							label = "AIHorizontal",
+							tooltip = "Horizontal AI buttons",
+							offsetX = 0,  -- Nymz: (20260318) ButtonPct
+--   - ButtonSize slider range changed to 10-500, default 100 (100% = theme default).
+--   - ButtonSize display now shows % directly instead of raw pixels.
+--   - Theme switch preserves user % automatically.
+--   - Slider value text moved to bottom center, 2px closer to slider than default.
+--
+-- Nymz: (20260318) ButtonLayout
+--   - Fixed ButtonLayout checkbox showing as checked on load and after /rl.
+--     Checkbox renderer now uses get/set functions when defined.
+--   - Same fix applied in FillRaidBots_LoadSettings after ApplySavedSettings.
+--
+-- Pumpan: (20260317) Horizontal buttons: -80 in offset is not needed anymore since all the buttons has new anchor points 
+							offsetY = 0,    
+							default = false,
+							buttons = CreateThemeButtons("AIHorizontal", 100, 40)
+						},
+						{
+							key = "Nymz",
+							label = "Nymz",
+							tooltip = "Nymz theme",
+							default = false,
+							spacing = -30,
+							buttons = CreateThemeButtons("Nymz", 40, 100)
+						},
+						{
+							key = "Nymzmini",
+							label = "Nymz Mini",
+							tooltip = "Nymz small buttons",
+							default = false,
+							buttons = CreateThemeButtons("Nymzmini", 32, 32)
+						},
+						{
+							key = "Gemma",
+							label = "Gemma",
+							tooltip = "Gemma theme",
+							default = false,
+							buttons = CreateThemeButtons("Gemma", 40, 100)
+						}						
+					},
+
+					onApply = function(selectedKey, item)
+
+						-- Nymz: (20260318) MoveButtons ButtonSize is now %, theme switch is automatic.
+						-- No conversion needed - the % carries over directly to the new theme.
+						FillRaidBotsSavedSettings.selectedButtonTheme = selectedKey
+
+						local currentPct = FillRaidBotsSavedSettings.ButtonSize or 100
+						for _, section in ipairs(SettingsConfig.sections) do
+							for _, it in ipairs(section.items) do
+								if it.type == "slider" and it.key == "ButtonSize" then
+									if it.frame then
+										it.frame:SetValue(currentPct + 0.001)
+										it.frame:SetValue(currentPct)
+									end
+								end
+							end
+						end
+
+						UpdateButtonSizes()
+						RepositionButtonsFromOffset()
+					end
+				}				
+            }
+        },
+    }
+}
+
+--==================================================
+-- SECTION HEADER + SEPARATOR
+--==================================================
+
+local function CreateUISectionHeader(parentFrame, anchorTo, label, offsetX, offsetY)
+
     local header = parentFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    header:SetPoint("TOPLEFT", anchorTo, "TOPLEFT", offsetX or 0, offsetY or -20)
+    header:SetPoint("TOPLEFT", anchorTo, "TOPLEFT", offsetX or 10, offsetY or -20)
     header:SetText(label)
 
     local separator = parentFrame:CreateTexture(nil, "ARTWORK")
@@ -78,553 +584,1087 @@ function CreateUISectionHeader(parentFrame, anchorTo, label, offsetX, offsetY)
     return header, separator
 end
 
-local function CreateToggleCheckButton()
-
-	local mainHeader, mainSeparator = CreateUISectionHeader(UISettingsFrame, UISettingsFrame, "Main", 10, -20)
-    
-    local checkButton = CreateFrame("CheckButton", "ToggleCheckAndRemoveCheckButton", UISettingsFrame, "UICheckButtonTemplate")
-    checkButton:SetWidth(20)
-    checkButton:SetHeight(20)
-    checkButton:SetPoint("TOPLEFT", mainSeparator, "TOPLEFT", 0, -10)
-
-    
-    checkButton.text = checkButton:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    checkButton.text:SetPoint("LEFT", checkButton, "RIGHT", 5, 0)
-    checkButton.text:SetText("Auto remove dead")
-
-    checkButton:SetChecked(FillRaidBotsSavedSettings.isCheckAndRemoveEnabled)
-
-	checkButton:SetScript("OnClick", function(self)
-		local isChecked = self:GetChecked()
-		FillRaidBotsSavedSettings.isCheckAndRemoveEnabled = isChecked
-		
-	
-		local status = isChecked and "|cFF00FF00enabled|r" or "|cFFFF0000disabled|r"
-		DEFAULT_CHAT_FRAME:AddMessage("Remove Dead Bots: "..status)
-	end)
-
-    checkButton:SetScript("OnEnter", function()
-        GameTooltip:SetOwner(checkButton, "ANCHOR_RIGHT")
-        GameTooltip:SetText("When enabled, dead bots will be automatically removed from the raid or party.")
-        GameTooltip:Show()
-    end)
-    checkButton:SetScript("OnLeave", function()
-        GameTooltip:Hide()
-    end)
-
-    
-local botMessagesCheckButton = CreateFrame("CheckButton", "BotMessagesCheckButton", UISettingsFrame, "UICheckButtonTemplate")
-botMessagesCheckButton:SetWidth(20)
-botMessagesCheckButton:SetHeight(20)
-botMessagesCheckButton:SetPoint("TOPLEFT", checkButton, "TOPLEFT", 0, -20)
-
-botMessagesCheckButton.text = botMessagesCheckButton:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-botMessagesCheckButton.text:SetPoint("LEFT", botMessagesCheckButton, "RIGHT", 5, 0)
-botMessagesCheckButton.text:SetText("Suppress Messages")
-
-botMessagesCheckButton:SetChecked(FillRaidBotsSavedSettings.isBotMessagesEnabled)
-
-local SuppressEditorButton = CreateFrame("Button", nil, UISettingsFrame, "GameMenuButtonTemplate")
-SuppressEditorButton:SetText("Suppress")
-SuppressEditorButton:SetWidth(80)
-SuppressEditorButton:SetHeight(20)
-SuppressEditorButton:SetPoint("TOPLEFT", botMessagesCheckButton, "TOPLEFT", 0, -20)
-SuppressEditorButton:SetScript("OnEnter", function()
-    GameTooltip:SetOwner(SuppressEditorButton, "ANCHOR_RIGHT")
-    GameTooltip:SetText("Add/Edit Messages to be Suppressed")
-    GameTooltip:Show()
-end)
-SuppressEditorButton:SetScript("OnLeave", function()
-    GameTooltip:Hide()
-end)
-SuppressEditorButton:SetScript("OnClick", function()
-    if SuppressEditor:IsShown() then
-        SuppressEditor:Hide()
-    else
-        RefreshSuppressList()
-        SuppressEditor:Show()
-    end
-end)
-
-if FillRaidBotsSavedSettings.isBotMessagesEnabled then
-    SuppressEditorButton:Enable()
-else
-    SuppressEditorButton:Disable()
-end
-
-botMessagesCheckButton:SetScript("OnClick", function(self)
-    local isChecked = self:GetChecked()
-    FillRaidBotsSavedSettings.isBotMessagesEnabled = isChecked
-
-   
-    if isChecked then
-        SuppressEditorButton:Enable()
-    else
-        SuppressEditorButton:Disable()
-    end
-
-    local status = isChecked and "|cFF00FF00enabled|r" or "|cFFFF0000disabled|r"
-    DEFAULT_CHAT_FRAME:AddMessage("Bot Messages: "..status)
-end)
-
-botMessagesCheckButton:SetScript("OnEnter", function()
-    GameTooltip:SetOwner(botMessagesCheckButton, "ANCHOR_RIGHT")
-    GameTooltip:SetText("When enabled, bot messages will be suppressed.")
-    GameTooltip:Show()
-end)
-botMessagesCheckButton:SetScript("OnLeave", function()
-    GameTooltip:Hide()
-end)
-
-
-------------------------------------------------------------------------
-
-
-
-	local ClickToFillCheackButton = CreateFrame("CheckButton", "ClickToFillCheackButton", UISettingsFrame, "UICheckButtonTemplate")
-	ClickToFillCheackButton:SetSize(20, 20)
-	ClickToFillCheackButton:SetPoint("TOPLEFT", SuppressEditorButton, "TOPLEFT", 0, -20)
-
-
-	ClickToFillCheackButton.text = ClickToFillCheackButton:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-	ClickToFillCheackButton.text:SetPoint("LEFT", ClickToFillCheackButton, "RIGHT", 5, 0)
-	ClickToFillCheackButton.text:SetText("Click-To-Fill")
-
-
-	ClickToFillCheackButton:SetChecked(FillRaidBotsSavedSettings.isClickToFillEnabled)
-	ToggleClickToFill(FillRaidBotsSavedSettings.isClickToFillEnabled)
-
-	ClickToFillCheackButton:SetScript("OnClick", function(self)
-		local isChecked = self:GetChecked()
-		FillRaidBotsSavedSettings.isClickToFillEnabled = isChecked
-		ToggleClickToFill(isChecked)
-		local status = isChecked and "|cFF00FF00enabled|r" or "|cFFFF0000disabled|r"
-		DEFAULT_CHAT_FRAME:AddMessage("Click-To-Fill mode: "..status)		
-	end)
-
-    ClickToFillCheackButton:SetScript("OnEnter", function()
-        GameTooltip:SetOwner(ClickToFillCheackButton, "ANCHOR_RIGHT")
-        GameTooltip:SetText("When enabled, will allow you to hold ctrl+alt+clicking the boss to fill the raid.")
-        GameTooltip:Show()
-    end)
-    ClickToFillCheackButton:SetScript("OnLeave", function()
-        GameTooltip:Hide()
-    end)
-	local AutoRepairCheckButton = CreateFrame("CheckButton", "AutoRepairCheckButton", UISettingsFrame, "UICheckButtonTemplate")
-	AutoRepairCheckButton:SetHeight(20)
-	AutoRepairCheckButton:SetWidth(20)
-	AutoRepairCheckButton:SetPoint("TOPLEFT", ClickToFillCheackButton, "TOPLEFT", 0, -20) 
-
-
-	AutoRepairCheckButton.text = AutoRepairCheckButton:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-	AutoRepairCheckButton.text:SetPoint("LEFT", AutoRepairCheckButton, "RIGHT", 5, 0)
-	AutoRepairCheckButton.text:SetText("Auto Repair")
-
-
-	AutoRepairCheckButton:SetChecked(FillRaidBotsSavedSettings.isAutoRepairEnabled)
-	ToggleAutoRepair(FillRaidBotsSavedSettings.isAutoRepairEnabled)
-
-	AutoRepairCheckButton:SetScript("OnClick", function(self)
-		local isChecked = self:GetChecked()
-		FillRaidBotsSavedSettings.isAutoRepairEnabled = isChecked
-		ToggleAutoRepair(isChecked)
-		local status = isChecked and "|cFF00FF00enabled|r" or "|cFFFF0000disabled|r"
-		DEFAULT_CHAT_FRAME:AddMessage("Auto Repair: "..status)		
-	end)
-
-    AutoRepairCheckButton:SetScript("OnEnter", function()
-        GameTooltip:SetOwner(AutoRepairCheckButton, "ANCHOR_RIGHT")
-        GameTooltip:SetText("When enabled, allows FillRaidBots to automatically repair after resurrection. \nVIP ONLY")
-        GameTooltip:Show()
-    end)
-    AutoRepairCheckButton:SetScript("OnLeave", function()
-        GameTooltip:Hide()
-    end) 
-  
- 
-	local AutoJoinGuildCheckButton = CreateFrame("CheckButton", "AutoJoinGuildCheckButton", UISettingsFrame, "UICheckButtonTemplate")
-	AutoJoinGuildCheckButton:SetHeight(20)
-	AutoJoinGuildCheckButton:SetWidth(20)
-	AutoJoinGuildCheckButton:SetPoint("TOPLEFT", AutoRepairCheckButton, "TOPLEFT", 0, -20)
-
-
-	AutoJoinGuildCheckButton.text = AutoJoinGuildCheckButton:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-	AutoJoinGuildCheckButton.text:SetPoint("LEFT", AutoJoinGuildCheckButton, "RIGHT", 5, 0)
-	AutoJoinGuildCheckButton.text:SetText("Auto Join Guild")
-
-
-	AutoJoinGuildCheckButton:SetChecked(FillRaidBotsSavedSettings.isAutoJoinGuildEnabled)
-	ToggleAutoJoinGuild(FillRaidBotsSavedSettings.isAutoJoinGuildEnabled)
-
-	AutoJoinGuildCheckButton:SetScript("OnClick", function(self)
-		local isChecked = self:GetChecked()
-		FillRaidBotsSavedSettings.isAutoJoinGuildEnabled = isChecked
-		ToggleAutoJoinGuild(isChecked)
-		local status = isChecked and "|cFF00FF00enabled|r" or "|cFFFF0000disabled|r"
-		DEFAULT_CHAT_FRAME:AddMessage("Auto join guild: "..status)		
-	end)
-
-    AutoJoinGuildCheckButton:SetScript("OnEnter", function()
-        GameTooltip:SetOwner(AutoJoinGuildCheckButton, "ANCHOR_RIGHT")
-        GameTooltip:SetText("When enabled, will allow FillRaidBots to \nautomaticaly join the SoloCraft guild.")
-        GameTooltip:Show()
-    end)
-    AutoJoinGuildCheckButton:SetScript("OnLeave", function()
-        GameTooltip:Hide()
-    end) 
-
-	local AutoMuteSoundCheckButton = CreateFrame("CheckButton", "AutoMuteSoundCheckButton", UISettingsFrame, "UICheckButtonTemplate")
-	AutoMuteSoundCheckButton:SetHeight(20)
-	AutoMuteSoundCheckButton:SetWidth(20)
-	AutoMuteSoundCheckButton:SetPoint("TOPLEFT", AutoJoinGuildCheckButton, "TOPLEFT", 0, -20)
-
-
-	AutoMuteSoundCheckButton.text = AutoMuteSoundCheckButton:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-	AutoMuteSoundCheckButton.text:SetPoint("LEFT", AutoMuteSoundCheckButton, "RIGHT", 5, 0)
-	AutoMuteSoundCheckButton.text:SetText("Auto Lower sound")
-
-
-	AutoMuteSoundCheckButton:SetChecked(FillRaidBotsSavedSettings.isAutoMuteSoundEnabled)
-	ToggleAutoMuteSound(FillRaidBotsSavedSettings.isAutoMuteSoundEnabled)
-
-	AutoMuteSoundCheckButton:SetScript("OnClick", function(self)
-		local isChecked = self:GetChecked()
-		FillRaidBotsSavedSettings.isAutoMuteSoundEnabled = isChecked
-		ToggleAutoMuteSound(isChecked)
-		local status = isChecked and "|cFF00FF00enabled|r" or "|cFFFF0000disabled|r"
-		DEFAULT_CHAT_FRAME:AddMessage("Auto Lower sound: "..status)		
-	end)
-
-    AutoMuteSoundCheckButton:SetScript("OnEnter", function()
-        GameTooltip:SetOwner(AutoMuteSoundCheckButton, "ANCHOR_RIGHT")
-        GameTooltip:SetText("When enabled, will lower Sound effects \nautomaticaly while filling raid.")
-        GameTooltip:Show()
-    end)
-    AutoMuteSoundCheckButton:SetScript("OnLeave", function()
-        GameTooltip:Hide()
-    end) 
-
-	local ButtonsHeader, mainSeparator = CreateUISectionHeader(UISettingsFrame, AutoMuteSoundCheckButton, "Buttons", 0, -25)
-
-	local removeDeadBotsCheckButton = CreateFrame("CheckButton", "removeDeadBotsCheckButton", UISettingsFrame, "UICheckButtonTemplate")
-	removeDeadBotsCheckButton:SetHeight(20)
-	removeDeadBotsCheckButton:SetWidth(20)
-	removeDeadBotsCheckButton:SetPoint("TOPLEFT", ButtonsHeader, "TOPLEFT", 0, -20)
-
-
-	removeDeadBotsCheckButton.text = removeDeadBotsCheckButton:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-	removeDeadBotsCheckButton.text:SetPoint("LEFT", removeDeadBotsCheckButton, "RIGHT", 5, 0)
-	removeDeadBotsCheckButton.text:SetText("Dead bots Button")
-
-
-	removeDeadBotsCheckButton:SetChecked(FillRaidBotsSavedSettings.isremoveDeadBotsButtonEnabled)
-	ToggleremoveDeadBots(FillRaidBotsSavedSettings.isremoveDeadBotsButtonEnabled)
-
-	removeDeadBotsCheckButton:SetScript("OnClick", function(self)
-		local isChecked = self:GetChecked()
-		FillRaidBotsSavedSettings.isremoveDeadBotsButtonEnabled = isChecked
-		ToggleremoveDeadBots(isChecked)
-		local status = isChecked and "|cFF00FF00enabled|r" or "|cFFFF0000disabled|r"
-		DEFAULT_CHAT_FRAME:AddMessage("Remove dead bots button: "..status)		
-	end)
-
-    removeDeadBotsCheckButton:SetScript("OnEnter", function()
-        GameTooltip:SetOwner(removeDeadBotsCheckButton, "ANCHOR_RIGHT")
-        GameTooltip:SetText("When enabled, A remove dead bots button will appear when there is dead bots.")
-        GameTooltip:Show()
-    end)
-    removeDeadBotsCheckButton:SetScript("OnLeave", function()
-        GameTooltip:Hide()
-    end) 
-
-
-    local moveButtonsCheckButton = CreateFrame("CheckButton", "moveButtonsCheckButton", UISettingsFrame, "UICheckButtonTemplate")
-    moveButtonsCheckButton:SetWidth(20)
-    moveButtonsCheckButton:SetHeight(20)
-    moveButtonsCheckButton:SetPoint("TOPLEFT", removeDeadBotsCheckButton, "TOPLEFT", 0, -20)
-
-    moveButtonsCheckButton.text = moveButtonsCheckButton:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    moveButtonsCheckButton.text:SetPoint("LEFT", moveButtonsCheckButton, "RIGHT", 5, 0)
-    moveButtonsCheckButton.text:SetText("Enable moving buttons")
-
-    moveButtonsCheckButton:SetChecked(FillRaidBotsSavedSettings.moveButtonsEnabled)
-
-	moveButtonsCheckButton:SetScript("OnClick", function(self)
-		local isChecked = self:GetChecked()
-		FillRaidBotsSavedSettings.moveButtonsEnabled = isChecked
-		ToggleButtonMovement(OpenFillRaidButton)
-		local status = isChecked and "|cFF00FF00enabled|r" or "|cFFFF0000disabled|r"
-		DEFAULT_CHAT_FRAME:AddMessage("Button Movement: "..status)
-	end)
-    moveButtonsCheckButton:SetScript("OnEnter", function()
-        GameTooltip:SetOwner(moveButtonsCheckButton, "ANCHOR_RIGHT")
-        GameTooltip:SetText("Enable moving of fillraid and kick all buttons.")
-        GameTooltip:Show()
-    end)
-    moveButtonsCheckButton:SetScript("OnLeave", function()
-        GameTooltip:Hide()
-    end)
-
-
-    local refillCheckButton = CreateFrame("CheckButton", "RefillButtonCheckButton", UISettingsFrame, "UICheckButtonTemplate")
-    refillCheckButton:SetWidth(20)
-    refillCheckButton:SetHeight(20)
-    refillCheckButton:SetPoint("TOPLEFT", moveButtonsCheckButton, "TOPLEFT", 0, -20)
-
-    refillCheckButton.text = refillCheckButton:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    refillCheckButton.text:SetPoint("LEFT", refillCheckButton, "RIGHT", 5, 0)
-    refillCheckButton.text:SetText("Enable Refill Button")
-
-    refillCheckButton:SetChecked(FillRaidBotsSavedSettings.isRefillEnabled)
-
-    refillCheckButton:SetScript("OnClick", function(self)
-		local isChecked = self:GetChecked()
-		FillRaidBotsSavedSettings.isRefillEnabled = isChecked
-		UpdateReFillButtonVisibility()
-		local status = isChecked and "|cFF00FF00enabled|r" or "|cFFFF0000disabled|r"
-		DEFAULT_CHAT_FRAME:AddMessage("Refill Button: "..status)
-    end)
-
-    refillCheckButton:SetScript("OnEnter", function()
-        GameTooltip:SetOwner(refillCheckButton, "ANCHOR_RIGHT")
-        GameTooltip:SetText("When enabled, the Refill Button will be available.")
-        GameTooltip:Show()
-    end)
-    refillCheckButton:SetScript("OnLeave", function()
-        GameTooltip:Hide()
-    end)
-
-    local SmallCheckButton = CreateFrame("CheckButton", "SmallButtonCheckButton", UISettingsFrame, "UICheckButtonTemplate")
-    SmallCheckButton:SetWidth(20)
-    SmallCheckButton:SetHeight(20)
-    SmallCheckButton:SetPoint("TOPLEFT", refillCheckButton, "TOPLEFT", 0, -20)
-
-    SmallCheckButton.text = SmallCheckButton:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    SmallCheckButton.text:SetPoint("LEFT", SmallCheckButton, "RIGHT", 5, 0)
-    SmallCheckButton.text:SetText("Enable Small Buttons")
-
-    SmallCheckButton:SetChecked(FillRaidBotsSavedSettings.isSmallEnabled)
-	if FillRaidBotsSavedSettings.isSmallEnabled then 
-		ToggleSmallbuttonCheck(FillRaidBotsSavedSettings.isSmallEnabled)
-	end
-
-	SmallCheckButton:SetScript("OnClick", function(self)
-		local isChecked = self:GetChecked()
-		FillRaidBotsSavedSettings.isSmallEnabled = isChecked
-		ToggleSmallbuttonCheck(isChecked)
-		local status = isChecked and "|cFF00FF00enabled|r" or "|cFFFF0000disabled|r"
-		DEFAULT_CHAT_FRAME:AddMessage("Small Buttons: "..status)
-	end)
-
-
-
-    SmallCheckButton:SetScript("OnEnter", function()
-        GameTooltip:SetOwner(SmallCheckButton, "ANCHOR_RIGHT")
-        GameTooltip:SetText("When enabled, The buttons will be small.")
-        GameTooltip:Show()
-    end)
-    SmallCheckButton:SetScript("OnLeave", function()
-        GameTooltip:Hide()
-    end)
- 
------------------------------------------auto loot option --------------------------------
-local LootTypeHeader = UISettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-LootTypeHeader:SetPoint("TOPLEFT", SmallCheckButton, "TOPLEFT", 0, -20)
-LootTypeHeader:SetText("Loot Type")
-
-local LootTypeSeparator = UISettingsFrame:CreateTexture(nil, "ARTWORK")
-LootTypeSeparator:SetHeight(2) 
-LootTypeSeparator:SetPoint("TOPLEFT", LootTypeHeader, "BOTTOMLEFT", 0, -2)
-LootTypeSeparator:SetPoint("TOPRIGHT", UISettingsFrame, "TOPRIGHT", -10, -232)
-LootTypeSeparator:SetTexture("Interface\\Buttons\\WHITE8x8") 
-LootTypeSeparator:SetVertexColor(1, 1, 1, 0.8) 
-
-local checkboxYOffset = -20 
-
-
-local AutoFFACheckButton = CreateFrame("CheckButton", "AutoFFACheckButton", UISettingsFrame, "UICheckButtonTemplate")
-AutoFFACheckButton:SetSize(20, 20)
-AutoFFACheckButton:SetPoint("TOPLEFT", LootTypeSeparator, "TOPLEFT", 10, checkboxYOffset)
-    AutoFFACheckButton:SetScript("OnEnter", function()
-        GameTooltip:SetOwner(AutoFFACheckButton, "ANCHOR_RIGHT")
-        GameTooltip:SetText("When enabled, puts FFA automatically on raid creation")
-        GameTooltip:Show()
-    end)
-    AutoFFACheckButton:SetScript("OnLeave", function()
-        GameTooltip:Hide()
-    end)
-local AutoFFAText = UISettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-AutoFFAText:SetPoint("BOTTOM", AutoFFACheckButton, "TOP", 0, 2)
-AutoFFAText:SetText("FFA")
-
-local AutoGroupLootCheckButton = CreateFrame("CheckButton", "AutoGroupLootCheckButton", UISettingsFrame, "UICheckButtonTemplate")
-AutoGroupLootCheckButton:SetSize(20, 20)
-AutoGroupLootCheckButton:SetPoint("LEFT", AutoFFACheckButton, "RIGHT", 40, 0)
-    AutoGroupLootCheckButton:SetScript("OnEnter", function()
-        GameTooltip:SetOwner(AutoFFACheckButton, "ANCHOR_RIGHT")
-        GameTooltip:SetText("When enabled, puts Group loot automatically on raid creation")
-        GameTooltip:Show()
-    end)
-    AutoGroupLootCheckButton:SetScript("OnLeave", function()
-        GameTooltip:Hide()
-    end)
-local AutoGroupLootText = UISettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-AutoGroupLootText:SetPoint("BOTTOM", AutoGroupLootCheckButton, "TOP", 0, 2)
-AutoGroupLootText:SetText("Group")
-
-local AutoMasterLootCheckButton = CreateFrame("CheckButton", "AutoMasterLootCheckButton", UISettingsFrame, "UICheckButtonTemplate")
-AutoMasterLootCheckButton:SetSize(20, 20)
-AutoMasterLootCheckButton:SetPoint("LEFT", AutoGroupLootCheckButton, "RIGHT", 40, 0)
-    AutoMasterLootCheckButton:SetScript("OnEnter", function()
-        GameTooltip:SetOwner(AutoFFACheckButton, "ANCHOR_RIGHT")
-        GameTooltip:SetText("When enabled, puts Master loot automatically on raid creation")
-        GameTooltip:Show()
-    end)
-    AutoMasterLootCheckButton:SetScript("OnLeave", function()
-        GameTooltip:Hide()
-    end)
-local AutoMasterLootText = UISettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-AutoMasterLootText:SetPoint("BOTTOM", AutoMasterLootCheckButton, "TOP", 0, 2)
-AutoMasterLootText:SetText("Master")
-
-local function SetLootOption(selectedLootType)
-    AutoFFACheckButton:SetChecked(selectedLootType == "freeforall")
-    AutoGroupLootCheckButton:SetChecked(selectedLootType == "group")
-    AutoMasterLootCheckButton:SetChecked(selectedLootType == "master")
-end
-
-AutoFFACheckButton:SetScript("OnClick", function(self)
-    SetLootOption("freeforall")
-    DEFAULT_CHAT_FRAME:AddMessage("Loot Method set to |cFF00FF00Free-for-All|r")
-end)
-
-AutoGroupLootCheckButton:SetScript("OnClick", function(self)
-    SetLootOption("group")
-    DEFAULT_CHAT_FRAME:AddMessage("Loot Method set to |cFF00FF00Group Loot|r")
-end)
-
-AutoMasterLootCheckButton:SetScript("OnClick", function(self)
-    SetLootOption("master")
-    DEFAULT_CHAT_FRAME:AddMessage("Loot Method set to |cFF00FF00Master Loot|r")
-end)
-
-if FillRaidBotsSavedSettings.isFFAEnabled then
-    SetLootOption("freeforall")
-elseif FillRaidBotsSavedSettings.isGroupLootEnabled then
-    SetLootOption("group")
-elseif FillRaidBotsSavedSettings.isMasterLootEnabled then
-    SetLootOption("master")
-else
-   
-    SetLootOption("group")
-end
-
-----------------------------------------------------------------------------------------------
- 
-    local debugMessagesCheckButton = CreateFrame("CheckButton", "DebugMessagesCheckButton", UISettingsFrame, "UICheckButtonTemplate")
-    debugMessagesCheckButton:SetWidth(20)
-    debugMessagesCheckButton:SetHeight(20)
-    debugMessagesCheckButton:SetPoint("TOPLEFT", AutoFFACheckButton, "TOPLEFT", -5, -20)
-
-    debugMessagesCheckButton.text = debugMessagesCheckButton:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    debugMessagesCheckButton.text:SetPoint("LEFT", debugMessagesCheckButton, "RIGHT", 5, 0)
-    debugMessagesCheckButton.text:SetText("Enable Debug")
-
-    debugMessagesCheckButton:SetChecked(FillRaidBotsSavedSettings.debugMessagesEnabled)
-
-	debugMessagesCheckButton:SetScript("OnClick", function(self)
-		local isChecked = self:GetChecked()
-		FillRaidBotsSavedSettings.debugMessagesEnabled = isChecked
-		local status = isChecked and "|cFF00FF00enabled|r" or "|cFFFF0000disabled|r"
-		DEFAULT_CHAT_FRAME:AddMessage("Debugging: " .. status)
-		if isChecked then
-			debuggerFrame:Show()
-		else
-			debuggerFrame:Hide()
-		end
-	end)
-
-
-    debugMessagesCheckButton:SetScript("OnEnter", function()
-        GameTooltip:SetOwner(debugMessagesCheckButton, "ANCHOR_RIGHT")
-        GameTooltip:SetText("When enabled, debug messages will be shown.")
-        GameTooltip:Show()
-    end)
-    debugMessagesCheckButton:SetScript("OnLeave", function()
-        GameTooltip:Hide()
-    end)
-
-
-	
-end
-
-
-function FillRaidBots_LoadSettings()
-    if settingsLoaded then return end
-    settingsLoaded = true
+--==================================================
+-- DEFAULT INITIALIZATION
+--==================================================
+
+local function InitializeDefaults()
 
     if not FillRaidBotsSavedSettings then
         FillRaidBotsSavedSettings = {}
     end
 
+    for _, section in ipairs(SettingsConfig.sections) do
+        for _, item in ipairs(section.items) do
+
+            if item.type == "checkbox" then
+
+                if FillRaidBotsSavedSettings[item.key] == nil then
+                    FillRaidBotsSavedSettings[item.key] = item.default
+                end
+
+            elseif item.type == "radio" then
+
+                for _, option in ipairs(item.options) do
+                    if FillRaidBotsSavedSettings[option.key] == nil then
+                        FillRaidBotsSavedSettings[option.key] = option.default
+                    end
+                end
+            elseif item.type == "slider" then
+
+                if FillRaidBotsSavedSettings[item.key] == nil then
+                    FillRaidBotsSavedSettings[item.key] = item.default or item.min or 0
+                end
+
+           
+            end
+        end
+    end
+
+    -- Nymz: default the Free-mode lock to unlocked (open/movable by default)
+    if FillRaidBotsSavedSettings.buttonMoveLocked == nil then
+        FillRaidBotsSavedSettings.buttonMoveLocked = false
+    end
+end
+
+--==================================================
+-- CHECKBUTTON CREATOR 
+--==================================================
+local function CreateCheckButton(parent, name, anchor, x, y, label, tooltip, value, onClick, framename)
+
     
-    if FillRaidBotsSavedSettings.isCheckAndRemoveEnabled == nil then
-        FillRaidBotsSavedSettings.isCheckAndRemoveEnabled = true 
+    local parentForItem = parent
+    if framename then
+        local globalFrame = getglobal(framename)
+        if globalFrame then
+            parentForItem = globalFrame
+        end
     end
 
-    if FillRaidBotsSavedSettings.isBotMessagesEnabled == nil then
-        FillRaidBotsSavedSettings.isBotMessagesEnabled = true
+    local cb = CreateFrame("CheckButton", name, parentForItem, "UICheckButtonTemplate")
+    cb:SetWidth(20)
+    cb:SetHeight(20)
+    cb:SetPoint("TOPLEFT", parentForItem, "TOPLEFT", x, y)
+
+    
+    cb.text = cb:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+	cb.text:SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
+    cb.text:SetPoint("LEFT", cb, "RIGHT", 5, 0)
+    cb.text:SetText(label)
+
+    
+    cb:SetChecked(value and true or false)
+
+    
+    cb:SetScript("OnClick", function()
+        local checked = cb:GetChecked() and true or false
+
+        if name and FillRaidBotsSavedSettings then
+            FillRaidBotsSavedSettings[name] = checked
+        end
+
+        if onClick then
+            onClick(checked)
+        end
+
+        local status = checked and "|cFF00FF00enabled|r" or "|cFFFF0000disabled|r"
+        DEFAULT_CHAT_FRAME:AddMessage((label or name) .. ": " .. status)
+    end)
+
+    
+    cb:SetScript("OnEnter", function()
+        if tooltip and tooltip ~= "" then
+            GameTooltip:SetOwner(cb, "ANCHOR_RIGHT")
+            GameTooltip:SetText(tooltip)
+            GameTooltip:Show()
+        end
+    end)
+
+    cb:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+
+    return cb
+end
+--==================================================
+-- UI CREATION
+--==================================================
+local function GenerateSafeFrameName(label)
+
+    if not label then
+        return nil
     end
 
-    if FillRaidBotsSavedSettings.debugMessagesEnabled == nil then
-        FillRaidBotsSavedSettings.debugMessagesEnabled = false
+    
+    local clean = string.gsub(label, "[^%w]", "")
+
+    
+    return "FillRaidBots_" .. clean .. "_Frame"
+end
+
+function CreateSettingsUI()
+
+    if not FillRaidBotsSavedSettings then
+        FillRaidBotsSavedSettings = {}
     end
 
-    if FillRaidBotsSavedSettings.moveButtonsEnabled == nil then
-        FillRaidBotsSavedSettings.moveButtonsEnabled = false
+    --------------------------------------------------
+    -- LAYOUT BASE SETTINGS
+    --------------------------------------------------
+    local columnWidth = 170
+    local columnSpacing = 8 -- Pumpan:(20260326) extra horizontal gap between settings columns/groups
+    local startX = 20
+    local startY = -20
+    local sectionSpacing = 8
+    local maxColumns = 2
+
+    --------------------------------------------------
+    -- ESTIMATE TOTAL HEIGHT (for auto-balance)
+    --------------------------------------------------
+    local totalHeight = 0
+
+    for _, section in ipairs(SettingsConfig.sections) do
+        local estimatedHeight = 40
+
+        for _, item in ipairs(section.items) do
+            if item.type == "checkbox" then
+                estimatedHeight = estimatedHeight + 25
+            elseif item.type == "radio" then
+                estimatedHeight = estimatedHeight + 50
+            elseif item.type == "button" then
+                estimatedHeight = estimatedHeight + 30
+			elseif item.type == "slider" then
+				estimatedHeight = estimatedHeight + 40				
+            end
+        end
+
+        totalHeight = totalHeight + estimatedHeight + sectionSpacing
     end
 
-    if FillRaidBotsSavedSettings.isRefillEnabled == nil then
-        FillRaidBotsSavedSettings.isRefillEnabled = true 
-    end
-    if FillRaidBotsSavedSettings.isSmallEnabled == nil then
-        FillRaidBotsSavedSettings.isSmallEnabled = false 
-    end
-    if FillRaidBotsSavedSettings.isFFAEnabled == nil then
-        FillRaidBotsSavedSettings.isFFAEnabled = false
-    end	
-    if FillRaidBotsSavedSettings.isGroupLootEnabled == nil then
-        FillRaidBotsSavedSettings.isGroupLootEnabled = true 
-    end	
-    if FillRaidBotsSavedSettings.isMasterLootEnabled == nil then
-        FillRaidBotsSavedSettings.isMasterLootEnabled = false
-    end
-    if FillRaidBotsSavedSettings.isClickToFillEnabled == nil then
-        FillRaidBotsSavedSettings.isClickToFillEnabled = true
-    end	
-    if FillRaidBotsSavedSettings.isAutoRepairEnabled == nil then
-        FillRaidBotsSavedSettings.isAutoRepairEnabled = false 
-    end
-    if FillRaidBotsSavedSettings.isAutoJoinGuildEnabled == nil then
-        FillRaidBotsSavedSettings.isAutoJoinGuildEnabled = true 
-    end
-    if FillRaidBotsSavedSettings.isAutoMuteSoundEnabled == nil then
-        FillRaidBotsSavedSettings.isAutoMuteSoundEnabled = true 
-    end	
-    if FillRaidBotsSavedSettings.isremoveDeadBotsButtonEnabled == nil then
-        FillRaidBotsSavedSettings.isremoveDeadBotsButtonEnabled = true 
-    end		
-    CreateToggleCheckButton()
-    InitializeButtonPosition()
-    ToggleButtonMovement(openFillRaidButton)
+    -- Pumpan:(20260326) Settings regrouped to General/Automation/Advanced while keeping Loot Type separate.
+    -- Small bias still helps the two-column layout balance better with the new section order.
+    local maxColumnHeight = math.ceil(totalHeight / maxColumns) + 15
+
+    --------------------------------------------------
+    -- COLUMN STATE
+    --------------------------------------------------
+    local currentColumnX = startX
+    local currentColumnHeight = 0
+    local columnsUsed = 1
+    local columnHeights = {}
+    columnHeights[1] = 0
+
+    --------------------------------------------------
+    -- BUILD SECTIONS
+    --------------------------------------------------
+    for _, section in ipairs(SettingsConfig.sections) do
+
+        local sectionFrame = CreateFrame("Frame", nil, UISettingsFrame, "BackdropTemplate")
+        sectionFrame:SetWidth(columnWidth)
+
+        
+        sectionFrame:SetBackdrop({
+            bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+            edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+            tile = true,
+            tileSize = 16,
+            edgeSize = 12,
+            insets = { left = 3, right = 3, top = 3, bottom = 3 }
+        })
+        sectionFrame:SetBackdropColor(0,0,0,0.6)
+
+        local sectionY = -12
+
+        local header = sectionFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        header:SetPoint("TOPLEFT", sectionFrame, "TOPLEFT", 8, sectionY)
+        header:SetText(section.name)
+
+        sectionY = sectionY - 15
+
+        local separator = sectionFrame:CreateTexture(nil, "ARTWORK")
+        separator:SetHeight(1)
+        separator:SetTexture(1,1,1,0.2)
+        separator:SetPoint("TOPLEFT", sectionFrame, "TOPLEFT", 8, sectionY)
+        separator:SetPoint("TOPRIGHT", sectionFrame, "TOPRIGHT", -8, sectionY)
+
+        sectionY = sectionY - 12
+
+        for _, item in ipairs(section.items) do
+
+            --------------------------------------------------
+            -- CHECKBOX
+            --------------------------------------------------
+			if item.type == "checkbox" then
+
+				local key = item.key
+				local currentItem = item
+
+				local parentFrame = sectionFrame
+				local posY = sectionY
+				local posX = 8
+				local usePopupLayout = false
+
+				
+				if currentItem.framename then
+					local customParent = getglobal(currentItem.framename)
+					if customParent then
+						parentFrame = customParent
+						usePopupLayout = true
+
+						posX = 10
+						posY = customParent.nextY or -30
+
+						
+						customParent.nextY = posY - 25
+						customParent.contentHeight = customParent.contentHeight + 25
+						customParent:SetHeight(customParent.contentHeight + 10)
+					end
+				end
+
+				-- Nymz: (20260318) MoveButtons use get/set if defined, else raw SavedSettings value.
+				-- Prevents truthy strings (e.g. "vertical") from incorrectly checking the box.
+				local initValue = currentItem.get and currentItem.get() or FillRaidBotsSavedSettings[key]
+				local cb = CreateCheckButton(
+					parentFrame,
+					key,
+					parentFrame,
+					posX,
+					posY,
+					currentItem.label,
+					currentItem.tooltip,
+					initValue,
+					function(value)
+
+						if currentItem.set then
+							currentItem.set(value)
+						else
+							FillRaidBotsSavedSettings[key] = value
+							if currentItem.onApply then
+								currentItem.onApply(value)
+							end
+						end
+
+					end,
+					nil
+				)
+
+				currentItem.frame = cb
+
+				
+				if not usePopupLayout then
+					sectionY = sectionY - 25
+				end
+			
+
+            --------------------------------------------------
+            -- RADIO
+            --------------------------------------------------
+			elseif item.type == "radio" then
+
+				local currentItem = item
+				local parentFrame = sectionFrame
+				local usePopupLayout = false
+				local posX = 8
+				local posY = sectionY
+
+				if currentItem.framename then
+					local customParent = getglobal(currentItem.framename)
+					if customParent then
+						parentFrame = customParent
+						usePopupLayout = true
+						posX = 10
+						posY = customParent.nextY or -30
+
+						if not customParent.contentHeight then
+							customParent.contentHeight = 0
+						end
+					end
+				end
+
+				local layout = currentItem.layout or "horizontal"
+				local textPosition = currentItem.textposition or "side"
+
+				local extraLabelHeight = 0
+				if textPosition == "over" then
+					extraLabelHeight = 14
+				end
+
+				local spacingX = 50
+				local spacingY = 28 + extraLabelHeight
+				local optionCount = table.getn(currentItem.options)
+
+				--------------------------------------------------
+				-- PREVIEW GROUP
+				--------------------------------------------------
+
+				local groupPreview = {}
+
+				for i = 1, optionCount do
+					if currentItem.options[i].buttons then
+
+						groupPreview.fill = parentFrame:CreateTexture(nil, "ARTWORK")
+						groupPreview.kick = parentFrame:CreateTexture(nil, "ARTWORK")
+						groupPreview.refill = parentFrame:CreateTexture(nil, "ARTWORK")
+
+						break
+					end
+				end
+
+				--------------------------------------------------
+				-- CREATE RADIO BUTTONS
+				--------------------------------------------------
+
+				local i
+				for i = 1, optionCount do
+
+					local option = currentItem.options[i]
+
+					local xOffset = posX
+					local yOffset = posY
+
+					if layout == "horizontal" then
+						xOffset = posX + ((i - 1) * spacingX)
+					else
+						yOffset = posY - ((i - 1) * spacingY)
+					end
+
+					local cb = CreateFrame("CheckButton", nil, parentFrame, "UICheckButtonTemplate")
+					cb:SetPoint("TOPLEFT", parentFrame, "TOPLEFT", xOffset, yOffset - extraLabelHeight)
+					cb:SetWidth(20)
+					cb:SetHeight(20)
+
+					cb:SetChecked(FillRaidBotsSavedSettings[option.key] and true or false)
+
+					local label = parentFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+					label:SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
+					label:SetText(option.label)
+
+					if textPosition == "over" then
+						label:SetPoint("BOTTOM", cb, "TOP", 0, 2)
+					else
+						label:SetPoint("LEFT", cb, "RIGHT", 5, 0)
+					end
+
+					local tooltipText = option.tooltip or currentItem.tooltip
+
+					if tooltipText then
+						cb:SetScript("OnEnter", function(self)
+							GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+							GameTooltip:SetText(tooltipText, 1,1,1,1)
+							GameTooltip:Show()
+						end)
+
+						cb:SetScript("OnLeave", function()
+							GameTooltip:Hide()
+						end)
+					end
+
+					cb:SetScript("OnClick", function()
+
+						for j = 1, optionCount do
+							local opt = currentItem.options[j]
+							FillRaidBotsSavedSettings[opt.key] = false
+							if opt.frame then
+								opt.frame:SetChecked(false)
+							end
+						end
+
+						FillRaidBotsSavedSettings[option.key] = true
+						FillRaidBotsSavedSettings.buttonStyle = option.key
+						cb:SetChecked(true)
+
+						ApplyButtonStyle(option.key)
+						DEFAULT_CHAT_FRAME:AddMessage(currentItem.group .. ": |cFF00FF00" .. option.label .. " selected|r")
+						--------------------------------------------------
+						-- UPDATE PREVIEW
+						--------------------------------------------------
+
+						if groupPreview.fill and option.buttons then
+
+							local fill = option.buttons["openFillRaidButton"]
+							local kick = option.buttons["kickAllButton"]
+							local refill = option.buttons["reFillButton"]
+
+							if fill then
+
+								local isHorizontal = fill.width >= fill.height
+
+								groupPreview.fill:ClearAllPoints()
+								groupPreview.kick:ClearAllPoints()
+								groupPreview.refill:ClearAllPoints()
+
+								if isHorizontal then
+
+									groupPreview.fill:SetPoint("TOPLEFT", parentFrame, "TOPLEFT", posX + 120, posY)
+									groupPreview.kick:SetPoint("TOPLEFT", groupPreview.fill, "BOTTOMLEFT", 0, -2)
+									groupPreview.refill:SetPoint("TOPLEFT", groupPreview.kick, "BOTTOMLEFT", 0, -2)
+
+								else
+
+									groupPreview.fill:SetPoint("TOPLEFT", parentFrame, "TOPLEFT", posX + 120, posY)
+									groupPreview.kick:SetPoint("LEFT", groupPreview.fill, "RIGHT", 4, 0)
+									groupPreview.refill:SetPoint("LEFT", groupPreview.kick, "RIGHT", 4, 0)
+
+								end
+
+								groupPreview.fill:SetTexture(fill.normal)
+								groupPreview.fill:SetWidth(fill.width)
+								groupPreview.fill:SetHeight(fill.height)
+
+							end
+
+							if kick then
+								groupPreview.kick:SetTexture(kick.normal)
+								groupPreview.kick:SetWidth(kick.width)
+								groupPreview.kick:SetHeight(kick.height)
+							end
+
+							if refill then
+								groupPreview.refill:SetTexture(refill.normal)
+								groupPreview.refill:SetWidth(refill.width)
+								groupPreview.refill:SetHeight(refill.height)
+							end
+
+						end
+
+						if currentItem.onApply then
+							currentItem.onApply(option.key, currentItem)
+						end
+
+						-- Nymz: if this is the Free option, reset lock to unlocked on user click.
+						-- This is intentionally in OnClick (not onApply) so it only fires on user
+						-- interaction, not during load-time ApplySavedSettings.
+						if option.showLockButton then
+							FillRaidBotsSavedSettings.buttonMoveLocked = false
+							if FRB_ShowLockButton then FRB_ShowLockButton() end
+							if ToggleButtonMoveLock then ToggleButtonMoveLock(false) end
+						elseif currentItem.group == "buttonMoveMode" then
+							-- Switched away from Free - just hide and reset the lock icon.
+							-- Do NOT call ToggleButtonMoveLock here; ToggleButtonMovement()
+							-- (called from onApply) already set up the correct drag scripts
+							-- for Fixed/Relative. Calling ToggleButtonMoveLock(false) would
+							-- wipe those scripts because isFree is now false.
+							if FRB_ResetLockButton then FRB_ResetLockButton() end
+						end
+
+					end)
+
+					option.frame = cb
+
+					--------------------------------------------------
+					-- LOCK BUTTON (Free mode only)
+					-- Nymz: a red/green lock icon to the right of the
+					-- "Moving Buttons (Free)" radio.  Red = locked in
+					-- place, Green = free to drag.
+					-- Hidden until Free mode is active.
+					-- State: FillRaidBotsSavedSettings.buttonMoveLocked
+					--------------------------------------------------
+					if option.showLockButton then
+
+						local SIZE = 18
+
+						local lockBtn = CreateFrame("Button", "FRB_FreeModeLocBtn", parentFrame)
+						lockBtn:SetWidth(SIZE)
+						lockBtn:SetHeight(SIZE)
+						-- Sit it directly to the right of the label.
+						-- The label is anchored LEFT of cb, so anchor to cb with a
+						-- fixed offset that clears the label text (~120 px wide).
+						lockBtn:SetPoint("LEFT", cb, "RIGHT", 118, 0)
+
+						-- Texture layer for the lock icon
+						local lockTex = lockBtn:CreateTexture(nil, "ARTWORK")
+						lockTex:SetWidth(SIZE)
+						lockTex:SetHeight(SIZE)
+						lockTex:SetPoint("CENTER", lockBtn, "CENTER", 3, 0)
+						lockTex:SetTexture("Interface\\LFGFrame\\UI-LFG-ICON-LOCK")
+
+						-- Highlight layer so it feels clickable
+						local hlTex = lockBtn:CreateTexture(nil, "HIGHLIGHT")
+						hlTex:SetAllPoints(lockBtn)
+						hlTex:SetTexture("Interface\\Buttons\\UI-Common-MouseHilight")
+						hlTex:SetBlendMode("ADD")
+
+						-- Helper: refresh icon colour based on saved state
+						local function RefreshLockIcon()
+							local locked = FillRaidBotsSavedSettings.buttonMoveLocked
+							if locked then
+								-- Red tint  = locked
+								lockTex:SetVertexColor(1, 0.15, 0.15, 1)
+							else
+								-- Green tint = free to move
+								lockTex:SetVertexColor(0.15, 1, 0.15, 1)
+							end
+						end
+
+						-- Reset: go back to unlocked/green and hide the button
+						local function ResetLockButton()
+							FillRaidBotsSavedSettings.buttonMoveLocked = false
+							RefreshLockIcon()
+							lockBtn:Hide()
+						end
+
+						-- Only show the lock when Free mode is active
+						local isFreeActive = FillRaidBotsSavedSettings.moveButtonsEnabled
+						if isFreeActive then
+							RefreshLockIcon()
+							lockBtn:Show()
+						else
+							lockBtn:Hide()
+						end
+
+						-- Tooltip
+						lockBtn:SetScript("OnEnter", function(self)
+							GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+							if FillRaidBotsSavedSettings.buttonMoveLocked then
+								GameTooltip:SetText("|cFFFF4444Buttons Locked|r\nClick to unlock and allow free dragging.")
+							else
+								GameTooltip:SetText("|cFF44FF44Buttons Unlocked|r\nClick to lock buttons in their current position.")
+							end
+							GameTooltip:Show()
+						end)
+						lockBtn:SetScript("OnLeave", function()
+							GameTooltip:Hide()
+						end)
+
+						-- Toggle on click
+						lockBtn:SetScript("OnClick", function()
+							FillRaidBotsSavedSettings.buttonMoveLocked =
+								not FillRaidBotsSavedSettings.buttonMoveLocked
+							RefreshLockIcon()
+							-- Delegate movement-enable/disable to main addon
+							if ToggleButtonMoveLock then
+								ToggleButtonMoveLock(FillRaidBotsSavedSettings.buttonMoveLocked)
+							end
+							-- Nymz:(20260321) refresh tooltip immediately while still hovering
+							if GameTooltip:IsShown() then
+								if FillRaidBotsSavedSettings.buttonMoveLocked then
+									GameTooltip:SetText("|cFFFF4444Buttons Locked|r\nClick to unlock and allow free dragging.")
+								else
+									GameTooltip:SetText("|cFF44FF44Buttons Unlocked|r\nClick to lock buttons in their current position.")
+								end
+							end
+						end)
+
+						-- Store references so external code can drive the button
+						FRB_FreeModeLocBtn_Refresh = RefreshLockIcon
+						-- FRB_ResetLockButton: call from ResetButtonPositions or when
+						-- switching away from Free mode to hide + go green
+						FRB_ResetLockButton = ResetLockButton
+						-- FRB_ShowLockButton: show the icon and refresh its colour.
+						-- Does NOT reset buttonMoveLocked - the saved value is preserved.
+						-- Call FRB_ResetLockButton first if you want to force-unlock.
+						FRB_ShowLockButton = function()
+							RefreshLockIcon()
+							lockBtn:Show()
+						end
+
+					end
+				end
+
+				--------------------------------------------------
+				-- DEFAULT PREVIEW
+				--------------------------------------------------
+
+				for i = 1, optionCount do
+					local opt = currentItem.options[i]
+
+					if FillRaidBotsSavedSettings[opt.key] and opt.buttons and groupPreview.fill then
+
+						local fill = opt.buttons["openFillRaidButton"]
+						local kick = opt.buttons["kickAllButton"]
+						local refill = opt.buttons["reFillButton"]
+
+						local isHorizontal = fill.width > fill.height
+
+						if isHorizontal then
+							groupPreview.fill:SetPoint("TOPLEFT", parentFrame, "TOPLEFT", posX + 120, posY)
+							groupPreview.kick:SetPoint("TOPLEFT", groupPreview.fill, "BOTTOMLEFT", 0, -2)
+							groupPreview.refill:SetPoint("TOPLEFT", groupPreview.kick, "BOTTOMLEFT", 0, -2)
+						else
+							groupPreview.fill:SetPoint("TOPLEFT", parentFrame, "TOPLEFT", posX + 120, posY)
+							groupPreview.kick:SetPoint("LEFT", groupPreview.fill, "RIGHT", 4, 0)
+							groupPreview.refill:SetPoint("LEFT", groupPreview.kick, "RIGHT", 4, 0)
+						end
+
+						groupPreview.fill:SetTexture(fill.normal)
+						groupPreview.fill:SetWidth(fill.width)
+						groupPreview.fill:SetHeight(fill.height)
+
+						groupPreview.kick:SetTexture(kick.normal)
+						groupPreview.kick:SetWidth(kick.width)
+						groupPreview.kick:SetHeight(kick.height)
+
+						groupPreview.refill:SetTexture(refill.normal)
+						groupPreview.refill:SetWidth(refill.width)
+						groupPreview.refill:SetHeight(refill.height)
+
+					end
+				end
+
+				local totalHeight = 0
+
+				if layout == "horizontal" then
+					totalHeight = spacingY
+				else
+					totalHeight = optionCount * spacingY
+				end
+
+				if usePopupLayout then
+					parentFrame.nextY = posY - totalHeight - 10
+					parentFrame.contentHeight = parentFrame.contentHeight + totalHeight
+					parentFrame:SetHeight(parentFrame.contentHeight + 20)
+				else
+					sectionY = sectionY - totalHeight -- Pumpan: removed -10 allows the nex checkbox to get closer to the radio buttons (20260317)
+				end
+
+            --------------------------------------------------
+            -- BUTTON
+            --------------------------------------------------
+			elseif item.type == "button" then
+
+				local currentItem = item
+
+				local btn = CreateFrame("Button", nil, sectionFrame, "GameMenuButtonTemplate")
+				btn:SetWidth(currentItem.width or 120)
+				btn:SetHeight(20)
+				btn:SetPoint("TOPLEFT", sectionFrame, "TOPLEFT", 8, sectionY)
+				btn:SetText(currentItem.label)
+				local textWidth = btn:GetFontString():GetStringWidth()
+				btn:SetWidth(textWidth + 20)
+				--------------------------------------------------
+				-- AUTO CREATE FRAME (WITH GLOBAL NAME)
+				--------------------------------------------------
+				if currentItem.createFrame then
+
+					
+					local frameName = currentItem.frameName
+					if not frameName then
+						local clean = string.gsub(currentItem.label or "", "[^%w]", "")
+						frameName = "FillRaidBots_" .. clean .. "_Frame"
+					end
+
+					
+					
+					local popup = CreateFrame("Frame", frameName, btn, "BackdropTemplate")
+
+					popup:SetWidth(currentItem.frameWidth or 200)
+					popup:SetHeight(40) 
+
+					popup:SetBackdrop({
+						bgFile = "Interface/Buttons/WHITE8X8",
+						edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+						tile = true,
+						tileSize = 16,
+						edgeSize = 12,
+						insets = { left = 3, right = 3, top = 3, bottom = 3 }
+					})
+					popup:SetBackdropColor(0,0,0,0.9)
+
+					popup:SetPoint("TOPLEFT", btn, "BOTTOMLEFT", 0, -2)
+					popup:Hide()
+
+					
+					popup.nextY = -30
+					popup.contentHeight = 0 
+
+					
+					if currentItem.frameTitle then
+						local title = popup:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+						title:SetPoint("TOP", popup, "TOP", 0, -8)
+						title:SetText(currentItem.frameTitle)
+
+						popup.contentHeight = popup.contentHeight + 20
+					end
+
+					
+					currentItem.generatedFrameName = frameName
+					currentItem.popupFrame = popup
+
+					btn:SetScript("OnClick", function()
+						if popup:IsShown() then
+							popup:Hide()
+						else
+							popup:Show()
+						end
+					end)
+
+				else
+					
+					btn:SetScript("OnClick", function()
+						if currentItem.onClick then
+							currentItem.onClick()
+						end
+					end)
+				end
+
+				btn:SetScript("OnEnter", function()
+					if currentItem.tooltip then
+						GameTooltip:SetOwner(btn, "ANCHOR_RIGHT")
+						GameTooltip:SetText(currentItem.tooltip)
+						GameTooltip:Show()
+					end
+				end)
+
+				btn:SetScript("OnLeave", function()
+					GameTooltip:Hide()
+				end)
+
+				sectionY = sectionY - 30
+			--------------------------------------------------
+			-- SLIDER
+			--------------------------------------------------
+			elseif item.type == "slider" then
+
+				local currentItem = item
+				local sliderName = "FillRaidSlider_" .. currentItem.key
+
+				local slider = CreateFrame("Slider", sliderName, sectionFrame, "OptionsSliderTemplate")
+
+				slider:SetWidth(currentItem.width or 140)
+				slider:SetHeight(16)
+				slider:SetPoint("TOPLEFT", sectionFrame, "TOPLEFT", 8, sectionY -10) -- Pumpan: -10 Moves the sliders down a litle to prevent the text to overlap (20260317) 
+
+				local min = currentItem.min or 0
+				local max = currentItem.max or 100
+				local step = currentItem.step or 1
+				local precision = currentItem.precision or 2
+
+				slider:SetMinMaxValues(min, max)
+				slider:SetValueStep(step)
+
+				local saved = FillRaidBotsSavedSettings[currentItem.key]
+				if saved == nil then
+					saved = currentItem.default or min
+				end
+
+				slider:SetValue(saved)
+				currentItem.frame = slider
+				local label = getglobal(sliderName.."Text")
+				local low = getglobal(sliderName.."Low")
+				local high = getglobal(sliderName.."High")
+
+				label:SetText(currentItem.label)
+				low:SetText(min)
+				high:SetText(max)
+
+				
+				local valueText = sectionFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+				-- Nymz: (20260318) MoveButtons moved value display to bottom center of slider.
+				valueText:SetPoint("TOP", slider, "BOTTOM", 0, 2)
+
+				local formatString = "%."..precision.."f"
+
+				local function SnapToStep(value)
+					return min + math.floor((value - min) / step + 0.5) * step
+				end
+
+				local function UpdateSliderValue(value)
+					-- Nymz: (20260318) MoveButtons ButtonSize is stored as %, display directly.
+					if currentItem.key == "ButtonSize" then
+						valueText:SetText(math.floor(value) .. "%")
+						return
+					end
+					valueText:SetText(string.format(formatString, value))
+				end
+
+				UpdateSliderValue(saved)
+				-- Pumpan: added possibility for tooltip for sliders
+				if currentItem.tooltip then
+				    slider:SetScript("OnEnter", function(self)
+				        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+				        GameTooltip:SetText(currentItem.tooltip)
+				        GameTooltip:Show()
+				    end)
+				
+				    slider:SetScript("OnLeave", function()
+				        GameTooltip:Hide()
+				    end)
+				end
+				
+				slider:SetScript("OnValueChanged", function(self)
+
+					local value = SnapToStep(self:GetValue())
+
+					UpdateSliderValue(value)
+
+					FillRaidBotsSavedSettings[currentItem.key] = value
+
+					if currentItem.onPreview then
+						currentItem.onPreview(value)
+					end
+
+				end)
+
+				slider:SetScript("OnMouseUp", function(self)
+
+					local value = SnapToStep(self:GetValue())
+
+					self:SetValue(value)
+
+					FillRaidBotsSavedSettings[currentItem.key] = value
+
+					if currentItem.onApply then
+						currentItem.onApply(value)
+					end
+
+				end)
+
+				sectionY = sectionY - 40				
+			end
+        end
+
+        local sectionHeight = -sectionY + 6
+        sectionFrame:SetHeight(sectionHeight)
 
 
-	if FillRaidBotsSavedSettings.debugMessagesEnabled then  
-		debuggerFrame:Show()
-	else
-		debuggerFrame:Hide()
+        if currentColumnHeight + sectionHeight > maxColumnHeight then
+            columnsUsed = columnsUsed + 1
+            currentColumnX = startX + (columnsUsed - 1) * (columnWidth + columnSpacing)
+            currentColumnHeight = 0
+            columnHeights[columnsUsed] = 0
+        end
+
+        sectionFrame:SetPoint(
+            "TOPLEFT",
+            UISettingsFrame,
+            "TOPLEFT",
+            currentColumnX,
+            startY - currentColumnHeight
+        )
+
+        currentColumnHeight = currentColumnHeight + sectionHeight + sectionSpacing
+        columnHeights[columnsUsed] = currentColumnHeight
+    end
+
+    local tallest = 0
+    for i = 1, columnsUsed do
+        if columnHeights[i] and columnHeights[i] > tallest then
+            tallest = columnHeights[i]
+        end
+    end
+
+    UISettingsFrame:SetWidth(startX + columnsUsed * columnWidth + ((columnsUsed - 1) * columnSpacing) + 20)
+    UISettingsFrame:SetHeight(tallest + 30)
+end
+--==================================================
+-- APPLY SETTINGS
+--==================================================
+
+function ApplySavedSettings()
+    for _, section in ipairs(SettingsConfig.sections) do
+        for _, item in ipairs(section.items) do
+
+            if item.type == "checkbox" then
+                local value = FillRaidBotsSavedSettings[item.key]
+
+                -- Update the checkbox UI
+                if item.frame then
+                    item.frame:SetChecked(value)
+                end
+
+                -- Apply saved value
+                if item.onApply then
+                    item.onApply(value)
+                end
+
+            elseif item.type == "radio" then
+                local selectedKey = nil
+
+                -- Update radio UI and determine selected
+                for _, option in ipairs(item.options) do
+                    local checked = FillRaidBotsSavedSettings[option.key]
+                    if option.frame then
+                        option.frame:SetChecked(checked)
+                    end
+                    if checked then
+                        selectedKey = option.key
+                    end
+                end
+
+                -- Apply selected radio
+                if item.onApply and selectedKey then
+                    item.onApply(selectedKey)
+                end
+			elseif item.type == "slider" then
+
+				local value = FillRaidBotsSavedSettings[item.key]
+
+				if item.frame then
+					item.frame:SetValue(value)
+				end
+
+				if item.onApply then
+					item.onApply(value)
+				end				
+            end
+        end
+    end
+
+    
+    if debuggerFrame then
+        if FillRaidBotsSavedSettings.debugMessagesEnabled then
+            debuggerFrame:Show()
+        else
+            debuggerFrame:Hide()
+        end
+    end
+
+    
+    SetLootOption(
+        FillRaidBotsSavedSettings.isFFAEnabled,
+        FillRaidBotsSavedSettings.isGroupLootEnabled,
+        FillRaidBotsSavedSettings.isMasterLootEnabled
+    )
+end
+--==================================================
+-- LOAD SETTINGS
+--==================================================
+function FillRaidBots_LoadSettings()
+
+    if not FillRaidBotsSavedSettings then
+        FillRaidBotsSavedSettings = {}
+    end
+
+	if not FillRaidBotsSavedSettings.selectedButtonTheme then
+		for _, section in ipairs(SettingsConfig.sections) do
+			for _, item in ipairs(section.items) do
+				if item.type == "radio" and item.group == "buttonTheme" then
+					for _, option in ipairs(item.options) do
+						if option.default then
+							FillRaidBotsSavedSettings.selectedButtonTheme = option.key
+							break
+						end
+					end
+				end
+			end
+		end
 	end
 
-    
-    ToggleCheckAndRemoveCheckButton:SetChecked(FillRaidBotsSavedSettings.isCheckAndRemoveEnabled)
+	if FillRaidBotsSavedSettings.isAutoRepairEnabled == nil then
+		for _, section in ipairs(SettingsConfig.sections) do
+			for _, item in ipairs(section.items) do
+				if item.type == "checkbox" and item.key == "isAutoRepairEnabled" then
+					FillRaidBotsSavedSettings.isAutoRepairEnabled = item.default
+					break
+				end
+			end
+		end
+	end
+
+    InitializeDefaults()
+
+    if not settingsLoaded then
+        settingsLoaded = true
+        CreateSettingsUI()
+    end
+	
+	ApplyButtonStyle(FillRaidBotsSavedSettings.selectedButtonTheme)
+    ApplySavedSettings()
+    -- Nymz: (20260318) MoveButtons fix ButtonLayout checkbox showing checked on load.
+    -- ApplySavedSettings reads ButtonLayout as a truthy string, same fix as in reset.
+    local layoutCb = GetSettingsCheckbox("ButtonLayout")
+    if layoutCb then
+        layoutCb:SetChecked(FillRaidBotsSavedSettings.ButtonLayout == "horizontal")
+    end
+
+    if UpdateVIPSettingsState then
+        UpdateVIPSettingsState()
+    end
 end
+
+--==================================================
+-- EVENT HANDLER
+--==================================================
+function GetSettingsCheckbox(key)
+
+    for _, section in ipairs(SettingsConfig.sections) do
+        for _, item in ipairs(section.items) do
+            if item.type == "checkbox" and item.key == key then
+                return item.frame
+            end
+        end
+    end
+
+end
+
+function GetSetting(key)
+    if FillRaidBotsSavedSettings then
+        return FillRaidBotsSavedSettings[key]
+    end
+    return nil
+end
+
+
+----------------------------------------------------------------------------------------------------------------------
+-- CHANGELOG
+----------------------------------------------------------------------------------------------------------------------
+-- Pumpan:(20260328) added Tutorial links checkbox
+--
+-- Pumpan:(20260326) VIP presets
+-- Added Use VIP Presets checkbox.
+-- Uses preset.vipValues when available.
+-- Falls back to normal preset values if missing.
+-- Reapplies current preset live when toggled.
+--
+-- Pumpan:(20260326) Settings layout improvements
+-- Increased horizontal spacing between groups.
+-- Improved alignment of sections (General, Automation, etc).
+--
+-- Pumpan:(20260326) General UI improvements
+-- More consistent enable/disable behavior.
+-- Better visual clarity for restricted settings.
+--
+--
+-- Pumpan:(20260325) Factory Reset UI
+-- Added Factory Reset button to settings.
+-- Uses confirmation popup before wiping data.
+--
+-- Nymz:(20260321) LockButton
+--   - Red/green lock icon added next to "Moving Buttons (Free)" radio option.
+--   - Hidden unless Free mode is active. Default state is unlocked/green (open to drag).
+--   - Red = buttons frozen in place, Green = free to drag.
+--   - Tooltip updates immediately on click without needing to re-hover.
+--   - Switching to Fixed or Relative hides the lock and clears buttonMoveLocked.
+--   - Reset Buttons also hides and resets the lock.
+--   - Horizontal layout can still be applied while lock is active.
+--   - Lock show/hide/reset lives in OnClick only, not onApply, so load-time
+--     ApplySavedSettings never wipes the saved lock state.
+-- Nymz: (20260318) ButtonPct
+--   - ButtonSize slider range changed to 10-500, default 100 (100% = theme default).
+--   - ButtonSize display now shows % directly instead of raw pixels.
+--   - Theme switch preserves user % automatically.
+--   - Slider value text moved to bottom center with 2px gap.
+--
+-- Nymz: (20260318) ButtonLayout
+--   - Fixed ButtonLayout checkbox showing as checked on load and after /rl.
+--     Checkbox renderer now uses get/set functions when defined.
+--   - Same fix applied in FillRaidBots_LoadSettings after ApplySavedSettings.
+--
+-- Pumpan: (20260317) Horizontal buttons: -80 in offset is not needed anymore since all the buttons has new anchor points 
+-- Pumpan: (20260317) -10 Moves the sliders down a litle to prevent the text to overlap  
+-- Pumpan: (20260317) added tooltip to sliders and horizontal button
+-- Pumpan: (20260317) Update slider UI to selected theme sizes
+-- Pumpan: (20260317) Rebase size to new theme default
+-- Pumpan: (20260317) removed -10 allows the next checkbox to get closer to the radio buttons 	
+-- Pumpan: Update slider UI to selected theme (20260317)
+-- Pumpan: added the possibility to add tooltip to the sliders (20260317)
+--
+-- Nymz: ButtonSettingsReorder (20260317)
+--   - Moved "Enable Refill Button" to below "Enable Others button" so both enable/disable
+--     button checkboxes are grouped together.
+--   - Moved "Button Themes" and "Reset Buttons" to after the sliders.
+--
+-- Nymz: ButtonSpacing (20260317)
+--   - Changed ButtonSpacing slider range from 0-40 to -50-50 to allow negative spacing.
+--     Useful for themes where buttons benefit from tighter or overlapping stacking, like AIHorizontal.
+--
+-- Pumpan:
+--   - Added checkbox for horizontal button layout.
+--   - Added ButtonSpacing slider (min 0, max 40).
+--   - Added ButtonSize slider (min 20, max 120).
+--
+-- Nymz: MoveButtons
+--   - Replaced old single "Enable moving buttons" checkbox with Fixed/Free/Relative radio group.
+--   - onApply updates SavedVariables mode flags and delegates to ToggleButtonMovement.
+--
+----------------------------------------------------------------------------------------------------------------------
