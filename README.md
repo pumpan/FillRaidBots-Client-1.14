@@ -255,7 +255,9 @@ If enabled a shortcut to the "Others presets" will be avalible on all instance f
 
 ---
 
-### 🪙 Loot System
+### 🪙 Loot System (reworked)
+
+Now also works if not using the addon to fill the raid.
 
 - Automatically sets loot method:
   - Free For All  
