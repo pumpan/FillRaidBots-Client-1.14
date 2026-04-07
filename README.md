@@ -287,7 +287,7 @@ The addon now automatically adapts to the current zone:
 - 🟠 **ZG / AQ20 → 19 bots**
 - 🔴 **Raids → 39 bots**
 - 🔴 **World Bosses → 39 bots**
-- 
+ 
 👉 The **“Spots Left” counter is always correct** based on:
 - Current zone  
 - Real players in group  
