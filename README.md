@@ -157,7 +157,7 @@ Each preset includes:
 ---
 
 ### 🧠 Smart Preset Detection (NEW) (ctrl + alt)
-
+   <img src="/ScreenShots/fastfill.png">
 Old system only supported bosses for an example "Boss Name", "Another Boss" 
 
 Presets now also support:
@@ -206,13 +206,13 @@ Supports:
 Fully rebuilt settings system:
 
 <p align="center">
-  <img src="/ScreenShots/frbsettings.png">
+  <img src="/ScreenShots/settings.png">
 </p>
 
 ---
 
 ### 🎛️ UI Customization
-
+  <img src="/ScreenShots/themes.png">
 - Button themes (Mini / Classic / AI / Nymz / etc.)  
 - Button size slider  
 - Button spacing slider  
