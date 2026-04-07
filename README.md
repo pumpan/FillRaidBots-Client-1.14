@@ -22,14 +22,21 @@
 - [Changelog](#changelog)
 - [License](#license)
 - [Contact](#contact)
+---
 
-## 📝 Overview
+## 🧠 Overview
 
-This addon is an extension for the **PartyBot Command Panel (PCP)** for **World of Warcraft (WoW) 1.14**. 
-It helps users efficiently fill a raid with bots and manage them through an intuitive command panel. The addon 
-includes features for setting up bot configurations, managing presets for various dungeons and raids, and automating 
-bot removal. **Note:** This addon works best on the **1.12.1 client**.
+**FillRaidBots** is an advanced addon for the **PartyBot Command Panel (PCP)** for **World of Warcraft (WoW 1.14 / 1.12.1 environments)**.
 
+It helps you:
+- Quickly fill raids with bots  
+- Use optimized presets for bosses and instances  
+- Automatically manage bots (remove, refill, organize)  
+- Customize everything directly in-game  
+
+> ⚠️ Works best on private servers using PartyBot systems (1.12.1 core behavior)
+
+---
 ## 🛠️ Installation
 
 1. **Download the Addon:**  
@@ -51,211 +58,334 @@ bot removal. **Note:** This addon works best on the **1.12.1 client**.
 
 5. **IF YOU ARE HAVING TROUBLES**
    - 📘 [How to install addons](https://github.com/pumpan/howtoinstalladdons/wiki)
-## ✨ Features
 
-- **Automated Interface Creation:**
-  - Automatically creates and opens the "Fill Raid" and "Kick All" buttons when accessing the PartyBot Command Panel.
+## ⚡ Features (Core Behavior)
 
-<p align="center">
-   <img src="/ScreenShots/newbuttons.png" alt="Configuration Frame">
-  <img src="/ScreenShots/fillraidbots.png" alt="Configuration Frame" width="400">
-</p>
-
-- **Fill Raid Button:**
-  - Opens a configuration frame to specify the number of bots to add.
-  - Allows users to choose from predefined presets for different raid instances.
+- Automatically creates:
+  - **Fill Raid button**
+  - **Kick All button**
+  - **Refill button**
+- Appears when opening PartyBot Command Panel  
 
 <p align="center">
-  <img src="/ScreenShots/fillraidbots3.png" alt="Preset Selection" width="400">
+   <img src="/ScreenShots/newbuttons.png">
+   <img src="/ScreenShots/fillraidbots.png" width="400">
 </p>
 
-- **Refill Raid Button:**
-  - Replaces bots that die and are removed during gameplay.
+---
 
-- **Kick All Button:**
-  - Removes all bots from the raid while keeping one bot to avoid disbanding the raid.
+### 🟢 Fill Raid Button
 
-- **Editable Presets (In-Game UI)**  
-  Raid composition presets can now be customized directly within the game.
-
-- **Editable Suppressed Bot Messages (In-Game UI)**  
-  Suppressed bot messages can now be managed and edited through the in-game interface.
-
-- **Auto Remove First Bot:**
-  - Removes the first bot (party bot with bad gear). 
-
-- **Remove Dead Bots Button:**
-  - Removes the dead bots. The button appears when a bot dies.
-
-- **Auto-Remove Bots Option**  
-  New toggle to automatically remove the first and/or dead bots in your group.  
-  Now available for WoW 1.14 clients.
-
-- **Fast Fill:**
-  - Quickly fills the raid with bots using optimized settings.
-    Add bots using `Ctrl + Alt + Mouse Click` on bosses to instantly load the preset raid setup.
-
-- **Loot Type Option:**
-  - Automatically changes the loot type on raid creation to the selected one.
-
-- **Export/Import Settings Between Accounts**  
-  You can now export and import your presets and suppressed messages across different accounts.
-
-- **Auto Repair (VIP Only)**  
-  Automatically repairs your gear when visiting a vendor — available exclusively to VIP users.
-
-- **Auto Join Guild Option**  
-  Optionally join the *SoloCraft* guild automatically on login.
-
-- **Simplified Reload Command**  
-  Use `/reload`, `/rl`, or `/reloadui` to reload the UI — no need for `/console reloadui`.
+- Opens the main configuration UI  
+- Lets you:
+  - Manually set number of bots per role  
+  - OR choose from predefined presets  
 
 <p align="center">
-  <img src="/ScreenShots/frbsettings.png" alt="Settings Menu">
+  <img src="/ScreenShots/fillraidbots3.png" width="400">
 </p>
 
+---
+
+### 🧠 Smart Fill System (NEW)
+
+- `Ctrl + Alt + Click boss` → loads correct preset  
+- `Ctrl + Alt (no target)` → loads preset based on instance  
+- If multiple presets match → **popup appears at cursor**
+
+---
+
+### 🔁 Refill Raid Button
+
+- Replaces missing or dead bots automatically  
+- Uses improved **multi-pass system**:
+  - Continues until raid is fully restored  
+  - Handles delayed bot removal correctly  
+
+---
+
+### 🔴 Kick All Button
+
+- Removes all bots from the raid  
+- Keeps one bot to prevent disband  
+- ✅ **Does NOT remove real players**
+
+---
+
+### ⚙️ Auto Remove Features
+
+- **Auto Remove First Bot**
+  - Removes the first bot (usually bad gear)
+
+- **Remove Dead Bots Button**
+  - Appears automatically when bots die  
+
+- **Auto Remove Option (Settings)**
+  - Can automatically:
+    - Remove first bot  
+    - Remove dead bots  
+
+---
+
+### ⚡ Fast Fill
+
+- Quickly fills the raid using optimized presets  
+- Minimal setup required  
+
+---
+
+## 🧩 Preset System
+
+---
+
+### 📦 Built-in Presets
+
+Supports:
+- Naxxramas  
+- Blackwing Lair  
+- Molten Core  
+- AQ40 / AQ20  
+- Zul'Gurub  
+- Onyxia  
+
+Each preset includes:
+- Tanks / Healers / DPS distribution  
+- Tooltip auto-generation  
+- Boss mapping support  
+
+---
+
+### 🧠 Smart Preset Detection (NEW)
+
+Presets now support:
+
+```lua
+bosses = { "Boss Name", "Another Boss" }
+```
+
+AND:
+
+👉 **Instance-based detection**
+
+- If no target → uses instance name  
+- If multiple matches → shows selection popup  
+
+---
+
+### ✏️ Editable Presets (In-Game UI)
+
+You can now:
+- Edit presets directly in-game  
+- Save changes  
+- Save As (create new preset)  
+- Delete presets  
+- Restore defaults  
+
+---
+
+### 💾 Export / Import (NEW)
+
+- Export all presets + settings  
+- Share between accounts  
+- Import directly in-game  
+
+---
+
+### 🛠️ Manual Editing (Advanced Users)
+
+You can still edit files manually:
+
+- `Presets.lua`
+- `SuppressBotMsg.lua`
+
+---
+
+## 🎥 Tutorial Videos System (NEW)
+
+- Integrated tutorial system via `Youtubelinks.lua`  
+- Displays boss-specific guides inside the addon  
+
+Supports:
+- Alliance / Horde versions  
+- VIP / non-VIP  
+- Multiple creators per boss  
+- Smart fallback system  
+
+---
+
+## ⚙️ Settings (UISettings.lua)
+
+Fully rebuilt settings system:
+
+<p align="center">
+  <img src="/ScreenShots/frbsettings.png">
+</p>
+
+---
+
+### 🎛️ UI Customization
+
+- Button themes (Mini / Classic / AI / Nymz / etc.)  
+- Button size slider  
+- Button spacing slider  
+- Layout modes:
+  - Fixed  
+  - Free  
+  - Relative  
+
+---
+
+### 🔧 Feature Toggles
+
+- Click-To-Fill  
+- Zone Presets  
+- Tutorial Links  
+- Debug Messages  
+- Auto Remove Bots  
+- Loot Type  
+
+---
+
+### 🪙 Loot System
+
+- Automatically sets loot method:
+  - Free For All  
+  - Group Loot  
+  - Master Loot  
+
+(Only if player is leader)
+
+---
+
+### 💎 VIP Features
+
+- Auto Repair  
+- VIP preset support  
+
+---
+
+## 📊 Dynamic Raid Size / Spots Left (NEW)
+
+The addon now automatically adapts to the current zone:
+
+- 🟢 **5-man dungeons → 9 bots**
+- 🟡 **UBRS → 14 bots**
+- 🟠 **ZG / AQ20 → 19 bots**
+- 🔴 **Raids → 39 bots**
+
+👉 The **“Spots Left” counter is always correct** based on:
+- Current zone  
+- Real players in group  
+- Bots already present  
+
+---
+
+## 💬 Suppress Bot Messages
+
+- Fully editable in-game  
+- Controls bot spam messages  
+
+---
+
+## 🧪 Debug System
+
+- Advanced debug window  
+- Log filtering  
+- Improved scrolling behavior  
+
+---
 
 ## 🚀 Usage
 
-1. **Open the PartyBot Command Panel:**  
-   - The addon automatically creates and opens the "Fill Raid" and "Kick All" buttons.
+---
 
-2. **Configure the Raid:**  
-   - Click the "Fill Raid" button to open a configuration frame.  
-   - Set the number of bots for each role or use the "Presets" button to choose from predefined raid setups.
+### 1. Open PCP
+Buttons appear automatically  
 
-3. **Apply Presets:**  
-   - Use the preset options to quickly fill the raid with optimized configurations for various dungeons and raids.
+---
 
-4. **Kick All Bots:**  
-   - Click the "Kick All" button to remove all bots, while keeping one to prevent raid disbanding.
+### 2. Fill Raid
+- Click **Fill Raid**
+- Choose preset OR manual setup  
 
-5. **Refill Raid:**  
-   - Use the "Refill Raid" button to replace bots that have died and been removed.
+---
 
-6. **Adjust Settings:**  
-   - Access the settings menu to enable automatic dead bot removal and suppress bot messages as needed.
+### 3. Smart Fill
 
-7. **Slash Commands:**  
-   - You can create macros for the following commands:
-     ```
-     /frb - for avalible commands
-     /frb ua or /frb uninvite all – Uninvite all raid members but saves Friends and guild members.
-     /frb (preset) – Fills the raid with the preset.
-     /frb open – Open the Fill Raid frame.
-     /frb rdb - Removes dead bots.
-     /frb refill – Refill the raid.
-     /frb fixgroups – Fix raid groups.
-     ```
+```
+Ctrl + Alt + Click → Boss preset
+Ctrl + Alt (no target) → Instance preset
+```
 
-## 🗺️ Presets
+---
 
-The addon includes optimized presets for several dungeons and raids:
+### 4. Manage Bots
 
-- **Onyxia:** 2 warrior tanks, 2 paladin healers, rest mages.
-- **Molten Core (MC):** Detailed presets for each boss, including tanks, healers, and DPS roles.
-- **AQ20:** Various presets for different bosses.
-- **Zul'Gurub (ZG):** Specific presets for each boss, including tanks, healers, and DPS roles.
-- **Blackwing Lair (BWL) and AQ40:** Configurations for raid encounters.
+- Refill → replaces dead bots  
+- Kick All → removes bots safely (keeps real players)  
 
-## 📝 Editing Presets or Suppress Bot Messages
+---
 
-- To edit how often a message should be displayed, modify the `SuppressBotMsg.lua` file.
-- To add or change a preset, modify the `Presets.lua` file.
+### 5. Settings
+
+- Open settings panel  
+- Customize everything  
+
+---
+### 🧩 Party vs Raid Behavior
+
+- The addon dynamically decides whether to stay in a party or convert to a raid
+
+Rules:
+- If total members (players + bots) ≤ 5 → stays a party  
+- If total members > 5 → converts to a raid  
+
+👉 No unnecessary raid conversion  
+👉 Works even when filling an existing group of real players
+## 💻 Slash Commands
+
+```
+/frb                → show commands
+/frb open           → open UI
+/frb refill         → refill bots
+/frb rdb            → remove dead bots
+/frb fixgroups      → fix raid groups
+/frb <preset>       → fill using preset
+/frb ua             → uninvite all (keeps friends/guild)
+```
+
+---
+
+## 🆕 Major Changes (From Old Version)
+
+- Instance-based preset detection  
+- Ctrl+Alt with no target support  
+- Preset selection popup at cursor  
+- Tutorial video system  
+- Full UISettings overhaul  
+- Improved refill logic (multi-pass)  
+- Editable presets UI  
+- Export / Import system  
+- Debug improvements  
+- Button layout & movement rewrite  
+- Dynamic raid size / spots left system  
+
+---
 
 ## 📅 Changelog
 
+See full changelog here:  
+👉 `/CHANGELOG.md`
 
-  ### **FillRaidBots 4.0.2**
-    🔄 Version updated to 4.0.2 — This update introduces bug fixes  
-    🐞 Fixed a critical localization bug where SendChatMessage could fail on non-English clients.
-    Chat messages now always use locale-independent chat type tokens, ensuring full compatibility with all languages.
-
-   ### **FillRaidBots 4.0.1**
-    🔄 Version updated to 4.0.1 — This update introduces bug fixes.
-    🆕 Fixed handling of new bot names containing an asterisk (“*”).
-    🔍 Improved detection of raid members as bots based on the asterisk in their names.
-
-
-  ### **FillRaidBots 4.0.0**
-    
-    🔄 Version updated to 4.0.0 — This update introduces major UI enhancements, in-game editing features, export/import options, and improved bot handling. It's a substantial quality-of-life release deserving of a full version bump.
-    
-    🆕 Added: Editable raid composition presets directly within the in-game UI.
-    🆕 Added: In-game UI for managing suppressed bot messages.
-    🆕 Added: Export/import support for presets and suppressed messages across accounts.
-    🆕 Added: Auto Repair feature (VIP only). Repairs your gear automatically at vendors.
-    🆕 Added: Option to auto-join the SoloCraft guild.
-    🆕 Added: Simplified reload command — use /reload, /rl, or /reloadui.
-    🆕 Added: Party bot logic—groups with fewer than 5 bots stay as a party, ideal for leveling.
-    🆕 Added: More accurate "Raid Filling Complete" message, reflecting the true raid state.
-    🆕 Added: Escape key now properly closes the FillRaid UI.
-    🆕 Added: Faction-based class filtering (e.g., hides Paladins for Horde, Shamans for Alliance).
-    🆕 Added: Class headers in the UI for better visual organization (e.g., Warriors, Mages).
-    🆕 Added: Auto-remove bot option — can remove first and/or dead bots automatically. (Now available for WoW 1.14 clients as well.)
-
-  ### **FillRaidBots 3.0.0**
-
-
-    🔄 Version updated: to 3.0.0, Since FillRaidBots now introduces multiple usability upgrades, UI options, new commands, 
-    and extended compatibility, it’s a big leap forward, making 3.0.0 the right version number.
-    🆕 Edited: you can now use /frb (bossname or part of bossname eg: ony or /frb mage group) (suggestion by Gemma)
-    🆕 Added: A new feature to add preset bots with ctrl+alt+mouse click on bosses
-    🆕 Added: Settings to chose if you want big or small (round) Buttons (fill raid, Kick all etc)
-    🆕 Added: You can now Select automatic loot type on raid creation in the settings menu.
-    🆕 Added: Works with both PCP and PCPRemake
-    🆕 Added: You can now reload ui with /rl /reloadui /reload    
-🛠 Improvements:
-  
-    🆕 Edited: you can now use /frb (bossname or part of bossname eg: ony) instead of /frb fill
-
-### **Previous Versions**
-## Changelog
-**FillRaidBots 2.1.0**
-
-    🔄 Version updated: to 2.1.0, introducing multiple improvements to performance, user experience, and new features.
-    🆕 Added: A Credits frame showcasing everyone who has helped in the development of the addon.
-    🆕 Added: Slash commands to improve raid management:
-        /frb ua or /frb uninvite all – Uninvite all raid members.
-        /frb fill – Automatically fill the raid.
-        /frb open – Open the Fill Raid frame.
-        /frb rdb - Removes dead bots
-        /frb refill – Refill the raid.
-        /frb fixgroups – Fix raid groups.
-    🆕 Fixed: Players on the raid leader's friend list are no longer removed when adding bots, removing dead bots, or using the "Kick All" button (previously, this only applied to guild members).
-
-🛠 Improvements:
-
-    Improved: Debug messages are now separated from commands, enhancing command responsiveness and speed.
-    Improved: Enhanced the process of matching player names, fixing an issue where a mismatch would cause a nil value error.
-
-🐞 Bug Fixes:
-
-    Fixed: An error where player names weren’t matched, which previously led to nil values.
-
-**FillraidBots 2.0.2**
-
-    🔄 Version updated: to 2.0.2. marking this as a major update due to significant new features and functionality improvements.
-    🆕 Now detects the player's faction and load the appropriate presets for Horde or Alliance.
-    🛠 Improved: Healing sorting.
-    🆕 Improved: Made the process of adding bots a little faster.
-    🆕 Added: Bots are now added in a new way: healers are added first, sorted into different groups, and then all other classes are added.
-    🛠 Fixed: Adjusted and fixed some presets for better functionality.
-    🆕 Added: A debugger window for when debugging is enabled. All debug messages are now sent here instead of cluttering the chat window.
-    🆕 Added: A version checker that notifies you if a newer version of the addon is available.
-    🆕 Added: Logic to distribute healers evenly across the raid when bots are added.
-    🆕 Added: Class and role detection in the raid, enabling new functionality such as managing bots based on their roles.
-    🆕 Added: A new "Refill Raid" button, which replaces bots that die and are removed during gameplay.
-    🛠 Fixed: The /uninviteraid slash handler to prevent conflicts with WoW's native commands like /kick and /uninvite, which were unintentionally uninviting the entire raid. (Reported by Gemma)
-    🛠 Fixed: Since the latest server update, which prevents adding bots while in combat, an issue occurred where adding certain bots, such as warriors or hunters, caused you to enter combat for a few seconds. This created a problem where the addon attempted to add bots when they couldn't be added. I have now fixed it so that the addon detects when you're in combat and pauses until you're out of combat.
-    🛠 Added: The ability to move the 'fill raid' and 'kick all' buttons if this is enabled in the settings."
-    🛠 Added: A version number to the FillRaidFrame so that it's easier to see which version you're using.
+---
 
 ## 📜 License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+MIT License  
 
-## 📧 Contact
+---
 
-For any questions or issues, please open an issue on GitHub or contact the repository owner.
+## 💬 Contact
+
+GitHub: https://github.com/pumpan
 
