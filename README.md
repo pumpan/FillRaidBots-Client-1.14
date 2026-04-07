@@ -200,7 +200,7 @@ You can now:
 
 ## 🎥 Tutorial Videos System (NEW)
   <img src="/ScreenShots/tutorials.png">
-- Integrated tutorial system via `Youtubelinks.lua`  
+- Integrated tutorial system via `Tutorials.lua`  
 - Displays boss-specific guides inside the addon  
 
 Supports:
