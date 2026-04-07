@@ -86,12 +86,11 @@ It helps you:
 </p>
 
 ---
+### 🔴 Kick All Button
 
-### 🧠 Smart Fill System (NEW)
-
-- `Ctrl + Alt + Click boss` → loads correct preset  
-- `Ctrl + Alt (no target)` → loads preset based on instance  
-- If multiple presets match → **popup appears at cursor**
+- Removes all bots from the raid  
+- Keeps one bot to prevent disband  
+- ✅ **Does NOT remove real players**
 
 ---
 
@@ -104,15 +103,17 @@ It helps you:
 
 ---
 
-### 🔴 Kick All Button
+### 🧠 Smart Fill System (NEW)
 
-- Removes all bots from the raid  
-- Keeps one bot to prevent disband  
-- ✅ **Does NOT remove real players**
+- `Ctrl + Alt + Click boss` → loads correct preset  
+- `Ctrl + Alt (no target)` → loads preset based on instance  
+- If multiple presets match → **popup appears at cursor**
 
 ---
 
-### ⚙️ Auto Remove Features
+
+
+### ⚙️ Auto Remove Features (Now Quicker and more secure)
 
 - **Auto Remove First Bot**
   - Removes the first bot (usually bad gear)
@@ -155,15 +156,11 @@ Each preset includes:
 
 ---
 
-### 🧠 Smart Preset Detection (NEW)
+### 🧠 Smart Preset Detection (NEW) (ctrl + alt)
 
-Presets now support:
+Old system only supported bosses for an example "Boss Name", "Another Boss" 
 
-```lua
-bosses = { "Boss Name", "Another Boss" }
-```
-
-AND:
+Presets now also support:
 
 👉 **Instance-based detection**
 
@@ -183,20 +180,11 @@ You can now:
 
 ---
 
-### 💾 Export / Import (NEW)
+### 💾 Export / Import
 
 - Export all presets + settings  
 - Share between accounts  
 - Import directly in-game  
-
----
-
-### 🛠️ Manual Editing (Advanced Users)
-
-You can still edit files manually:
-
-- `Presets.lua`
-- `SuppressBotMsg.lua`
 
 ---
 
@@ -267,12 +255,13 @@ Fully rebuilt settings system:
 ## 📊 Dynamic Raid Size / Spots Left (NEW)
 
 The addon now automatically adapts to the current zone:
-
+- 🟢 **No dungeon → 4 bots**
 - 🟢 **5-man dungeons → 9 bots**
 - 🟡 **UBRS → 14 bots**
 - 🟠 **ZG / AQ20 → 19 bots**
 - 🔴 **Raids → 39 bots**
-
+- 🔴 **World Bosses → 39 bots**
+- 
 👉 The **“Spots Left” counter is always correct** based on:
 - Current zone  
 - Real players in group  
@@ -297,18 +286,12 @@ The addon now automatically adapts to the current zone:
 
 ## 🚀 Usage
 
----
-
 ### 1. Open PCP
 Buttons appear automatically  
-
----
 
 ### 2. Fill Raid
 - Click **Fill Raid**
 - Choose preset OR manual setup  
-
----
 
 ### 3. Smart Fill
 
@@ -317,14 +300,10 @@ Ctrl + Alt + Click → Boss preset
 Ctrl + Alt (no target) → Instance preset
 ```
 
----
-
 ### 4. Manage Bots
 
 - Refill → replaces dead bots  
 - Kick All → removes bots safely (keeps real players)  
-
----
 
 ### 5. Settings
 
@@ -363,7 +342,7 @@ Rules:
 - Preset selection popup at cursor  
 - Tutorial video system  
 - Full UISettings overhaul  
-- Improved refill logic (multi-pass)  
+- Improved refill logic (multi-pass, and better tank detection)  
 - Editable presets UI  
 - Export / Import system  
 - Debug improvements  
