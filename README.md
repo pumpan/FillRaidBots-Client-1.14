@@ -205,9 +205,9 @@ Supports:
 
 Fully rebuilt settings system:
 
-<p align="center">
-  <img src="/ScreenShots/settings.png">
-</p>
+
+  <img src="/ScreenShots/frbsettings.png">
+
 
 ---
 
@@ -265,6 +265,9 @@ If enabled a shortcut to the "Others presets" will be avalible on all instance f
 ## 📊 Dynamic Raid Size / Spots Left (NEW)
 
 The addon now automatically adapts to the current zone:
+
+ <img src="/ScreenShots/spotsleft.png">
+ 
 - 🟢 **No dungeon → 4 bots**
 - 🟢 **5-man dungeons → 9 bots**
 - 🟡 **UBRS → 14 bots**
