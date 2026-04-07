@@ -72,6 +72,17 @@ It helps you:
    <img src="/ScreenShots/fillraidbots.png" width="400">
 </p>
 
+### 🧩 Party vs Raid Behavior
+
+- The addon dynamically decides whether to stay in a party or convert to a raid
+
+Rules:
+- If total members (players + bots) ≤ 5 → stays a party  
+- If total members > 5 → converts to a raid  
+
+👉 No unnecessary raid conversion  
+👉 Works even when filling an existing group of real players
+
 ---
 
 ### 🟢 Fill Raid Button
@@ -324,16 +335,7 @@ Ctrl + Alt (no target) → Instance preset
 - Customize everything  
 
 ---
-### 🧩 Party vs Raid Behavior
 
-- The addon dynamically decides whether to stay in a party or convert to a raid
-
-Rules:
-- If total members (players + bots) ≤ 5 → stays a party  
-- If total members > 5 → converts to a raid  
-
-👉 No unnecessary raid conversion  
-👉 Works even when filling an existing group of real players
 ## 💻 Slash Commands
 
 ```
