@@ -47,7 +47,7 @@ It helps you:
 3. **Extract Files:**  
    - Extract the contents to your WoW addons directory, typically located at:
      ```
-     World of Warcraft/Interface/AddOns
+     \SoloCraft 1.14 - Full\_classic_era_\Interface\AddOns\
      ```  
    - Rename the folder `FillRaidBots-1.14--main` to `FillRaidBots`.
 
