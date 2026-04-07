@@ -34,7 +34,6 @@ It helps you:
 - Automatically manage bots (remove, refill, organize)  
 - Customize everything directly in-game  
 
-> ⚠️ Works best on private servers using PartyBot systems (1.12.1 core behavior)
 
 ---
 ## 🛠️ Installation
