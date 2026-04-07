@@ -245,6 +245,7 @@ Fully rebuilt settings system:
 ---
 
 ### 🪙 Zone Presets
+  <img src="/ScreenShots/zoneandbosses.png">
 Opens the correct set of presets when you open the Fillraidbots frame.
 
 ---
