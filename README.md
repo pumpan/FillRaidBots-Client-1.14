@@ -234,6 +234,16 @@ Fully rebuilt settings system:
 
 ---
 
+### 🪙 Zone Presets
+Opens the correct set of presets when you open the Fillraidbots frame.
+
+---
+
+### 🪙 Others button
+If enabled a shortcut to the "Others presets" will be avalible on all instance frames.
+
+---
+
 ### 🪙 Loot System
 
 - Automatically sets loot method:
@@ -324,13 +334,14 @@ Rules:
 ## 💻 Slash Commands
 
 ```
-/frb                → show commands
-/frb open           → open UI
-/frb refill         → refill bots
-/frb rdb            → remove dead bots
-/frb fixgroups      → fix raid groups
-/frb <preset>       → fill using preset
-/frb ua             → uninvite all (keeps friends/guild)
+/frb                      → show help
+/frb ua                   → uninvite all non-guild/friend raid members
+/frb open                 → toggle/open FillRaid window
+/frb refill               → replace recently removed bots
+/frb fixgroups            → reorganize raid groups
+/frb list                 → list all presets
+/frb resetbuttons         → reset button positions to default
+/frb <preset name>        → fill using a preset match Ex: onyxia
 ```
 
 ---
@@ -339,7 +350,7 @@ Rules:
 
 - Instance-based preset detection  
 - Ctrl+Alt with no target support  
-- Preset selection popup at cursor  
+- Preset selection popup at cursor  (ctrl+alt)
 - Tutorial video system  
 - Full UISettings overhaul  
 - Improved refill logic (multi-pass, and better tank detection)  
