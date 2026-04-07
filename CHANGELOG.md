@@ -7,7 +7,7 @@
 ## 👥 Credits
 
 - **Pumpan** — Core systems, UI, presets, tutorial system, raid logic  
-- **Nymz** — Debugger, button system, movement system, architecture
+- **Nymz** — Debugger, button system, movement system, architecture and more
 
 ## 🚀 Added
 
