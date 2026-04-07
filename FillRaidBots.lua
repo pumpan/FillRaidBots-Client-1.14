@@ -7715,16 +7715,26 @@ local function ShowVersionPopupOnce()
 
    
     if FillRaidBotsSavedSettings.lastPopupVersionSeen ~= versionNumber then
-        local versionDetails = {
-			{"Auto Remove", "Auto removes first bot and auto remove dead bots"},
-            {"Auto Repair", "Auto repairs when you ress (VIP only option)"},
-            {"Auto Join Guild", "Automatically checks if you are in a guild on login. If not, it joins SoloCraft (to prevent removal after inactivity)."},
-            {"Reload UI", "Now you can reload UI using /rl or /reload ui without /console."},
-            {"Party Bots", "(Add less than 5 bots won't convert to raid) - useful for leveling."},
-            {"Edit Presets In-Game", "You can now edit presets directly in-game."},
-            {"Release Notes", "Only shown on first login for new releases."},
-            {"Other Fixes", "More accurate \"raid filling complete\" message."} 
-        }
+	local versionDetails = {
+		{"Fast Fill", "Hold Ctrl + Alt and click a boss to automatically fill using presets."},
+		{"Refill System", "Automatically replaces dead bots until your group is full again."},
+		{"Auto Remove", "Automatically removes the starter bot and dead bots."},
+		{"Auto Repair", "Automatically repairs after resurrection (VIP only)."},
+		{"Auto Join Guild", "Joins SoloCraft automatically if you are not in a guild."},
+
+		{"Party Bots", "Adding fewer than 5 bots keeps the group as a party."},
+		{"Edit Presets In-Game", "Edit and save presets directly in-game."},
+		{"VIP Presets", "Use enhanced preset values when VIP mode is enabled."},
+
+		{"Tutorial Links", "Optional in-game boss guides with multiple sources and fallback support."},
+		{"Export / Import", "Share presets between accounts using export/import."},
+
+		{"Customizable Buttons", "Move, resize, and change button layouts in settings."},
+
+		{"Reload UI", "Reload UI using /rl or /reload without /console."},
+		{"Release Notes", "Shown once after updating to a new version."},
+		{"Other Fixes", "Improved \"raid filling complete\" accuracy."}
+	}
 
        
         local message = "|cffffff00FillRaidBots v" .. versionNumber .. "|r\n\n"
@@ -7773,26 +7783,34 @@ local function ShowDailyTipInChat()
 
 	local tips = {
 		"Adding fewer than 5 bots keeps you in party mode.",
+		"Large fills (5+ bots) automatically convert your group to a raid.",
 		"Auto Repair works automatically if you're VIP.",
 		"You can edit presets directly in-game.",
 		"Use SuppressEditor to silence bot spam.",
-		"You can quickly refill raids using presets.",
+		"Dead bots are automatically replaced when using Refill.",
+		"Refill continues until all dead bots are replaced.",
 
-		"Use " .. CMD .. "/frb help" .. END .. " to see available commands if you want to create macros.",
+		"Use " .. CMD .. "/frb help" .. END .. " to see available commands.",
 		"Use " .. FEAT .. "Fast Fill" .. END .. " (Ctrl + Alt + click a boss) to automatically fill the raid.",
-		"You could add an instance name under 'boss name' to make a default preset when using Fast Fill.",
-		"You can include boss, mob, or instance names in presets to make them work with Fast Fill.",
+		"Fast Fill will not trigger if the target is already dead.",
+		"You can use boss, mob, or instance names in presets for Fast Fill.",
+		"You can use instance names to create default presets.",
+
 		"Kick All will not remove real players.",
-		
 		"Use " .. CMD .. "/frb fixgroups" .. END .. " to rebalance raid groups.",
 		"Use " .. CMD .. "/frb refill" .. END .. " to instantly replace dead bots.",
-		"Hold Ctrl + Alt and click a boss to instantly load its preset.",
+
 		"You can export and import presets between accounts.",
-		"FillRaidBots automatically spreads healers across raid groups.",
-		"Boss presets can be loaded using part of the boss name.",
-		"Use presets to quickly prepare raids for different dungeons.",
-		"If you have an idea, don't hesitate to contact the creator.",
-		"Did you know that if you contribute or donate to the creator of this addon, your name will be added to the credits tab?"
+		"VIP presets can override normal presets if enabled.",
+		"You must be leader or assistant for some features to work.",
+		"Zone-based presets automatically adjust raid size limits.",
+
+		"You can move and resize buttons in the settings.",
+		"You can enable tutorial links in settings to see boss guides.",
+		"Negative button spacing allows compact layouts.",
+		"Enable the debugger in settings for advanced troubleshooting.",
+
+		"Support the addon to get your name in the credits."
 	}
 
         if not FillRaidBotsSavedSettings.usedDailyTips then
