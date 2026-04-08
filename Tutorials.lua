@@ -13,6 +13,7 @@ FillRaidTutorialLinks['Patchwerk'] = {
     description = "Patchwerk:\nA grotesque abomination stitched together by the Scourge.\nBuilt for brute force and used as one of Naxxramas' deadliest constructs.",
     alliance = {
         nonvip = {
+            { label = "FillRaidBots", url = "https://youtu.be/Ud9cQUD3tts" },		
             { label = "SoloCraft", url = "https://youtu.be/Ti1DuwZ5sG0?si=6_OFMVC5PqTS5LSj" },
         },
         vip = {
@@ -34,6 +35,7 @@ FillRaidTutorialLinks['Grobbulus'] = {
     description = "Grobbulus:\nA massive flesh giant created through plague experiments.\nOne of Naxxramas' most infamous failed abomination designs.",
     alliance = {
         nonvip = {
+            { label = "FillRaidBots", url = "https://youtu.be/TpInIbVDZdo" },		
             -- { label = "Guide 1", url = "https://www.youtube.com/" },
         },
         vip = {
@@ -57,6 +59,7 @@ FillRaidTutorialLinks['Gluth'] = {
     description = "Gluth:\nAn undead plague hound kept by the Scourge.\nA savage construct that prowls the Construct Quarter.",
     alliance = {
         nonvip = {
+            { label = "FillRaidBots", url = "https://youtu.be/DESdF2I5948" },		
             -- { label = "Guide 1", url = "https://www.youtube.com/" },
         },
         vip = {
@@ -79,6 +82,7 @@ FillRaidTutorialLinks['Thaddius'] = {
     description = "Thaddius:\nA giant flesh construct animated by stolen souls and lightning.\nCreated through horrific experiments within Naxxramas.",
     alliance = {
         nonvip = {
+            { label = "FillRaidBots", url = "https://youtu.be/cZJxQYcX-YE" },		
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=Ue56U8Y6G94&list=PLuZTM2O8dt2n8F77da1pX1wHCw3MV7xg0&index=10" },
         },
         vip = {
@@ -100,6 +104,7 @@ FillRaidTutorialLinks['Instructor Razuvious'] = {
     description = "Instructor Razuvious:\nThe ruthless trainer of Naxxramas' death knights.\nHe enforces absolute discipline and martial perfection.",
     alliance = {
         nonvip = {
+            { label = "FillRaidBots", url = "https://youtu.be/IzA6FOZgsXg" },		
             -- { label = "Guide 1", url = "https://www.youtube.com/" },
         },
         vip = {
@@ -120,6 +125,7 @@ FillRaidTutorialLinks['Gothik the Harvester'] = {
     description = "Gothik the Harvester:\nA powerful necromancer in service to Kel'Thuzad.\nHe commands undead forces from the Military Quarter.",
     alliance = {
         nonvip = {
+            { label = "FillRaidBots", url = "https://youtu.be/n2My1gxpfds" },		
             -- { label = "Guide 1", url = "https://www.youtube.com/" },
         },
         vip = {
@@ -140,11 +146,13 @@ FillRaidTutorialLinks['The Four Horsemen'] = {
     description = "The Four Horsemen:\nKel'Thuzad's elite death knights.\nEach is a legendary champion empowered by the Scourge.",
     alliance = {
         nonvip = {
+		
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=tILr-ry9w-Y&list=PLuZTM2O8dt2n8F77da1pX1wHCw3MV7xg0&index=3" },
             { label = "MmControl", url = "https://www.youtube.com/watch?v=EqC8mWfI6xs&list=PLGrv4LF-03KyLwBpw5UUnvYU8P2juAy2C&index=10" },				
         },
         vip = {
             { label = "Capo", url = "https://www.youtube.com/watch?v=iTkMVH_7yvM&t=9m20s" },
+            { label = "FillRaidBots", url = "https://youtu.be/zNJGLP0XNaE" },			
         },
     },
     horde = {
@@ -161,6 +169,7 @@ FillRaidTutorialLinks["Anub'Rekhan"] = {
     description = "Anub'Rekhan:\nA nerubian crypt lord raised into Scourge service.\nHe stands guard over the Arachnid Quarter.",
     alliance = {
         nonvip = {
+            { label = "FillRaidBots", url = "https://youtu.be/UBj_mkXx1W4" },		
             { label = "SoloCraft", url = "https://youtu.be/VUhdcTqK-HM?si=aIemfjxiUDQppo5l" },
         },
         vip = {
@@ -181,6 +190,7 @@ FillRaidTutorialLinks['Grand Widow Faerlina'] = {
     description = "Grand Widow Faerlina:\nOne of Naxxramas' most powerful cult leaders.\nShe oversees devoted followers of the Cult of the Damned.",
     alliance = {
         nonvip = {
+            { label = "FillRaidBots", url = "https://youtu.be/yN9zgiBqgdY" },		
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=oE68bxdwoyw&list=PLuZTM2O8dt2n8F77da1pX1wHCw3MV7xg0&index=12" },
         },
         vip = {
@@ -201,6 +211,7 @@ FillRaidTutorialLinks['Maexxna'] = {
     description = "Maexxna:\nA monstrous spider nurtured by the Scourge.\nIts webs and brood infest the Arachnid Quarter.",
     alliance = {
         nonvip = {
+            { label = "FillRaidBots", url = "https://youtu.be/4kwFbHxbtdA" },		
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=iMsi5OHU1SY&list=PLuZTM2O8dt2n8F77da1pX1wHCw3MV7xg0&index=13" },
             { label = "MmControl", url = "https://www.youtube.com/watch?v=UxCGazVQTGI&list=PLGrv4LF-03KyLwBpw5UUnvYU8P2juAy2C&index=3" },			
         },
@@ -222,6 +233,7 @@ FillRaidTutorialLinks['Noth the Plaguebringer'] = {
     description = "Noth the Plaguebringer:\nA former human mage turned necromancer and lich.\nHe spreads plague in the name of the Scourge.",
     alliance = {
         nonvip = {
+            { label = "FillRaidBots", url = "https://youtu.be/qi2KUja8qzI" },		
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=KgSPw76k-vo&list=PLuZTM2O8dt2n8F77da1pX1wHCw3MV7xg0&index=5" },
             { label = "MmControl", url = "https://www.youtube.com/watch?v=pZNJoBAl2fU&list=PLGrv4LF-03KyLwBpw5UUnvYU8P2juAy2C&index=4" }			
         },
@@ -244,6 +256,7 @@ FillRaidTutorialLinks['Heigan the Unclean'] = {
     description = "Heigan the Unclean:\nA master of plague and decay within Naxxramas.\nHis laboratories are devoted to disease and corruption.",
     alliance = {
         nonvip = {
+            { label = "FillRaidBots", url = "https://youtu.be/JZ52K7TPDr4" },		
             -- { label = "Guide 1", url = "https://www.youtube.com/" },
         },
         vip = {
@@ -264,6 +277,7 @@ FillRaidTutorialLinks['Loatheb'] = {
     description = "Loatheb:\nA warped fungal horror born of plague-ridden decay.\nIt embodies the corruption spreading through Naxxramas.",
     alliance = {
         nonvip = {
+            { label = "FillRaidBots", url = "https://youtu.be/NzCl_gL2wNA" },		
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=cYPjlC1q9OE&list=PLuZTM2O8dt2n8F77da1pX1wHCw3MV7xg0&index=6" },
             { label = "MmControl", url = "https://www.youtube.com/watch?v=VwntRZxi3ac&list=PLGrv4LF-03KyLwBpw5UUnvYU8P2juAy2C&index=5" }			
         },
@@ -285,6 +299,7 @@ FillRaidTutorialLinks['Sapphiron'] = {
     description = "Sapphiron:\nA blue dragon resurrected by Kel'Thuzad as a frost wyrm.\nNow it guards the upper reaches of Naxxramas.",
     alliance = {
         nonvip = {
+            { label = "FillRaidBots", url = "https://youtu.be/2LfqaE40v2c" },		
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=o7ltrdKNi_w&list=PLuZTM2O8dt2n8F77da1pX1wHCw3MV7xg0&index=14" },
             { label = "MmControl", url = "https://www.youtube.com/watch?v=rvZX9iTh4dM&list=PLGrv4LF-03KyLwBpw5UUnvYU8P2juAy2C&index=11" }			
         },
@@ -310,6 +325,7 @@ FillRaidTutorialLinks["Kel'Thuzad"] = {
             { label = "MmControl", url = "https://www.youtube.com/watch?v=keekY43jTVs&list=PLGrv4LF-03KyLwBpw5UUnvYU8P2juAy2C&index=12" }			
         },
         vip = {
+            { label = "FillRaidBots", url = "https://youtu.be/NvwO73s3y50" },		
             { label = "Capo", url = "https://www.youtube.com/watch?v=lRnahvwi1Ss&t=2m20s" },
         },
     },
@@ -735,6 +751,7 @@ FillRaidTutorialLinks['The Prophet Skeram'] = {
     description = "The Prophet Skeram:\nA qiraji prophet who serves the Old God C'Thun.\nHe spreads madness and devotion within Ahn'Qiraj.",
     alliance = {
         nonvip = {
+            { label = "FillRaidBots", url = "https://youtu.be/cZJxQYcX-YE" },			
             -- { label = "Guide 1", url = "https://www.youtube.com/" },
         },
         vip = {
@@ -756,6 +773,7 @@ FillRaidTutorialLinks['Bug Trio'] = {
     description = "Bug Trio:\nPrincess Yauj, Vem, and Lord Kri are elite qiraji servants.\nTogether they guard the halls of the Temple of Ahn'Qiraj.",
     alliance = {
         nonvip = {
+            { label = "FillRaidBots", url = "https://youtu.be/61b9fXonltg" },			
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=SGOw-h9XnHI&list=PLuZTM2O8dt2nXRTHfkLujH6IBwPe1aLgy&index=2" },
         },
         vip = {
@@ -777,6 +795,7 @@ FillRaidTutorialLinks['Battleguard Sartura'] = {
     description = "Battleguard Sartura:\nA qiraji warleader of unmatched speed and aggression.\nShe commands elite silithid forces in Ahn'Qiraj.",
     alliance = {
         nonvip = {
+            { label = "FillRaidBots", url = "https://youtu.be/SvPmvRvY7nA" },			
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=UZf9cXuhuW0&list=PLuZTM2O8dt2nXRTHfkLujH6IBwPe1aLgy&index=3" },
         },
         vip = {
@@ -798,6 +817,7 @@ FillRaidTutorialLinks['Fankriss the Unyielding'] = {
     description = "Fankriss the Unyielding:\nA towering qiraji beast bred for relentless war.\nHe guards the deeper reaches of the temple.",
     alliance = {
         nonvip = {
+            { label = "FillRaidBots", url = "https://youtu.be/zCNzTyPd61o" },			
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=Ag0N_t1Rwy4&list=PLuZTM2O8dt2nXRTHfkLujH6IBwPe1aLgy&index=4" },
         },
         vip = {
@@ -840,6 +860,7 @@ FillRaidTutorialLinks['Princess Huhuran'] = {
     description = "Princess Huhuran:\nA deadly silithid princess of the qiraji empire.\nShe is infamous for her venomous nature.",
     alliance = {
         nonvip = {
+            { label = "FillRaidBots", url = "https://youtu.be/QUqQG9P4eJA" },			
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=hrw3tYIIuiY&list=PLuZTM2O8dt2nXRTHfkLujH6IBwPe1aLgy&index=6" },
             { label = "MmControl", url = "https://www.youtube.com/watch?v=o2fQtZ_2SPU&list=PLGrv4LF-03KyLwBpw5UUnvYU8P2juAy2C&index=6" }			
         },
@@ -862,6 +883,7 @@ FillRaidTutorialLinks['The Twin Emperors'] = {
     description = "The Twin Emperors:\nVek'lor and Vek'nilash are the ruling brothers of the qiraji.\nTogether they command the empire of Ahn'Qiraj.",
     alliance = {
         nonvip = {
+            { label = "FillRaidBots", url = "https://youtu.be/JEIIH13iALQ" },		
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=J74p6J9ei2Q&list=PLuZTM2O8dt2nXRTHfkLujH6IBwPe1aLgy&index=7" },
             { label = "SoloCraft", url = "https://www.youtube.com/watch?v=TZ-es5oWgvs&list=PLPgI_NFz7pmDpVqkAksWxv1q4bCX5E-Wh&index=1" },			
         },
@@ -883,6 +905,7 @@ FillRaidTutorialLinks['Ouro'] = {
     description = "Ouro:\nA gigantic sand worm dwelling beneath Ahn'Qiraj.\nIt erupts from the earth to devour intruders.",
     alliance = {
         nonvip = {
+            { label = "FillRaidBots", url = "https://youtu.be/1uTVNC_sB2c" },		
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=BXHF7piM28Y&list=PLuZTM2O8dt2nXRTHfkLujH6IBwPe1aLgy&index=8" },
         },
         vip = {
@@ -904,6 +927,7 @@ FillRaidTutorialLinks["C'Thun"] = {
     description = "C'Thun:\nAn Old God imprisoned beneath Ahn'Qiraj.\nIts whispers spread madness and corruption across Azeroth.",
     alliance = {
         nonvip = {
+            { label = "FillRaidBots", url = "https://youtu.be/PnK3uXuALpE" },			
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=MxHFSqx7yOU&list=PLuZTM2O8dt2nXRTHfkLujH6IBwPe1aLgy&index=9" },
             { label = "MmControl", url = "https://www.youtube.com/watch?v=pdwHWk3Ak7Q&list=PLGrv4LF-03KyLwBpw5UUnvYU8P2juAy2C&index=7" },
 			
