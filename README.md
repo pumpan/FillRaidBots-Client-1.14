@@ -34,6 +34,12 @@ It helps you:
 - Automatically manage bots (remove, refill, organize)  
 - Customize everything directly in-game  
 
+## 🎬 Quick Tutorial
+
+Watch a short guide on how to use FillRaidBots:
+
+[![Watch the tutorial](https://img.youtube.com/vi/vJozbfeNEno/maxresdefault.jpg)]
+(https://www.youtube.com/watch?v=vJozbfeNEno)
 
 ---
 ## 🛠️ Installation
