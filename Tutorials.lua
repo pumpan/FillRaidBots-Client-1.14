@@ -36,10 +36,10 @@ FillRaidTutorialLinks['Grobbulus'] = {
     alliance = {
         nonvip = {
             { label = "FillRaidBots", url = "https://youtu.be/TpInIbVDZdo" },		
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
             { label = "Capo", url = "https://www.youtube.com/watch?v=Hlcmp2zjrl8&t=7m45s" },
         },
     },
@@ -60,10 +60,10 @@ FillRaidTutorialLinks['Gluth'] = {
     alliance = {
         nonvip = {
             { label = "FillRaidBots", url = "https://youtu.be/DESdF2I5948" },		
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
             { label = "Capo", url = "https://www.youtube.com/watch?v=Hlcmp2zjrl8&t=9m20s" },
         },
     },
@@ -86,7 +86,7 @@ FillRaidTutorialLinks['Thaddius'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=Ue56U8Y6G94&list=PLuZTM2O8dt2n8F77da1pX1wHCw3MV7xg0&index=10" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
             { label = "Capo", url = "https://www.youtube.com/watch?v=Hlcmp2zjrl8&t=11m05s" },
         },
     },
@@ -105,7 +105,7 @@ FillRaidTutorialLinks['Instructor Razuvious'] = {
     alliance = {
         nonvip = {
             { label = "FillRaidBots", url = "https://youtu.be/IzA6FOZgsXg" },		
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
         vip = {
             { label = "Capo", url = "https://www.youtube.com/watch?v=iTkMVH_7yvM&t=3m20s" },
@@ -126,7 +126,7 @@ FillRaidTutorialLinks['Gothik the Harvester'] = {
     alliance = {
         nonvip = {
             { label = "FillRaidBots", url = "https://youtu.be/n2My1gxpfds" },		
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
         vip = {
             { label = "Capo", url = "https://www.youtube.com/watch?v=iTkMVH_7yvM&t=5m50s" },
@@ -157,7 +157,7 @@ FillRaidTutorialLinks['The Four Horsemen'] = {
     },
     horde = {
         nonvip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
         vip = {
             { label = "Vandramio", url = "https://www.youtube.com/watch?v=FKNi2fvj8XE&list=PLHiVBR_ef9z9VPTFowPaRnz_XbZ_3uf95&index=6" },
@@ -199,7 +199,7 @@ FillRaidTutorialLinks['Grand Widow Faerlina'] = {
     },
     horde = {
         nonvip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
         vip = {
             { label = "Vandramio", url = "https://www.youtube.com/watch?v=_O6awxElurI&list=PLHiVBR_ef9z9VPTFowPaRnz_XbZ_3uf95&index=10" },
@@ -257,7 +257,7 @@ FillRaidTutorialLinks['Heigan the Unclean'] = {
     alliance = {
         nonvip = {
             { label = "FillRaidBots", url = "https://youtu.be/JZ52K7TPDr4" },		
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
         vip = {
             { label = "Capo", url = "https://www.youtube.com/watch?v=ffvksQgPNe0&t=3m48s" },
@@ -265,7 +265,7 @@ FillRaidTutorialLinks['Heigan the Unclean'] = {
     },
     horde = {
         nonvip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
         vip = {
             { label = "Vandramio", url = "https://www.youtube.com/watch?v=8NeGz3UErl0&list=PLHiVBR_ef9z9VPTFowPaRnz_XbZ_3uf95&index=17" },
@@ -287,7 +287,7 @@ FillRaidTutorialLinks['Loatheb'] = {
     },
     horde = {
         nonvip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
         vip = {
             { label = "Vandramio", url = "https://www.youtube.com/watch?v=9TQ6wzV4zoE&list=PLHiVBR_ef9z9VPTFowPaRnz_XbZ_3uf95&index=19" },
@@ -309,7 +309,7 @@ FillRaidTutorialLinks['Sapphiron'] = {
     },
     horde = {
         nonvip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
         vip = {
             { label = "Vandramio", url = "https://www.youtube.com/watch?v=M9foHrmg_OQ&list=PLHiVBR_ef9z9VPTFowPaRnz_XbZ_3uf95&index=26" },
@@ -331,7 +331,7 @@ FillRaidTutorialLinks["Kel'Thuzad"] = {
     },
     horde = {
         nonvip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
         vip = {
             { label = "Vandramio", url = "https://www.youtube.com/watch?v=OUBVG6K9uyY&list=PLHiVBR_ef9z9VPTFowPaRnz_XbZ_3uf95&index=27" },
@@ -347,7 +347,7 @@ FillRaidTutorialLinks['Razorgore the Untamed'] = {
             { label = "SoloCraft", url = "https://www.youtube.com/watch?v=xB9G051oIS0&list=PLPgI_NFz7pmBxHnvnY67gSPAvXtdLSh3J" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -357,7 +357,7 @@ FillRaidTutorialLinks['Razorgore the Untamed'] = {
 			
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -370,7 +370,7 @@ FillRaidTutorialLinks['Vaelastrasz the Corrupt'] = {
             { label = "SoloCraft", url = "https://www.youtube.com/watch?v=JRdIQXS7qaU&t=12s" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -379,7 +379,7 @@ FillRaidTutorialLinks['Vaelastrasz the Corrupt'] = {
             { label = "M4cr4J", url = "https://youtu.be/5eVXZ3E9P_o?si=uSxRpjt2vzt2KIMl" },			
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -392,7 +392,7 @@ FillRaidTutorialLinks['Broodlord Lashlayer'] = {
             { label = "SoloCraft", url = "https://www.youtube.com/watch?v=EFxrBu8ubKs" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -401,7 +401,7 @@ FillRaidTutorialLinks['Broodlord Lashlayer'] = {
             { label = "M4cr4J", url = "https://youtu.be/7HSSDeqPa90?si=Xk_UyVxKU9FdJnXS" },				
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -414,7 +414,7 @@ FillRaidTutorialLinks['Firemaw'] = {
             { label = "SoloCraft", url = "https://www.youtube.com/watch?v=5KM0G_2WK9o" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -422,7 +422,7 @@ FillRaidTutorialLinks['Firemaw'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=D6t7L89nLpI&list=PLuZTM2O8dt2n66THKgHS1NRoGObBseyHr&index=4" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -435,7 +435,7 @@ FillRaidTutorialLinks['Ebonroc'] = {
             { label = "SoloCraft", url = "https://www.youtube.com/watch?v=nln3cKLWrEQ" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -443,7 +443,7 @@ FillRaidTutorialLinks['Ebonroc'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=77BLqmDkjpo&list=PLuZTM2O8dt2n66THKgHS1NRoGObBseyHr&index=5" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -456,7 +456,7 @@ FillRaidTutorialLinks['Flamegor'] = {
             { label = "SoloCraft", url = "https://www.youtube.com/watch?v=Qa0moKTo83A&list=PLPgI_NFz7pmBxHnvnY67gSPAvXtdLSh3J&index=7" },			
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -464,7 +464,7 @@ FillRaidTutorialLinks['Flamegor'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=-CoRDZCNgZY&list=PLuZTM2O8dt2n66THKgHS1NRoGObBseyHr&index=6" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -490,7 +490,7 @@ FillRaidTutorialLinks['Chromaggus'] = {
             { label = "M4cr4J", url = "https://youtu.be/XOr3hXa33Vc?si=E7uO2ycInxlijJ8m" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -506,7 +506,7 @@ FillRaidTutorialLinks['Nefarian'] = {
 
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -514,7 +514,7 @@ FillRaidTutorialLinks['Nefarian'] = {
             { label = "M4cr4J", url = "https://youtu.be/mcIBVvvIG5E?si=KM2v4t4r9dwHpZAC" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -527,7 +527,7 @@ FillRaidTutorialLinks['Lucifron'] = {
             { label = "MmControl", url = "https://www.youtube.com/watch?v=dxHsvIKtpC0&list=PLGrv4LF-03KyLwBpw5UUnvYU8P2juAy2C&index=2" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
 		
         },
     },
@@ -536,7 +536,7 @@ FillRaidTutorialLinks['Lucifron'] = {
             { label = "Vandramio", url = "https://www.youtube.com/watch?v=P67B7C7eb7g" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -549,7 +549,7 @@ FillRaidTutorialLinks['Magmadar'] = {
 
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -557,7 +557,7 @@ FillRaidTutorialLinks['Magmadar'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=UXDQjotBfJo&list=PLuZTM2O8dt2kleI2VATFJRmcjPPKcsfKZ&index=1" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -570,7 +570,7 @@ FillRaidTutorialLinks['Gehennas'] = {
 
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -578,7 +578,7 @@ FillRaidTutorialLinks['Gehennas'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=qvTjsD3tQXk&list=PLuZTM2O8dt2kleI2VATFJRmcjPPKcsfKZ&index=2" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -591,7 +591,7 @@ FillRaidTutorialLinks['Garr'] = {
 
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -611,7 +611,7 @@ FillRaidTutorialLinks['Baron Geddon'] = {
             { label = "SoloCraft", url = "https://www.youtube.com/watch?v=H49KXp0YUDs&list=PLPgI_NFz7pmAt-unCyQBYfHCamb0SdTYi&index=2" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -619,7 +619,7 @@ FillRaidTutorialLinks['Baron Geddon'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=BosD88nCurk&list=PLuZTM2O8dt2kleI2VATFJRmcjPPKcsfKZ&index=5" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -631,7 +631,7 @@ FillRaidTutorialLinks['Shazzrah'] = {
             { label = "SoloCraft", url = "https://www.youtube.com/watch?v=8J0sKJXHgSE&list=PLPgI_NFz7pmAt-unCyQBYfHCamb0SdTYi" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -639,7 +639,7 @@ FillRaidTutorialLinks['Shazzrah'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=6iATl3I-Ul4&list=PLuZTM2O8dt2kleI2VATFJRmcjPPKcsfKZ&index=3" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -651,7 +651,7 @@ FillRaidTutorialLinks['Sulfuron Harbinger'] = {
             { label = "SoloCraft", url = "https://www.youtube.com/watch?v=kBGzed6qAcs&list=PLPgI_NFz7pmAt-unCyQBYfHCamb0SdTYi&index=8" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -659,7 +659,7 @@ FillRaidTutorialLinks['Sulfuron Harbinger'] = {
             { label = "Vandramio", url = "https://www.youtube.com/watch?v=ZwtjZF9bqRc" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -672,7 +672,7 @@ FillRaidTutorialLinks['Golemagg the Incinerator'] = {
 
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -680,7 +680,7 @@ FillRaidTutorialLinks['Golemagg the Incinerator'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=ay36KbZxqsw&list=PLuZTM2O8dt2kleI2VATFJRmcjPPKcsfKZ&index=6" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -693,7 +693,7 @@ FillRaidTutorialLinks['Majordomo Executus'] = {
 
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -701,7 +701,7 @@ FillRaidTutorialLinks['Majordomo Executus'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=v8gY4EPJq5g&list=PLuZTM2O8dt2kleI2VATFJRmcjPPKcsfKZ&index=7" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -713,7 +713,7 @@ FillRaidTutorialLinks['Ragnaros'] = {
             { label = "SoloCraft", url = "https://www.youtube.com/watch?v=0Pf-qL2vysI&list=PLPgI_NFz7pmAt-unCyQBYfHCamb0SdTYi&index=9" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -721,7 +721,7 @@ FillRaidTutorialLinks['Ragnaros'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=wATImgq4ij4&list=PLuZTM2O8dt2kleI2VATFJRmcjPPKcsfKZ&index=8" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -733,7 +733,7 @@ FillRaidTutorialLinks['Onyxia'] = {
             { label = "SoloCraft", url = "https://www.youtube.com/watch?v=jKPqOcKuWAg&list=PLPgI_NFz7pmDGqzs3X5DhkEXS5WlEMKZh&index=1&t=10s" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -742,7 +742,7 @@ FillRaidTutorialLinks['Onyxia'] = {
             { label = "M4cr4J", url = "https://youtu.be/ng-rFOdzM6I?si=XYEA0JtCDkTDSCvD" },			
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -752,10 +752,10 @@ FillRaidTutorialLinks['The Prophet Skeram'] = {
     alliance = {
         nonvip = {
             { label = "FillRaidBots", url = "https://youtu.be/cZJxQYcX-YE" },			
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
             { label = "Capo", url = "https://www.youtube.com/watch?v=1JEXp7aeKMs&t=0m55s" },
         },
     },
@@ -764,7 +764,7 @@ FillRaidTutorialLinks['The Prophet Skeram'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=lu06AHCk2cE&list=PLuZTM2O8dt2nXRTHfkLujH6IBwPe1aLgy" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -777,16 +777,16 @@ FillRaidTutorialLinks['Bug Trio'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=SGOw-h9XnHI&list=PLuZTM2O8dt2nXRTHfkLujH6IBwPe1aLgy&index=2" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
             { label = "Capo", url = "https://www.youtube.com/watch?v=1JEXp7aeKMs&t=25m0s" },
         },
     },
     horde = {
         nonvip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -795,20 +795,20 @@ FillRaidTutorialLinks['Battleguard Sartura'] = {
     description = "Battleguard Sartura:\nA qiraji warleader of unmatched speed and aggression.\nShe commands elite silithid forces in Ahn'Qiraj.",
     alliance = {
         nonvip = {
-            { label = "FillRaidBots", url = "https://youtu.be/SvPmvRvY7nA" },			
+            { label = "FillRaidBots", url = "https://youtu.be/t9bp0uXDKr4" },			
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=UZf9cXuhuW0&list=PLuZTM2O8dt2nXRTHfkLujH6IBwPe1aLgy&index=3" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
             { label = "Capo", url = "https://www.youtube.com/watch?v=1JEXp7aeKMs&t=3m55s" },
         },
     },
     horde = {
         nonvip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -821,16 +821,16 @@ FillRaidTutorialLinks['Fankriss the Unyielding'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=Ag0N_t1Rwy4&list=PLuZTM2O8dt2nXRTHfkLujH6IBwPe1aLgy&index=4" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
             { label = "Capo", url = "https://www.youtube.com/watch?v=1JEXp7aeKMs&t=7m15s" },
         },
     },
     horde = {
         nonvip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -842,16 +842,16 @@ FillRaidTutorialLinks['Viscidus'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=qvyyQQhS8Ks&list=PLuZTM2O8dt2nXRTHfkLujH6IBwPe1aLgy&index=5" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
             { label = "Capo", url = "https://www.youtube.com/watch?v=1JEXp7aeKMs&t=26m45s" },
         },
     },
     horde = {
         nonvip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -865,16 +865,16 @@ FillRaidTutorialLinks['Princess Huhuran'] = {
             { label = "MmControl", url = "https://www.youtube.com/watch?v=o2fQtZ_2SPU&list=PLGrv4LF-03KyLwBpw5UUnvYU8P2juAy2C&index=6" }			
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
             { label = "Capo", url = "https://www.youtube.com/watch?v=1JEXp7aeKMs&t=11m30s" },
         },
     },
     horde = {
         nonvip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -893,10 +893,10 @@ FillRaidTutorialLinks['The Twin Emperors'] = {
     },
     horde = {
         nonvip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -909,16 +909,16 @@ FillRaidTutorialLinks['Ouro'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=BXHF7piM28Y&list=PLuZTM2O8dt2nXRTHfkLujH6IBwPe1aLgy&index=8" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
             { label = "Capo", url = "https://www.youtube.com/watch?v=1JEXp7aeKMs&t=19m10s" },
         },
     },
     horde = {
         nonvip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -933,7 +933,7 @@ FillRaidTutorialLinks["C'Thun"] = {
 			
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
             { label = "Capo", url = "https://www.youtube.com/watch?v=1JEXp7aeKMs&t=19m20s" },
         },
     },
@@ -942,7 +942,7 @@ FillRaidTutorialLinks["C'Thun"] = {
             { label = "SoloCraft", url = "https://www.youtube.com/watch?v=nIALEEPO3sI&list=PLPgI_NFz7pmDpVqkAksWxv1q4bCX5E-Wh&index=2" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -952,9 +952,10 @@ FillRaidTutorialLinks['Kurinnaxx'] = {
     alliance = {
         nonvip = {
             { label = "Solocraft", url = "https://youtu.be/rSG6Yf9Ld8E?si=JkKyR1eYOtDG0ZHo" },
+			{ label = "FillRaidBots", url = "https://youtu.be/ZY6IQvZxE5Q" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -962,7 +963,7 @@ FillRaidTutorialLinks['Kurinnaxx'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=d45m8LvVBAo&list=PLuZTM2O8dt2lruMBwhn7p5OQrXoY0prGE" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -971,11 +972,12 @@ FillRaidTutorialLinks['General Rajaxx'] = {
     description = "General Rajaxx:\nA qiraji general who led assaults against Kalimdor's defenders.\nHe is one of the empire's greatest military commanders.",
     alliance = {
         nonvip = {
+			{ label = "FillRaidBots", url = "https://youtu.be/PG2M4x_wFZE" },		
             { label = "Vandramio", url = "https://www.youtube.com/watch?v=YPzDF0cMdps" },
             { label = "SoloCraft", url = "https://youtu.be/JnSXM2XbNg0?si=mhdmt09YqL5ehL-2" },			
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -983,7 +985,7 @@ FillRaidTutorialLinks['General Rajaxx'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=SzobwljmoMM&list=PLuZTM2O8dt2lruMBwhn7p5OQrXoY0prGE&index=2" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -992,10 +994,11 @@ FillRaidTutorialLinks['Moam'] = {
     description = "Moam:\nAn ancient obsidian destroyer empowered by arcane energy.\nIt stands watch over the Ruins of Ahn'Qiraj.",
     alliance = {
         nonvip = {
+			 { label = "FillRaidBots", url = "https://youtu.be/EQmJGyHjViY" },		
              { label = "SoloCraft", url = "https://youtu.be/A8_QOk5NHnw?si=N5YkBReAVj-jILci" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -1003,7 +1006,7 @@ FillRaidTutorialLinks['Moam'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=Mf21OYorogA&list=PLuZTM2O8dt2lruMBwhn7p5OQrXoY0prGE&index=5" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -1015,7 +1018,7 @@ FillRaidTutorialLinks['Ossirian the Unscarred'] = {
             { label = "SoloCraft", url = "https://youtu.be/0RMOZsiLPUI?si=TsoJqgWveiP7J3Ho" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -1023,7 +1026,7 @@ FillRaidTutorialLinks['Ossirian the Unscarred'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=nqzbpbxB9rg&list=PLuZTM2O8dt2lruMBwhn7p5OQrXoY0prGE&index=6" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -1032,10 +1035,12 @@ FillRaidTutorialLinks['Ayamiss the Hunter'] = {
     description = "Ayamiss the Hunter:\nA flying silithid queen that rules from above the ruins.\nShe commands swarms in defense of Ahn'Qiraj.",
     alliance = {
         nonvip = {
+			 { label = "FillRaidBots", url = "https://youtu.be/OIeT5MdE12k" },
              { label = "SoloCraft", url = "https://youtu.be/2W69LGhsRIs?si=nRCpEovQXIlIGHUC" },
+
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -1043,7 +1048,7 @@ FillRaidTutorialLinks['Ayamiss the Hunter'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=JHUc7F-FlQA&list=PLuZTM2O8dt2lruMBwhn7p5OQrXoY0prGE&index=4" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -1052,10 +1057,11 @@ FillRaidTutorialLinks['Buru the Gorger'] = {
     description = "Buru the Gorger:\nA huge silithid that rampages through the ruins.\nIts hunger and brood make it a constant threat.",
     alliance = {
         nonvip = {
+			 { label = "FillRaidBots", url = "https://youtu.be/8A9_fyCr3Kc" },		
              { label = "SoloCraft", url = "https://youtu.be/_ue5u61ARFs?si=9o37czd5OV81U7y2" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -1063,7 +1069,7 @@ FillRaidTutorialLinks['Buru the Gorger'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=oFxu-LuyyWk&list=PLuZTM2O8dt2lruMBwhn7p5OQrXoY0prGE&index=3" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -1072,10 +1078,11 @@ FillRaidTutorialLinks['High Priestess Jeklik'] = {
     description = "High Priestess Jeklik:\nA priestess of Hakkar devoted to the bat loa.\nShe was transformed by dark troll ritual magic.",
     alliance = {
         nonvip = {
+             { label = "FillRaidBots", url = "https://youtu.be/b6pQG_rt690" },		
              { label = "SoloCraft", url = "https://youtu.be/L35gZti50XE?si=7rDbiRnSv0DSUYVj" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -1083,7 +1090,7 @@ FillRaidTutorialLinks['High Priestess Jeklik'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=-znhiKBVvDQ&list=PLuZTM2O8dt2mvXz5l6QZB0K_ZNEKxpITo&index=3" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -1092,10 +1099,11 @@ FillRaidTutorialLinks['High Priest Venoxis'] = {
     description = "High Priest Venoxis:\nA Hakkari priest devoted to the serpent loa.\nHe is one of Zul'Gurub's chief spiritual leaders.",
     alliance = {
         nonvip = {
+             { label = "FillRaidBots", url = "https://youtu.be/c4NFiaKKD5U" },		
              { label = "SoloCraft", url = "https://youtu.be/DSwMuHWJ70Q?si=x6-POBOuvmZ4jqJP" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -1103,7 +1111,7 @@ FillRaidTutorialLinks['High Priest Venoxis'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=4GReCGCR-18&list=PLuZTM2O8dt2mvXz5l6QZB0K_ZNEKxpITo&index=5" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -1112,10 +1120,11 @@ FillRaidTutorialLinks["High Priestess Mar'li"] = {
     description = "High Priestess Mar'li:\nA Hakkari priestess who serves the spider loa.\nShe commands venom and shadowy ritual power.",
     alliance = {
         nonvip = {
+             { label = "FillRaidBots", url = "https://youtu.be/yubsQBcvdw0" },		
              { label = "SoloCraft", url = "https://youtu.be/2RRYDbzv3wA?si=4SB0mBTEtrUcBvmo" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -1123,7 +1132,7 @@ FillRaidTutorialLinks["High Priestess Mar'li"] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=is-XsY7nGvA&list=PLuZTM2O8dt2mvXz5l6QZB0K_ZNEKxpITo&index=2" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -1132,10 +1141,11 @@ FillRaidTutorialLinks['Bloodlord Mandokir'] = {
     description = "Bloodlord Mandokir:\nA feared Gurubashi champion who serves Hakkar.\nHe rose to power through conquest and bloodshed.",
     alliance = {
         nonvip = {
+             { label = "FillRaidBots", url = "https://youtu.be/wKIA2EMDivQ" },		
              { label = "SoloCraft", url = "https://youtu.be/msV06FzEx_U?si=A5upIPls93QI0Oqq" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -1143,7 +1153,7 @@ FillRaidTutorialLinks['Bloodlord Mandokir'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=EL_qoyqF2Tc&list=PLuZTM2O8dt2mvXz5l6QZB0K_ZNEKxpITo&index=8" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -1152,10 +1162,11 @@ FillRaidTutorialLinks['High Priest Thekal'] = {
     description = "High Priest Thekal:\nA Hakkari priest devoted to the tiger loa.\nHis faith grants him the fury of a great predator.",
     alliance = {
         nonvip = {
+             { label = "FillRaidBots", url = "https://youtu.be/FpqdGEnKJKE" },		
              { label = "SoloCraft", url = "https://youtu.be/ZFFn8guBLMQ?si=2ljiQYxYXQfnlXKA" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -1163,7 +1174,7 @@ FillRaidTutorialLinks['High Priest Thekal'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=Aeu7tFZ5oo4&list=PLuZTM2O8dt2mvXz5l6QZB0K_ZNEKxpITo&index=6" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -1172,10 +1183,11 @@ FillRaidTutorialLinks['High Priestess Arlokk'] = {
     description = "High Priestess Arlokk:\nA Hakkari priestess of the panther loa.\nShe stalks intruders through shadow and ritual magic.",
     alliance = {
         nonvip = {
+             { label = "FillRaidBots", url = "https://youtu.be/fUO1WmqItGc" },		
              { label = "SoloCraft", url = "https://youtu.be/sPwfSl2H0O8?si=APGBcV89kJQ_WTC" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -1183,7 +1195,7 @@ FillRaidTutorialLinks['High Priestess Arlokk'] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=exX8W4EglbE&list=PLuZTM2O8dt2mvXz5l6QZB0K_ZNEKxpITo&index=4" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -1192,10 +1204,11 @@ FillRaidTutorialLinks["Jin'do the Hexxer"] = {
     description = "Jin'do the Hexxer:\nA powerful troll witch doctor and master of hexes.\nHe walks the line between loa worship and forbidden magic.",
     alliance = {
         nonvip = {
+             { label = "FillRaidBots", url = "https://youtu.be/OgkNriw4OPk" },		
              { label = "SoloCraft", url = "https://youtu.be/3GwRcM__wbA?si=jdMf4MmkSV8MaOrk" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
@@ -1203,7 +1216,7 @@ FillRaidTutorialLinks["Jin'do the Hexxer"] = {
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=vqqauH6ZU-A&list=PLuZTM2O8dt2mvXz5l6QZB0K_ZNEKxpITo" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
@@ -1212,42 +1225,43 @@ FillRaidTutorialLinks['Hakkar the Soulflayer'] = {
     description = "Hakkar the Soulflayer:\nThe Blood God worshipped by the Gurubashi trolls.\nHe feeds on blood, souls, and sacrifice.",
     alliance = {
         nonvip = {
+             { label = "FillRaidBots", url = "https://youtu.be/N11r_kj49-8" },		
              { label = "SoloCraft", url = "https://youtu.be/ksGqSq4NSHI?si=s_doC8nemqyK-CrO" },		
             { label = "Wowmantrav", url = "https://www.youtube.com/watch?v=anfPtCbh804&list=PLuZTM2O8dt2mvXz5l6QZB0K_ZNEKxpITo&index=7" },
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
     horde = {
         nonvip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
         vip = {
-            -- { label = "Guide 1", url = "https://www.youtube.com/" },
+            
         },
     },
 }
 
 
--- Pumpan:(20260402) Tutorial link key cleanup
--- Renamed outdated/internal tutorial keys to match current preset fullnames.
--- Removed temporary alias table now that the main keys are corrected directly.
 
--- Pumpan:(20260331)
--- Replaced all boss descriptions with short lore-based summaries.
---
--- Pumpan:(20260330)
--- Added links
---
--- Pumpan:(20260329) Tutorial links
--- Expanded every boss into a full manual table instead of CreateTutorialLinkEntry().
--- Every entry now has explicit alliance/horde + vip/nonvip blocks for easier editing.
--- Add more links to any category by inserting more { label = "...", url = "..." } rows.
---
--- Pumpan:(20260328) Tutorial links
--- Added placeholder entries for all default presets so they are easy to edit.
--- Supports lookup by preset fullname, preset label, or boss name.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 --
 
 

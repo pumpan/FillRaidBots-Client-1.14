@@ -130,7 +130,7 @@ SettingsConfig = {
 					key = "showTutorialLinks",
 					label = "Tutorial Links",
 					tooltip = "Shows a small tutorial link button beside default presets when a link exists.",
-					default = false,
+					default = true,
 					onApply = function(value)
 						if ToggleTutorialLinks then
 							ToggleTutorialLinks(value)
@@ -236,10 +236,8 @@ SettingsConfig = {
                     onApply = function(value)
                         if value then
                             debuggerFrame:Show()
-                            DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00Debug messages enabled|r")
                         else
                             debuggerFrame:Hide()
-                            DEFAULT_CHAT_FRAME:AddMessage("|cFFFF0000Debug messages disabled|r")
                         end
                     end
                 },
@@ -274,8 +272,8 @@ SettingsConfig = {
                     onApply = function(value) ToggleOthersButton(value) end
                 },
 
-                -- Nymz: ButtonSettingsReorder (20260317) moved Enable Refill Button here so both
-                -- enable/disable button checkboxes are grouped together.
+                
+                
                 {
                     type = "checkbox",
                     key = "isRefillEnabled",
@@ -288,10 +286,10 @@ SettingsConfig = {
                     end
                 },
 
-                --Nymz: MoveButtons 3-option radio group replacing the old single "Enable moving buttons" checkbox.
-                -- Fixed    = buttons locked to PCP window, move with it automatically.
-                -- Free     = drag anywhere, absolute screen position saved in physical pixels.
-                -- Relative = drag freely, position saved as physical-pixel offset from PCP window.
+                
+                
+                
+                
                 {
                     type = "radio",
                     group = "buttonMoveMode",
@@ -308,7 +306,7 @@ SettingsConfig = {
                             label = "Move Buttons (Free)",
                             tooltip = "Drag buttons freely. Position saved in absolute screen coords.",
                             default = false,
-                            showLockButton = true,  -- Nymz: render the red/green lock toggle beside this option
+                            showLockButton = true,  
                         },
                         {
                             key = "buttonMoveModeRelative",
@@ -318,13 +316,13 @@ SettingsConfig = {
                         },
                     },
                     onApply = function(selectedKey)
-                        --Nymz: MoveButtons onApply fires when a radio option is selected.
-                        -- Updates SavedVariables mode flags then delegates to ToggleButtonMovement.
+                        
+                        
                         FillRaidBotsSavedSettings.moveButtonsEnabled = (selectedKey == "buttonModeMoveFree")
                         FillRaidBotsSavedSettings.moveButtonsRelative = (selectedKey == "buttonMoveModeRelative")
-                        -- Nymz: clear the lock state whenever leaving Free mode so it never
-                        -- bleeds into Fixed/Relative (the guard in ToggleButtonMovement is now
-                        -- scoped to isFree, but clearing here keeps SavedVariables clean too).
+                        
+                        
+                        
                         if selectedKey ~= "buttonModeMoveFree" then
                             FillRaidBotsSavedSettings.buttonMoveLocked = false
                         end
@@ -332,7 +330,7 @@ SettingsConfig = {
                     end
                 },
 
-				-- pumpan: added checkbox for horizontal buttons
+				
 				{
 					type = "checkbox",
 					label = "Horizontal layout",
@@ -352,13 +350,13 @@ SettingsConfig = {
 					end
 				},
 
-				-- pumpan: added sliders for spacing and button size
+				
 				{
 					type = "slider",
 					key = "ButtonSpacing",
 					label = "Button Spacing",
-					tooltip = "Adjust spacing between the FillRaid buttons.\nNegative values move buttons closer together.", -- Pumpan: added tooltip (20260317)
-					min = -50, -- Nymz: ButtonSpacing (20260317) allow negative spacing
+					tooltip = "Adjust spacing between the FillRaid buttons.\nNegative values move buttons closer together.", 
+					min = -50, 
 					max = 50,
 					step = 1,
 					precision = 0,
@@ -376,13 +374,13 @@ SettingsConfig = {
 					type = "slider",
 					key = "ButtonSize",
 					label = "Button Size",
-					tooltip = "Adjust the size of the FillRaid buttons.", -- Pumpan: added tooltip (20260317)
-					-- Nymz: (20260318) MoveButtons ButtonSize now stored as %, range 10-500, default 100%.
+					tooltip = "Adjust the size of the FillRaid buttons.", 
+					
 					min = 10,
 					max = 500,
 					step = 1,
 					precision = 0,
-					default = 100, -- 100% = theme default size
+					default = 100, 
 
 					onPreview = function(value)
 						if not FillRaidBotsSavedSettings then return end
@@ -497,18 +495,18 @@ SettingsConfig = {
 							key = "AIHorizontal",
 							label = "AIHorizontal",
 							tooltip = "Horizontal AI buttons",
-							offsetX = 0,  -- Nymz: (20260318) ButtonPct
---   - ButtonSize slider range changed to 10-500, default 100 (100% = theme default).
---   - ButtonSize display now shows % directly instead of raw pixels.
---   - Theme switch preserves user % automatically.
---   - Slider value text moved to bottom center, 2px closer to slider than default.
---
--- Nymz: (20260318) ButtonLayout
---   - Fixed ButtonLayout checkbox showing as checked on load and after /rl.
---     Checkbox renderer now uses get/set functions when defined.
---   - Same fix applied in FillRaidBots_LoadSettings after ApplySavedSettings.
---
--- Pumpan: (20260317) Horizontal buttons: -80 in offset is not needed anymore since all the buttons has new anchor points 
+							offsetX = 0,  
+
+
+
+
+
+
+
+
+
+
+
 							offsetY = 0,    
 							default = false,
 							buttons = CreateThemeButtons("AIHorizontal", 100, 40)
@@ -539,8 +537,8 @@ SettingsConfig = {
 
 					onApply = function(selectedKey, item)
 
-						-- Nymz: (20260318) MoveButtons ButtonSize is now %, theme switch is automatic.
-						-- No conversion needed - the % carries over directly to the new theme.
+						
+						
 						FillRaidBotsSavedSettings.selectedButtonTheme = selectedKey
 
 						local currentPct = FillRaidBotsSavedSettings.ButtonSize or 100
@@ -621,7 +619,7 @@ local function InitializeDefaults()
         end
     end
 
-    -- Nymz: default the Free-mode lock to unlocked (open/movable by default)
+    
     if FillRaidBotsSavedSettings.buttonMoveLocked == nil then
         FillRaidBotsSavedSettings.buttonMoveLocked = false
     end
@@ -712,7 +710,7 @@ function CreateSettingsUI()
     -- LAYOUT BASE SETTINGS
     --------------------------------------------------
     local columnWidth = 170
-    local columnSpacing = 8 -- Pumpan:(20260326) extra horizontal gap between settings columns/groups
+    local columnSpacing = 8 
     local startX = 20
     local startY = -20
     local sectionSpacing = 8
@@ -741,8 +739,8 @@ function CreateSettingsUI()
         totalHeight = totalHeight + estimatedHeight + sectionSpacing
     end
 
-    -- Pumpan:(20260326) Settings regrouped to General/Automation/Advanced while keeping Loot Type separate.
-    -- Small bias still helps the two-column layout balance better with the new section order.
+    
+    
     local maxColumnHeight = math.ceil(totalHeight / maxColumns) + 15
 
     --------------------------------------------------
@@ -821,8 +819,8 @@ function CreateSettingsUI()
 					end
 				end
 
-				-- Nymz: (20260318) MoveButtons use get/set if defined, else raw SavedSettings value.
-				-- Prevents truthy strings (e.g. "vertical") from incorrectly checking the box.
+				
+				
 				local initValue = currentItem.get and currentItem.get() or FillRaidBotsSavedSettings[key]
 				local cb = CreateCheckButton(
 					parentFrame,
@@ -1031,19 +1029,19 @@ function CreateSettingsUI()
 							currentItem.onApply(option.key, currentItem)
 						end
 
-						-- Nymz: if this is the Free option, reset lock to unlocked on user click.
-						-- This is intentionally in OnClick (not onApply) so it only fires on user
-						-- interaction, not during load-time ApplySavedSettings.
+						
+						
+						
 						if option.showLockButton then
 							FillRaidBotsSavedSettings.buttonMoveLocked = false
 							if FRB_ShowLockButton then FRB_ShowLockButton() end
 							if ToggleButtonMoveLock then ToggleButtonMoveLock(false) end
 						elseif currentItem.group == "buttonMoveMode" then
-							-- Switched away from Free - just hide and reset the lock icon.
-							-- Do NOT call ToggleButtonMoveLock here; ToggleButtonMovement()
-							-- (called from onApply) already set up the correct drag scripts
-							-- for Fixed/Relative. Calling ToggleButtonMoveLock(false) would
-							-- wipe those scripts because isFree is now false.
+							
+							
+							
+							
+							
 							if FRB_ResetLockButton then FRB_ResetLockButton() end
 						end
 
@@ -1066,44 +1064,44 @@ function CreateSettingsUI()
 						local lockBtn = CreateFrame("Button", "FRB_FreeModeLocBtn", parentFrame)
 						lockBtn:SetWidth(SIZE)
 						lockBtn:SetHeight(SIZE)
-						-- Sit it directly to the right of the label.
-						-- The label is anchored LEFT of cb, so anchor to cb with a
-						-- fixed offset that clears the label text (~120 px wide).
+						
+						
+						
 						lockBtn:SetPoint("LEFT", cb, "RIGHT", 118, 0)
 
-						-- Texture layer for the lock icon
+						
 						local lockTex = lockBtn:CreateTexture(nil, "ARTWORK")
 						lockTex:SetWidth(SIZE)
 						lockTex:SetHeight(SIZE)
 						lockTex:SetPoint("CENTER", lockBtn, "CENTER", 3, 0)
 						lockTex:SetTexture("Interface\\LFGFrame\\UI-LFG-ICON-LOCK")
 
-						-- Highlight layer so it feels clickable
+						
 						local hlTex = lockBtn:CreateTexture(nil, "HIGHLIGHT")
 						hlTex:SetAllPoints(lockBtn)
 						hlTex:SetTexture("Interface\\Buttons\\UI-Common-MouseHilight")
 						hlTex:SetBlendMode("ADD")
 
-						-- Helper: refresh icon colour based on saved state
+						
 						local function RefreshLockIcon()
 							local locked = FillRaidBotsSavedSettings.buttonMoveLocked
 							if locked then
-								-- Red tint  = locked
+								
 								lockTex:SetVertexColor(1, 0.15, 0.15, 1)
 							else
-								-- Green tint = free to move
+								
 								lockTex:SetVertexColor(0.15, 1, 0.15, 1)
 							end
 						end
 
-						-- Reset: go back to unlocked/green and hide the button
+						
 						local function ResetLockButton()
 							FillRaidBotsSavedSettings.buttonMoveLocked = false
 							RefreshLockIcon()
 							lockBtn:Hide()
 						end
 
-						-- Only show the lock when Free mode is active
+						
 						local isFreeActive = FillRaidBotsSavedSettings.moveButtonsEnabled
 						if isFreeActive then
 							RefreshLockIcon()
@@ -1112,7 +1110,7 @@ function CreateSettingsUI()
 							lockBtn:Hide()
 						end
 
-						-- Tooltip
+						
 						lockBtn:SetScript("OnEnter", function(self)
 							GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 							if FillRaidBotsSavedSettings.buttonMoveLocked then
@@ -1126,16 +1124,16 @@ function CreateSettingsUI()
 							GameTooltip:Hide()
 						end)
 
-						-- Toggle on click
+						
 						lockBtn:SetScript("OnClick", function()
 							FillRaidBotsSavedSettings.buttonMoveLocked =
 								not FillRaidBotsSavedSettings.buttonMoveLocked
 							RefreshLockIcon()
-							-- Delegate movement-enable/disable to main addon
+							
 							if ToggleButtonMoveLock then
 								ToggleButtonMoveLock(FillRaidBotsSavedSettings.buttonMoveLocked)
 							end
-							-- Nymz:(20260321) refresh tooltip immediately while still hovering
+							
 							if GameTooltip:IsShown() then
 								if FillRaidBotsSavedSettings.buttonMoveLocked then
 									GameTooltip:SetText("|cFFFF4444Buttons Locked|r\nClick to unlock and allow free dragging.")
@@ -1145,14 +1143,14 @@ function CreateSettingsUI()
 							end
 						end)
 
-						-- Store references so external code can drive the button
+						
 						FRB_FreeModeLocBtn_Refresh = RefreshLockIcon
-						-- FRB_ResetLockButton: call from ResetButtonPositions or when
-						-- switching away from Free mode to hide + go green
+						
+						
 						FRB_ResetLockButton = ResetLockButton
-						-- FRB_ShowLockButton: show the icon and refresh its colour.
-						-- Does NOT reset buttonMoveLocked - the saved value is preserved.
-						-- Call FRB_ResetLockButton first if you want to force-unlock.
+						
+						
+						
 						FRB_ShowLockButton = function()
 							RefreshLockIcon()
 							lockBtn:Show()
@@ -1214,7 +1212,7 @@ function CreateSettingsUI()
 					parentFrame.contentHeight = parentFrame.contentHeight + totalHeight
 					parentFrame:SetHeight(parentFrame.contentHeight + 20)
 				else
-					sectionY = sectionY - totalHeight -- Pumpan: removed -10 allows the nex checkbox to get closer to the radio buttons (20260317)
+					sectionY = sectionY - totalHeight 
 				end
 
             --------------------------------------------------
@@ -1322,7 +1320,7 @@ function CreateSettingsUI()
 
 				slider:SetWidth(currentItem.width or 140)
 				slider:SetHeight(16)
-				slider:SetPoint("TOPLEFT", sectionFrame, "TOPLEFT", 8, sectionY -10) -- Pumpan: -10 Moves the sliders down a litle to prevent the text to overlap (20260317) 
+				slider:SetPoint("TOPLEFT", sectionFrame, "TOPLEFT", 8, sectionY -10) 
 
 				local min = currentItem.min or 0
 				local max = currentItem.max or 100
@@ -1349,7 +1347,7 @@ function CreateSettingsUI()
 
 				
 				local valueText = sectionFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-				-- Nymz: (20260318) MoveButtons moved value display to bottom center of slider.
+				
 				valueText:SetPoint("TOP", slider, "BOTTOM", 0, 2)
 
 				local formatString = "%."..precision.."f"
@@ -1359,7 +1357,7 @@ function CreateSettingsUI()
 				end
 
 				local function UpdateSliderValue(value)
-					-- Nymz: (20260318) MoveButtons ButtonSize is stored as %, display directly.
+					
 					if currentItem.key == "ButtonSize" then
 						valueText:SetText(math.floor(value) .. "%")
 						return
@@ -1368,7 +1366,7 @@ function CreateSettingsUI()
 				end
 
 				UpdateSliderValue(saved)
-				-- Pumpan: added possibility for tooltip for sliders
+				
 				if currentItem.tooltip then
 				    slider:SetScript("OnEnter", function(self)
 				        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
@@ -1457,12 +1455,12 @@ function ApplySavedSettings()
             if item.type == "checkbox" then
                 local value = FillRaidBotsSavedSettings[item.key]
 
-                -- Update the checkbox UI
+                
                 if item.frame then
                     item.frame:SetChecked(value)
                 end
 
-                -- Apply saved value
+                
                 if item.onApply then
                     item.onApply(value)
                 end
@@ -1470,7 +1468,7 @@ function ApplySavedSettings()
             elseif item.type == "radio" then
                 local selectedKey = nil
 
-                -- Update radio UI and determine selected
+                
                 for _, option in ipairs(item.options) do
                     local checked = FillRaidBotsSavedSettings[option.key]
                     if option.frame then
@@ -1481,7 +1479,7 @@ function ApplySavedSettings()
                     end
                 end
 
-                -- Apply selected radio
+                
                 if item.onApply and selectedKey then
                     item.onApply(selectedKey)
                 end
@@ -1499,22 +1497,6 @@ function ApplySavedSettings()
             end
         end
     end
-
-    
-    if debuggerFrame then
-        if FillRaidBotsSavedSettings.debugMessagesEnabled then
-            debuggerFrame:Show()
-        else
-            debuggerFrame:Hide()
-        end
-    end
-
-    
-    SetLootOption(
-        FillRaidBotsSavedSettings.isFFAEnabled,
-        FillRaidBotsSavedSettings.isGroupLootEnabled,
-        FillRaidBotsSavedSettings.isMasterLootEnabled
-    )
 end
 --==================================================
 -- LOAD SETTINGS
@@ -1560,8 +1542,8 @@ function FillRaidBots_LoadSettings()
 	
 	ApplyButtonStyle(FillRaidBotsSavedSettings.selectedButtonTheme)
     ApplySavedSettings()
-    -- Nymz: (20260318) MoveButtons fix ButtonLayout checkbox showing checked on load.
-    -- ApplySavedSettings reads ButtonLayout as a truthy string, same fix as in reset.
+    
+    
     local layoutCb = GetSettingsCheckbox("ButtonLayout")
     if layoutCb then
         layoutCb:SetChecked(FillRaidBotsSavedSettings.ButtonLayout == "horizontal")
@@ -1594,77 +1576,3 @@ function GetSetting(key)
     return nil
 end
 
-
-----------------------------------------------------------------------------------------------------------------------
--- CHANGELOG
-----------------------------------------------------------------------------------------------------------------------
--- Pumpan:(20260328) added Tutorial links checkbox
---
--- Pumpan:(20260326) VIP presets
--- Added Use VIP Presets checkbox.
--- Uses preset.vipValues when available.
--- Falls back to normal preset values if missing.
--- Reapplies current preset live when toggled.
---
--- Pumpan:(20260326) Settings layout improvements
--- Increased horizontal spacing between groups.
--- Improved alignment of sections (General, Automation, etc).
---
--- Pumpan:(20260326) General UI improvements
--- More consistent enable/disable behavior.
--- Better visual clarity for restricted settings.
---
---
--- Pumpan:(20260325) Factory Reset UI
--- Added Factory Reset button to settings.
--- Uses confirmation popup before wiping data.
---
--- Nymz:(20260321) LockButton
---   - Red/green lock icon added next to "Moving Buttons (Free)" radio option.
---   - Hidden unless Free mode is active. Default state is unlocked/green (open to drag).
---   - Red = buttons frozen in place, Green = free to drag.
---   - Tooltip updates immediately on click without needing to re-hover.
---   - Switching to Fixed or Relative hides the lock and clears buttonMoveLocked.
---   - Reset Buttons also hides and resets the lock.
---   - Horizontal layout can still be applied while lock is active.
---   - Lock show/hide/reset lives in OnClick only, not onApply, so load-time
---     ApplySavedSettings never wipes the saved lock state.
--- Nymz: (20260318) ButtonPct
---   - ButtonSize slider range changed to 10-500, default 100 (100% = theme default).
---   - ButtonSize display now shows % directly instead of raw pixels.
---   - Theme switch preserves user % automatically.
---   - Slider value text moved to bottom center with 2px gap.
---
--- Nymz: (20260318) ButtonLayout
---   - Fixed ButtonLayout checkbox showing as checked on load and after /rl.
---     Checkbox renderer now uses get/set functions when defined.
---   - Same fix applied in FillRaidBots_LoadSettings after ApplySavedSettings.
---
--- Pumpan: (20260317) Horizontal buttons: -80 in offset is not needed anymore since all the buttons has new anchor points 
--- Pumpan: (20260317) -10 Moves the sliders down a litle to prevent the text to overlap  
--- Pumpan: (20260317) added tooltip to sliders and horizontal button
--- Pumpan: (20260317) Update slider UI to selected theme sizes
--- Pumpan: (20260317) Rebase size to new theme default
--- Pumpan: (20260317) removed -10 allows the next checkbox to get closer to the radio buttons 	
--- Pumpan: Update slider UI to selected theme (20260317)
--- Pumpan: added the possibility to add tooltip to the sliders (20260317)
---
--- Nymz: ButtonSettingsReorder (20260317)
---   - Moved "Enable Refill Button" to below "Enable Others button" so both enable/disable
---     button checkboxes are grouped together.
---   - Moved "Button Themes" and "Reset Buttons" to after the sliders.
---
--- Nymz: ButtonSpacing (20260317)
---   - Changed ButtonSpacing slider range from 0-40 to -50-50 to allow negative spacing.
---     Useful for themes where buttons benefit from tighter or overlapping stacking, like AIHorizontal.
---
--- Pumpan:
---   - Added checkbox for horizontal button layout.
---   - Added ButtonSpacing slider (min 0, max 40).
---   - Added ButtonSize slider (min 20, max 120).
---
--- Nymz: MoveButtons
---   - Replaced old single "Enable moving buttons" checkbox with Fixed/Free/Relative radio group.
---   - onApply updates SavedVariables mode flags and delegates to ToggleButtonMovement.
---
-----------------------------------------------------------------------------------------------------------------------

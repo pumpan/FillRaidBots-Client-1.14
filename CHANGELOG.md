@@ -4,14 +4,9 @@
 
 ---
 
-## 👥 Credits
-
-- **Pumpan** — Core systems, UI, presets, tutorial system, raid logic  
-- **Nymz** — Debugger, button system, movement system, architecture and more
-
 ## 🚀 Added
 
-### 🎯 Click-To-Fill System 
+### 🎯 Click-To-Fill System (Pumpan & Nymz)
 - Hold **Ctrl + Alt** to trigger Fast Fill
 - With target → fills boss preset instantly
 - Without target → zone-based fallback
@@ -20,7 +15,7 @@
 
 ---
 
-### 📺 Tutorial System 
+### 📺 Tutorial System (Pumpan)
 - Multi-link tutorial popup per preset
 - Supports Alliance / Horde + VIP / non-VIP
 - Automatic fallback if missing category
@@ -29,7 +24,7 @@
 
 ---
 
-### ⚙️ Settings System Overhaul 
+### ⚙️ Settings System Overhaul (Pumpan & Nymz)
 - New structured UI sections
 - Added:
   - Use VIP Presets
@@ -45,7 +40,7 @@
 
 ---
 
-### 🎨 Button System 
+### 🎨 Button System (Pumpan & Nymz)
 - Multiple themes (Mini, Classic, AI, etc.)
 - Horizontal layout support
 - Button spacing slider (supports negative)
@@ -55,7 +50,7 @@
 
 ---
 
-### 🔁 Preset System 
+### 🔁 Preset System (Pumpan)
 - values + vipValues support
 - Save / Save As / Delete / Restore
 - Instance-based presets
@@ -63,7 +58,7 @@
 
 ---
 
-### 🔄 Export / Import 
+### 🔄 Export / Import (Pumpan)
 - Export/import all presets in-game
 - Scrollable edit box with copy support
 
@@ -80,7 +75,7 @@
 
 ## 🔧 Changed
 
-### ⚔️ Fast Fill Behavior 
+### ⚔️ Fast Fill Behavior (Pumpan & Nymz)
 - Ctrl+Alt works without click
 - Improved zone fallback chooser
 - Added boss remapping:
@@ -91,7 +86,7 @@
 
 ---
 
-### 📺 Tutorial UI 
+### 📺 Tutorial UI (Pumpan)
 - Always on top (strata fix)
 - Solid background
 - Header added
@@ -101,7 +96,7 @@
 
 ---
 
-### 🎛️ Button Layout 
+### 🎛️ Button Layout (Pumpan & Nymz)
 - Rebuilt positioning logic
 - Fixed reload inconsistencies
 - Horizontal layout uses UIParent
@@ -109,14 +104,14 @@
 
 ---
 
-### 👥 Raid Logic 
+### 👥 Raid Logic (Pumpan)
 - Smart raid conversion using targetGroupSize
 - Works with real-player-only groups
 - Improved starter bot sequence
 
 ---
 
-### 📊 Zone Scaling 
+### 📊 Zone Scaling (Pumpan)
 - Dynamic caps:
   - 39 (raid)
   - 19 (ZG/AQ20)
@@ -126,14 +121,14 @@
 
 ---
 
-### 🔁 Refill System 
+### 🔁 Refill System (Pumpan)
 - Improved batching
 - Reliable re-check loop
 - Stable across group sizes
 
 ---
 
-### 💰 Loot System 
+### 💰 Loot System (Pumpan)
 - Applies only when needed
 - Triggers on leader change
 - Prevents spam
@@ -142,7 +137,7 @@
 
 ## 🐛 Fixed
 
-### 💾 Preset Saving 
+### 💾 Preset Saving (Pumpan)
 - Fixed VIP save logic:
   - Saves to vipValues when enabled
   - Saves to values otherwise
@@ -150,17 +145,17 @@
 
 ---
 
-### 🗺️ AQ Matching 
+### 🗺️ AQ Matching (Pumpan)
 - Fixed "Ahn'Qiraj" matching AQ20 incorrectly
 
 ---
 
-### 💀 Dead Target Fill 
+### 💀 Dead Target Fill (Pumpan)
 - Fast Fill aborts if target is dead
 
 ---
 
-### 🧹 UI Behavior 
+### 🧹 UI Behavior (Nymz)
 - Remove Dead Bots button hidden when auto-remove enabled
 
 ---
@@ -178,13 +173,13 @@
 
 ---
 
-### 📺 Tutorial Layout 
+### 📺 Tutorial Layout (Pumpan)
 - Fixed overlapping UI
 - Fixed layout refresh issues
 
 ---
 
-### ⚔️ Automation 
+### ⚔️ Automation (Pumpan)
 - Prevented "Cannot kick yourself" spam
 - Fill pauses when dead and resumes
 - Safe fail when lacking permissions
@@ -192,35 +187,35 @@
 ---
 
 ### 🧪 Misc Fixes
-- DetectRole fix 
-- Refill consistency fixes 
-- Starter bot detection fixes 
-- Azuregos/Kazzak zone fixes 
-- PlaySound Classic fix 
+- DetectRole fix (Pumpan)
+- Refill consistency fixes (Pumpan)
+- Starter bot detection fixes (Pumpan)
+- Azuregos/Kazzak zone fixes (Pumpan)
+- PlaySound Classic fix (Nymz)
 
 ---
 
 ## ✨ UI / UX Improvements
 
-### 🎯 Interaction 
+### 🎯 Interaction (Nymz)
 - Shift+Click Fill toggles debugger
 - Shift+Click preset = load + fill
 
 ---
 
-### 📊 UI Clarity 
+### 📊 UI Clarity (Pumpan)
 - BotsLeft UI only subtracts real players
 
 ---
 
-### 🔘 Live Updates 
+### 🔘 Live Updates (Pumpan & Nymz)
 - Tutorial links toggle live update
 - Others button toggle live update
 - Dynamic frame resizing
 
 ---
 
-### 🎨 Polish 
+### 🎨 Polish (Pumpan & Nymz)
 - Improved spacing and alignment
 - Cleaner labels and tooltips
 - Consistent UI headers

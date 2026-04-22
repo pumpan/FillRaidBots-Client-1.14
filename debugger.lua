@@ -11,15 +11,15 @@ local theme = {
 
 local texturePath = "Interface\\AddOns\\fillraidbots\\img\\"
 
--- Pumpan:(20260324) Added saved debugger settings helpers so the debugger can remember
--- position, timestamp visibility and log level filters between reloads.
--- Nymz:(20260403) Size - EnsureDebuggerSettings must only run after PLAYER_LOGIN so that
--- SavedVariables are already loaded; calling it earlier (at addon load time) would overwrite
--- the persisted values with defaults because FillRaidBotsSavedSettings is still nil then.
+
+
+
+
+
 local savedVarsReady = false
 
 local function EnsureDebuggerSettings()
-    -- Bail out silently before SavedVariables are available.
+    
     if not savedVarsReady then
         return
     end
@@ -55,12 +55,12 @@ local function EnsureDebuggerSettings()
         FillRaidBotsSavedSettings.debuggerLevels.debugversion = true
     end
 
-    -- Nymz:(20260403) DebugVisibility - persist whether the debugger window was open or closed
+    
     if FillRaidBotsSavedSettings.debuggerVisible == nil then
         FillRaidBotsSavedSettings.debuggerVisible = false
     end
 
-    -- Nymz:(20260403) Size - persist the debugger window height
+    
     if FillRaidBotsSavedSettings.debuggerHeight == nil then
         FillRaidBotsSavedSettings.debuggerHeight = 300
     end
@@ -90,7 +90,7 @@ end
 local function GetDebuggerLevelSetting(level)
     if not savedVarsReady or not FillRaidBotsSavedSettings
             or not FillRaidBotsSavedSettings.debuggerLevels then
-        return true  -- default all levels on before SavedVars load
+        return true  
     end
     EnsureDebuggerSettings()
     return FillRaidBotsSavedSettings.debuggerLevels[level]
@@ -125,8 +125,8 @@ end
 local function RestoreDebuggerFramePosition()
     local savedPosition
 
-    -- SavedVariables are not available at addon load time; fall back to centre.
-    -- Position will be properly restored in PLAYER_LOGIN once savedVarsReady is true.
+    
+    
     if savedVarsReady and FillRaidBotsSavedSettings then
         savedPosition = FillRaidBotsSavedSettings.debuggerFramePosition
     end
@@ -143,9 +143,9 @@ end
 local debugEditBox
 local ClearDebugEditBoxFocus
 local RefreshDebuggerCheckboxStates
--- Nymz:(20260403) LogLevelFilter - forward declaration so UpdateDebugMessages can call it before definition
+
 local IsLogLevelEnabled
--- Nymz:(20260403) Size - forward declaration so ApplyDebuggerHeight can call it before definition
+
 local UpdateDebugMessages
 
 debuggerFrame = CreateFrame("Frame", "FillraidbotsDebuggerFrame", UIParent, "BackdropTemplate")
@@ -180,7 +180,7 @@ debuggerFrame:SetScript("OnMouseUp", function(self, button)
 end)
 
 RestoreDebuggerFramePosition()
--- Nymz:(20260403) Size - keep hidden until PLAYER_LOGIN restores the correct state
+
 debuggerFrame:Hide()
 
 local header = debuggerFrame:CreateFontString(nil, "OVERLAY")
@@ -205,8 +205,8 @@ scrollFrame:SetBackdrop({
 })
 scrollFrame:SetBackdropColor(unpack(theme.backdropColor2))
 
--- Pumpan:(20260325) Use a real EditBox as the scroll child so the log text can be
--- selected/copied while still staying anchored to the debugger scroll area.
+
+
 local scrollChild = CreateFrame("EditBox", "FillraidbotsScrollChild", scrollFrame)
 scrollChild:SetPoint("TOPLEFT", scrollFrame, "TOPLEFT", 4, -4)
 scrollChild:SetWidth(440)
@@ -242,7 +242,7 @@ scrollBar:SetScript("OnValueChanged", function()
     scrollFrame:SetVerticalScroll(scrollBar:GetValue())
 end)
 
--- Nymz:(20260403) MouseWheelScroll - enable mouse wheel scrolling on the log area
+
 local scrollStep = 20
 scrollFrame:EnableMouseWheel(true)
 scrollFrame:SetScript("OnMouseWheel", function(self, delta)
@@ -290,7 +290,7 @@ local function UpdateDebugTextWidth()
     debugEditBox:SetWidth(contentWidth)
 end
 
---Nymz: DebuggerWidth (20260327) Expand window when timestamps are enabled, shrink when disabled
+
 local function UpdateDebuggerWidth()
     local baseWidth = 480
     local expandedWidth = 535
@@ -300,16 +300,16 @@ local function UpdateDebuggerWidth()
     UpdateDebugTextWidth()
 end
 
--- Nymz:(20260403) Size - apply a height to the debugger frame and reflow dependent elements
+
 local defaultHeight = 300
 local expandStep   = 100
 
 ApplyDebuggerHeight = function(h)
     h = math.max(defaultHeight, h)
 
-    -- Re-anchor to TOPLEFT using the current pixel position of the top-left corner
-    -- before resizing, so the top of the window never moves regardless of the
-    -- original anchor point.
+    
+    
+    
     local left = debuggerFrame:GetLeft()
     local top  = debuggerFrame:GetTop()
     if left and top then
@@ -319,10 +319,10 @@ ApplyDebuggerHeight = function(h)
 
     debuggerFrame:SetHeight(h)
 
-    -- Persist the new TOPLEFT anchor
+    
     SaveDebuggerFramePosition()
 
-    -- scrollFrame sits from y -40 to bottom buttons area (50px from bottom)
+    
     local newScrollHeight = h - 40 - 50
     if newScrollHeight < 60 then newScrollHeight = 60 end
     scrollFrame:SetHeight(newScrollHeight)
@@ -360,22 +360,22 @@ UpdateDebugMessages = function()
     local atBottom = false
     local contentHeight
     local maxScroll
-    -- Nymz:(20260403) LogLevelFilter - count only visible messages for display
+    
     local visibleCount = 0
 
     if currentScroll >= (oldMaxScroll - 5) then
         atBottom = true
     end
--- Pumpan:(20260405) Debugger Scroll Fix
--- Fixed an issue where disabled log levels still affected the scroll height.
--- Messages are now filtered into a visible list before rendering, so hidden rows
--- no longer create invisible scroll space or force unwanted auto-scrolling.
--- Full message history is still preserved, and rows reappear correctly when
--- a log level is re-enabled.
+
+
+
+
+
+
     visibleDebugMessages = {}
 
     for i = 1, table.getn(debugMessages) do
-        -- Nymz:(20260403) LogLevelFilter - skip entries whose level is currently disabled
+        
         if IsLogLevelEnabled(debugMessages[i].level) then
             table.insert(visibleDebugMessages, debugMessages[i])
             text = text .. GetDisplayMessage(debugMessages[i]) .. "\n"
@@ -457,12 +457,12 @@ closeButton:SetPushedTexture(pushedTexture)
 
 closeButton:SetScript("OnClick", function()
     ClearDebugEditBoxFocus()
-    -- Nymz:(20260403) DebugVisibility - remember that the user closed the window
+    
     SetDebuggerSetting("debuggerVisible", false)
     debuggerFrame:Hide()
 end)
 
--- Nymz:(20260403) Size - helper to create a small text button near the close button
+
 local function CreateSizeButton(name, label, offsetX, tooltipTitle, tooltipBody, onClick)
     local btn = CreateFrame("Button", name, debuggerFrame)
     btn:SetWidth(15)
@@ -491,14 +491,14 @@ local function CreateSizeButton(name, label, offsetX, tooltipTitle, tooltipBody,
     return btn
 end
 
--- Nymz:(20260403) Size - expand button: grow window by expandStep px
+
 local expandButton = CreateSizeButton(
     "FillraidbotsExpandButton", "v", -66,
     "Expand", "Increase the window height by " .. expandStep .. " px.",
     function()
         ClearDebugEditBoxFocus()
         local current = GetDebuggerSetting("debuggerHeight", defaultHeight)
-        -- Only expand if the bottom of the frame won't go off-screen
+        
         local bottom = debuggerFrame:GetBottom()
         if bottom and bottom - expandStep < 0 then
             return
@@ -507,7 +507,7 @@ local expandButton = CreateSizeButton(
     end
 )
 
--- Nymz:(20260403) Size - contract button: reduce height by expandStep px
+
 local contractButton = CreateSizeButton(
     "FillraidbotsContractButton", "^", -48,
     "Contract", "Reduce the window height by " .. expandStep .. " px.",
@@ -518,7 +518,7 @@ local contractButton = CreateSizeButton(
     end
 )
 
--- Nymz:(20260403) Size - reset button: restore the default height
+
 local resetSizeButton = CreateSizeButton(
     "FillraidbotsResetSizeButton", "r", -30,
     "Reset Size", "Reset the window height to the default (" .. defaultHeight .. " px).",
@@ -581,7 +581,7 @@ logLevelHeader:SetPoint("TOP", logLevelFrame, "TOP", 0, -10)
 logLevelHeader:SetText("Log Levels")
 logLevelHeader:SetTextColor(unpack(theme.textColor))
 
--- Nymz:(20260403) LogLevelTooltips - tooltip descriptors for each log level checkbox
+
 local logLevelTooltips = {
     debugfilling    = "Fill loop lifecycle.\nStarting, pausing, resuming, progress and completion of raid fills.\nAlso covers combat blocks and starter bot sequences.",
     debugdetection  = "Bot and player list state.\nLogs when detection lists are cleared or rebuilt.",
@@ -603,10 +603,10 @@ local function CreateLogLevelCheckbox(name, label, parent, offsetY, level)
     checkbox:SetChecked(GetDebuggerLevelSetting(level))
     checkbox:SetScript("OnClick", function(self)
         SetDebuggerLevelSetting(level, self:GetChecked() and true or false)
-        -- Nymz:(20260403) LogLevelFilter - refresh display so messages for this level show/hide immediately
+        
         UpdateDebugMessages()
     end)
-    -- Nymz:(20260403) LogLevelTooltips - show what each level covers on hover
+    
     if logLevelTooltips[level] then
         checkbox:SetScript("OnEnter", function(self)
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
@@ -629,8 +629,8 @@ local debugInfoCheckbox = CreateLogLevelCheckbox("DebugInfoCheckbox", "Debug Inf
 local debugVersionCheckbox = CreateLogLevelCheckbox("DebugVersionCheckbox", "Debug Version", logLevelFrame, -190, "debugversion")
 local debugZonesCheckbox = CreateLogLevelCheckbox("DebugZonesCheckbox", "Zones", logLevelFrame, -220, "debugzones")
 
--- Pumpan:(20260324) Added a timestamp toggle directly in the debugger so the user can
--- switch between compact logs and timestamped logs without editing code.
+
+
 local timestampCheckbox = CreateFrame("CheckButton", "DebugTimestampCheckbox", logLevelFrame, "UICheckButtonTemplate")
 timestampCheckbox:SetPoint("TOPLEFT", logLevelFrame, "TOPLEFT", 20, -250)
 timestampCheckbox.text = timestampCheckbox:CreateFontString(nil, "OVERLAY")
@@ -663,8 +663,8 @@ ClearDebugEditBoxFocus = function()
     end
 end
 
--- Nymz:(20260403) DebugVisibility - global so FillRaidBots.lua can persist visibility
--- when it shows/hides the debugger frame directly (e.g. Shift+Click Fill).
+
+
 function SetDebuggerVisibility(visible)
     SetDebuggerSetting("debuggerVisible", visible and true or false)
 end
@@ -684,7 +684,7 @@ IsLogLevelEnabled = function(level)
     return GetDebuggerLevelSetting(level) and true or false
 end
 
--- Nymz:(20260403) LogLevelFilter - always store messages regardless of level; filtering happens at render time
+
 function DebugMessage(message, level)
     local entry
 
@@ -712,11 +712,11 @@ SlashCmdList["FILLRAIDBOTSDEBUG"] = function()
     ClearDebugEditBoxFocus()
 
     if debuggerFrame:IsShown() then
-        -- Nymz:(20260403) DebugVisibility - remember closed state
+        
         SetDebuggerSetting("debuggerVisible", false)
         debuggerFrame:Hide()
     else
-        -- Nymz:(20260403) DebugVisibility - remember open state
+        
         SetDebuggerSetting("debuggerVisible", true)
         RefreshDebuggerCheckboxStates()
         debuggerFrame:Show()
@@ -735,8 +735,8 @@ eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 
 eventFrame:SetScript("OnEvent", function(self, event, ...)
     if event == "PLAYER_LOGIN" then
-        -- Nymz:(20260403) Size - SavedVariables are guaranteed loaded by PLAYER_LOGIN;
-        -- flip the flag so EnsureDebuggerSettings can safely read/write them from here on.
+        
+        
         savedVarsReady = true
         EnsureDebuggerSettings()
         RestoreDebuggerFramePosition()
@@ -745,8 +745,8 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
         UpdateDebugMessages()
         DebugMessage("Player logged in.", "debuginfo")
 
-        -- Nymz:(20260403) DebugVisibility - restore window open/closed state from last session
-        -- Nymz:(20260403) Size - restore debugger height from last session
+        
+        
         ApplyDebuggerHeight(GetDebuggerSetting("debuggerHeight", 300))
         if GetDebuggerSetting("debuggerVisible", false) then
             debuggerFrame:Show()
@@ -761,47 +761,46 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
 end)
 
 
--- Pumpan:(20260405) Debugger Scroll Fix
--- Fixed an issue where disabled log levels still affected the scroll height.
--- Messages are now filtered into a visible list before rendering, so hidden rows
--- no longer create invisible scroll space or force unwanted auto-scrolling.
--- Full message history is still preserved, and rows reappear correctly when
--- a log level is re-enabled.
---
--- Nymz:(20260403) Size
--- debugger window height now persists across /rl via SavedVariables
--- added v button: expands window height by 100 px
--- added ^ button: contracts window height by 100 px (floor: default 300 px)
--- added r button: resets window height to default 300 px
--- all three buttons are blue, have tooltips, and are placed near the close button
--- resizing preserves window position; clamping at screen edges is handled gracefully
 
--- Nymz:(20260403) DebugVisibility
--- debugger window now remembers its open/closed state across /rl
--- window stays hidden after close; Shift+Click Fill or /frbdebug to reopen
--- works even when closed: messages are always buffered when option is enabled
 
--- Nymz:(20260403) LogLevelFilter
--- messages are always stored regardless of log level
--- enabling/disabling a log level in the Log Levels panel now shows/hides
--- those entries live in the debugger window without needing a reload
 
--- Nymz:(20260403) LogLevelTooltips
--- added hover tooltips to all log level checkboxes in the Log Levels panel
--- each tooltip describes what category of messages that level covers
 
--- Nymz:(20260403) MouseWheelScroll
--- added mouse wheel scrolling to the log area
--- scrolling over both the scroll frame and the text box moves the scrollbar
 
--- Pumpan:(20260325)
--- Use a real EditBox as the scroll child so the log text can be selected/copied
 
--- Pumpan:(20260324)
--- fixed the broken timestamp/message formatting
--- keep a lifetime counter so the log does not look stuck at 70
--- only auto-scroll when already near the bottom
--- added a Show Timestamps checkbox with SavedVariables support
--- save debugger frame position between reloads
--- tightened scroll text anchoring to the debugger UI
--- restored selectable log text and a Copy All button beside Clear Messages
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
