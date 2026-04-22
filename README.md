@@ -36,10 +36,11 @@ It helps you:
 
 ## 🎬 Quick Tutorial
 
-Watch a short guide on how to use FillRaidBots:
-
-[![Watch the tutorial](https://img.youtube.com/vi/vJozbfeNEno/maxresdefault.jpg)]
-(https://www.youtube.com/watch?v=vJozbfeNEno)
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=vJozbfeNEno">
+    <img src="https://img.youtube.com/vi/vJozbfeNEno/maxresdefault.jpg" width="600">
+  </a>
+</p>
 
 ---
 ## 🛠️ Installation
