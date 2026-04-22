@@ -21,8 +21,8 @@ local classes = {
 
 local addonName = "FillRaidBots"
 local addonPrefix = "FillRaid1142"
-local versionNumber = "4.0.2"
-local a = "4"
+local versionNumber = "5.0.0"
+local a = "5"
 local botCount = 0
 local initialBotRemoved = false
 firstBotName = nil
@@ -35,6 +35,9 @@ local classCounts = {}
 local FillRaidFrame 
 local fillRaidFrameManualClose = false 
 local isCheckAndRemoveEnabled = false
+local starterSequenceRunning = false
+local continueFillAfterStarter = false
+
 
 if FillRaidBotsSavedSettings == nil then
     FillRaidBotsSavedSettings = {}
@@ -47,31 +50,45 @@ local function InitializeSettings()
         FillRaidBotsSavedSettings.isCheckAndRemoveEnabled = false  
     end
 end
+--=================================================
+-- Generate toggle functions from UISettings.lua --
+--=================================================
+for _, section in ipairs(SettingsConfig.sections) do
+    for _, item in ipairs(section.items) do
+        if item.type == "checkbox" and item.toggle then
 
-function ToggleAutoRepair(isChecked)
-    AutoRepairEnabled = isChecked 
+            local varName = item.toggle          
+            local funcBase = string.gsub(varName, "Enabled$", "")
+            local funcName = "Toggle"..funcBase 
+
+            if not _G[funcName] then
+                
+                _G[funcName] = function(isChecked)
+                    _G[varName] = isChecked
+                end
+            end
+        end
+    end
 end
-function ToggleAutoJoinGuild(isChecked)
-    AutoJoinGuildEnabled = isChecked 
-end
-function ToggleAutoMuteSound(isChecked)
-    AutoMuteSoundEnabled = isChecked 
-end
-function ToggleremoveDeadBots(isChecked)
-    removeDeadBotsEnabled = isChecked 
-end
+
+
+
+
 ----------------------VIP Detector--------------------------
 local vipFrame = CreateFrame("Frame", "VIPDetectorFrame")
 local isVIP = false
 local vipTimer = 0
 local vipListening = true
 
+
 local VIP_KEYWORDS = {
     "repaired.",
 }
 
+
 vipFrame:RegisterEvent("CHAT_MSG_SYSTEM")
 vipFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+
 
 local function IsVIPMessage(msg)
     for _, keyword in ipairs(VIP_KEYWORDS) do
@@ -95,10 +112,22 @@ vipFrame:SetScript("OnEvent", function(self, event, arg1)
                         vipListening = false
                         DebugMessage("|cffffff00[VIP SCAN DONE]|r No VIP detected.", "debuginfo")
                         self:SetScript("OnUpdate", nil)
-                        AutoRepairCheckButton:SetChecked(false)
-                        AutoRepairCheckButton:Disable()
-                        AutoRepairCheckButton.text:SetTextColor(0.5, 0.5, 0.5)
-                        AutoRepairCheckButton.text:SetText("Auto Repair (VIP ONLY)")
+
+						local cb = GetSettingsCheckbox("isAutoRepairEnabled")
+						if cb then
+							cb:SetChecked(false)
+							cb:Disable()
+							cb.text:SetTextColor(0.5, 0.5, 0.5)
+							cb.text:SetText("Auto Repair (VIP ONLY)")
+						end
+
+						local vipCb = GetSettingsCheckbox("useVipPresets")
+						if vipCb then
+							vipCb:SetChecked(false)
+							vipCb:Disable()
+							vipCb.text:SetTextColor(0.5, 0.5, 0.5)
+							vipCb.text:SetText("Use VIP Presets (VIP ONLY)")
+						end
                     end
                 end
             end)
@@ -109,24 +138,40 @@ vipFrame:SetScript("OnEvent", function(self, event, arg1)
             if msg and IsVIPMessage(msg) then
                 isVIP = true
                 FillRaidBotsSavedSettings.isVIP = true
-                AutoRepairCheckButton:SetChecked(true)
+
+				local cb = GetSettingsCheckbox("isAutoRepairEnabled")
+				if cb then
+					cb:SetChecked(FillRaidBotsSavedSettings.isAutoRepairEnabled and true or false)
+					cb:Enable()
+					cb.text:SetTextColor(1, 1, 1)
+					cb.text:SetText("Auto Repair")
+				end
+
+				local vipCb = GetSettingsCheckbox("useVipPresets")
+				if vipCb then
+					vipCb:SetChecked(FillRaidBotsSavedSettings.useVipPresets and true or false)
+					vipCb:Enable()
+					vipCb.text:SetTextColor(1, 1, 1)
+					vipCb.text:SetText("Use VIP Presets")
+				end
+
                 print("|cff00ff00[VIP DETECTED]|r You have VIP status!")
 				
                 vipListening = false
-                AutoRepairCheckButton:Enable()
                 self:SetScript("OnUpdate", nil)
             end
         end
     end
 end)
 
-
-
----------------------------------------------------- auto repair ----------------------------------------------
+-- ==============
+-- auto repair --
+-- ==============
 local durabilityFrame = CreateFrame("Frame", "DurabilityRepairFrame")
 durabilityFrame:RegisterEvent("PLAYER_UNGHOST")
 durabilityFrame:RegisterEvent("PLAYER_ALIVE")
 durabilityFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+
 
 local DURABLE_SLOTS = {
     "HeadSlot", "ShoulderSlot", "ChestSlot", "WaistSlot", "LegsSlot",
@@ -172,6 +217,7 @@ local function ColorPercent(pct)
         return "|cffff0000" .. string.format("%.0f%%", pct) .. "|r"
     end
 end
+
 
 local lastRepairTime = 0
 
@@ -265,11 +311,13 @@ function QueueDebugMessage(message, recipient)
         { message = message, recipient = recipient or "none" })
 end
 
-
+local CanManageRaidBots
+local IsFillBlocked
+local RefreshBotManagementPermissionState
 
 
 local RoleDetector = CreateFrame("Frame")
-RoleDetector:RegisterEvent("UNIT_AURA") 
+
 RoleDetector:RegisterEvent("PLAYER_ENTERING_WORLD") 
 RoleDetector:RegisterEvent("GROUP_ROSTER_UPDATE") 
 RoleDetector:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
@@ -487,27 +535,66 @@ local function normalizePlayerName(playerName)
     return cleanName
 end
 
+local classColors = {
+    warrior = "|cFFC79C6E",
+    mage = "|cFF40C7EB",
+    warlock = "|cFF8788EE",
+    hunter = "|cFFABD473",
+    rogue = "|cFFFFF569",
+    paladin = "|cFFF58CBA",
+    shaman = "|cFF0070DE",
+    druid = "|cFFFF7D0A",
+    priest = "|cFFFFFFFF",
+}
+
+local resetColor = "|r"
+
+local function GetColoredClass(classRole)
+    if not classRole then return "" end
+
+    
+    classRole = string.gsub(classRole, "^%s*(.-)%s*$", "%1")
+
+    
+    local spacePos = string.find(classRole, " ")
+
+    local class
+    if spacePos then
+        class = string.sub(classRole, 1, spacePos - 1)
+    else
+        class = classRole
+    end
+
+    local lower = string.lower(class)
+
+    
+    local display = string.upper(string.sub(lower, 1, 1)) ..
+                    string.sub(lower, 2)
+
+    local color = classColors[lower]
+
+    if color then
+        return color .. display .. resetColor
+    end
+
+    return display
+end
+
 
 local function updateRoleConfidence(playerName, class, role, confidenceIncrease, spell)
+
     local normalizedPlayerName = normalizePlayerName(playerName)
     if not normalizedPlayerName then return end  
 
-    local classColors = {
-        warrior = "|cFFC79C6E",   
-        mage = "|cFF40C7EB",      
-        warlock = "|cFF8788EE",  
-        hunter = "|cFFABD473",    
-        rogue = "|cFFFFF569",    
-        paladin = "|cFFF58CBA",   
-        shaman = "|cFF0070DE",    
-        druid = "|cFFFF7D0A",     
-        priest = "|cFFFFFFFF",   
-    }
-    local resetColor = "|r" 
+    local coloredClass = GetColoredClass(class)
+    local plainClass = string.lower(class or "")
 
-    local coloredClass = classColors[string.lower(class)] and (classColors[string.lower(class)] .. class .. resetColor) or class
-    local plainClass = string.lower(class)
-    local data = playerData[normalizedPlayerName] or { classColored = coloredClass, ClassNoColor = plainClass, role = role, roleConfidence = 0 }
+    local data = playerData[normalizedPlayerName] or {
+        classColored = coloredClass,
+        ClassNoColor = plainClass,
+        role = role,
+        roleConfidence = 0
+    }
 
     data.roleConfidence = data.roleConfidence + confidenceIncrease
 
@@ -516,15 +603,24 @@ local function updateRoleConfidence(playerName, class, role, confidenceIncrease,
             detectedPlayers[normalizedPlayerName] = true
             detectedPlayerCount = detectedPlayerCount + 1
 
-            QueueDebugMessage("Detected: " .. detectedPlayerCount .. " - " .. playerName .. " is a " .. coloredClass .. " (" .. role .. ") using: " .. spell, "debugdetection")
+            QueueDebugMessage(
+                "Detected:" .. detectedPlayerCount ..
+                " - " .. playerName ..
+                " is a " .. coloredClass ..
+                " (" .. role .. ") using: " .. spell,
+                "debugdetection"
+            )
         end
     else
-        QueueDebugMessage("INFO: Updated confidence for " .. playerName .. ": " .. data.roleConfidence, "debuginfo")
+        QueueDebugMessage(
+            "INFO: Updated confidence for " .. playerName ..
+            ": " .. data.roleConfidence,
+            "debugdetection"
+        )
     end
 
     playerData[normalizedPlayerName] = data
 end
-
 
 local function isBotNameInGroup(playerName)
     local normalizedPlayerName = normalizePlayerName(playerName)
@@ -539,35 +635,46 @@ local function isBotNameInGroup(playerName)
     return false
 end
 
+CanManageRaidBots = function()
+    if not IsInGroup() then
+        return true
+    end
+
+    return UnitIsGroupLeader("player") or UnitIsGroupAssistant("player")
+end
+
 local function DetectRole(event, ...)
+    if not CanManageRaidBots() then
+        return
+    end
+
     if event == "COMBAT_LOG_EVENT_UNFILTERED" then
-        
+
         local timestamp, subevent, _, sourceGUID, sourceName, _, _, destGUID, destName, _, _, spellID, spellName = CombatLogGetCurrentEventInfo()
 
-        
         if not sourceName or not spellName then return end
 
-        
         local normalizedPlayerName = normalizePlayerName(sourceName)
-        if not normalizedPlayerName then return end 
+        if not normalizedPlayerName then return end
 
-        
         if not isBotNameInGroup(normalizedPlayerName) then
             return
         end
 
-        
         if subevent == "SPELL_CAST_SUCCESS" or subevent == "SPELL_CAST_START" then
 
-			if spellDictionary[spellName] then
-				local role = spellDictionary[spellName].role
+            if spellDictionary[spellName] then
+                local role = spellDictionary[spellName].role
 
-				
-				if role ~= "tank" then
-					
-					updateRoleConfidence(sourceName, spellDictionary[spellName].class, role, spellDictionary[spellName].confidenceIncrease, spellName)
-				end
-			end
+                
+                
+                local existingData = playerData[normalizedPlayerName]
+                if existingData and existingData.role == "tank" then
+                    return
+                end
+
+                updateRoleConfidence(sourceName, spellDictionary[spellName].class, role, spellDictionary[spellName].confidenceIncrease, spellName)
+            end
 
         end
     end
@@ -577,7 +684,13 @@ end
 
 
 local warriorDetectionCount = {}
+
+
 local function CheckRaidAuras()
+    if not CanManageRaidBots() then
+        return
+    end
+
     local playerName = UnitName("player")  
 
     for i = 1, GetNumGroupMembers() do
@@ -601,25 +714,17 @@ local function CheckRaidAuras()
             end
 
             for j = 1, 16 do
-                
                 local buffName = UnitBuff(unitId, j)
                 if not buffName then break end  
 
-                
                 if buffName == "Greater Armor" then  
                     hasTankBuff = true  
                     if not detectedPlayers[unitName] then
                         detectedPlayers[unitName] = true  
                         updateRoleConfidence(unitName, unitClass, "tank", 3, "Greater Armor")
                     end
+                    break 
                 end
-
-               
-               
-               
-               
-               
-               
             end
 
             if unitClass == "warrior" and not hasTankBuff and not detectedPlayers[unitName] then
@@ -629,9 +734,12 @@ local function CheckRaidAuras()
                     warriorDetectionCount[unitName] = warriorDetectionCount[unitName] + 1  
                 end
 
-                if warriorDetectionCount[unitName] >= 10 then
+                
+                
+                
+                if warriorDetectionCount[unitName] >= 2 then
                     detectedPlayers[unitName] = true  
-                    updateRoleConfidence(unitName, "warrior", "meleedps", 3, "Checked 10 times")
+                    updateRoleConfidence(unitName, "warrior", "meleedps", 3, "Checked 2 times")
                     warriorDetectionCount[unitName] = nil  
                 end
             end
@@ -641,9 +749,76 @@ end
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+local checkRaidAurasTimer = nil
+local checkRaidAurasSecondTimer = nil
+local previousGroupSize = 0
+local hadBotManagementPermission = true
+
+local function CancelCheckRaidAurasTimers()
+    if checkRaidAurasTimer then
+        checkRaidAurasTimer:Cancel()
+        checkRaidAurasTimer = nil
+    end
+
+    if checkRaidAurasSecondTimer then
+        checkRaidAurasSecondTimer:Cancel()
+        checkRaidAurasSecondTimer = nil
+    end
+end
+
+local function ScheduleCheckRaidAuras()
+    if not CanManageRaidBots() then
+        CancelCheckRaidAurasTimers()
+        previousGroupSize = GetNumGroupMembers()
+        return
+    end
+
+    local currentSize = GetNumGroupMembers()
+
+    
+    if currentSize <= previousGroupSize then
+        previousGroupSize = currentSize
+        return
+    end
+    previousGroupSize = currentSize
+
+    
+    CancelCheckRaidAurasTimers()
+
+    
+    checkRaidAurasTimer = C_Timer.NewTimer(1, function()
+        CheckRaidAuras()
+        checkRaidAurasTimer = nil
+
+        
+        checkRaidAurasSecondTimer = C_Timer.NewTimer(3, function()
+            CheckRaidAuras()
+            checkRaidAurasSecondTimer = nil
+        end)
+    end)
+end
+
+
+
+
 RoleDetector:SetScript("OnEvent", function(self, event, ...)
-    if event == "UNIT_AURA" then
-         CheckRaidAuras() 
+    if event == "PLAYER_ENTERING_WORLD" or event == "GROUP_ROSTER_UPDATE" then
+        RefreshBotManagementPermissionState()
+    end
+
+    if event == "GROUP_ROSTER_UPDATE" then
+        ScheduleCheckRaidAuras()
     else
         DetectRole(event, ...)
     end
@@ -698,20 +873,34 @@ end
 
 
 UpdateGroupMembers()
-
+local ResetRefillLoopState
+local FinishRefillLoop
+local ScheduleRefillRecheck
+local RecheckRefillState
+local RunRefillPass
+local refillLoopRunning = false
+local refillRecheckPending = false
+local PendingRefill = {}
+local refillFinalCheckPending = false
 
 RoleRemoverFrame:SetScript("OnEvent", function()
-    
+    RefreshBotManagementPermissionState()
+
     local oldGroupMembers = groupMembers
 
     
     UpdateGroupMembers()
     UpdateReFillButtonVisibility() 
 
+    if refillLoopRunning and not refillRecheckPending then
+        ScheduleRefillRecheck(0.2)
+    end
+
     
     local isInGroup = GetNumGroupMembers() > 0
     if wasInGroup and not isInGroup then
         ReplaceDeadBot = {}
+        ResetRefillLoopState()
         UpdateReFillButtonVisibility()
         resetData() 
         QueueDebugMessage("Cleared both lists", "debugdetection")
@@ -762,7 +951,7 @@ local function markAsRemoved(name, timeout)
 	alreadyRemoved[name] = true
 	C_Timer.After(timeout or 15, function()
 		alreadyRemoved[name] = nil
-		--QueueDebugMessage("DEBUG: Reset skipping removal flag for " .. name, "debugremove")
+		
 	end)
 end
 
@@ -812,6 +1001,21 @@ function resetData()
     detectedPlayers = {}
     detectedPlayerCount = 0
     QueueDebugMessage("INFO: All player data has been reset.", "debuginfo")
+end
+
+RefreshBotManagementPermissionState = function()
+    local hasPermission = CanManageRaidBots()
+
+    if hadBotManagementPermission and not hasPermission then
+        resetData()
+        warriorDetectionCount = {}
+        previousGroupSize = 0
+        CancelCheckRaidAurasTimers()
+    elseif not hadBotManagementPermission and hasPermission then
+        previousGroupSize = 0
+    end
+
+    hadBotManagementPermission = hasPermission
 end
 
 SLASH_ROLELIST1 = "/rolelist"
@@ -897,39 +1101,70 @@ local function IsAnyGroupMemberInCombat()
     return false
 end
 
+local fillPausedByDeath = false
+
+IsFillBlocked = function()
+    if UnitIsDead("player") or UnitIsGhost("player") then
+        return true, "dead"
+    end
+
+    if IsAnyGroupMemberInCombat() then
+        return true, "combat"
+    end
+
+    return false, nil
+end
 
 function RetryMessageQueueProcessing()
     local currentTime = GetTime()
     if currentTime - lastTimeChecked >= checkInterval then
+        local blocked, reason = IsFillBlocked()
         lastTimeChecked = currentTime 
 
-        if not IsAnyGroupMemberInCombat() then
-            QueueDebugMessage("Resuming..", "none")
+        if not blocked then
+            if fillPausedByDeath then
+                QueueDebugMessage("INFO: Fill resumed after death.", "debugfilling")
+                fillPausedByDeath = false
+            else
+                QueueDebugMessage("Resuming..", "none")
+            end
+
             isInCombat = false
             retryTimerRunning = false
             incombatmessagesent = false    
             combatCheckFrame:SetScript("OnUpdate", nil) 
             ProcessMessageQueue() 
             ProcessDebugMessageQueue()
-        else
-            
+        elseif reason == "dead" and not fillPausedByDeath then
+            QueueDebugMessage("INFO: Fill paused while player is dead.", "debugfilling")
+            fillPausedByDeath = true
         end
     end
 end
 
+
 local firstBotRemovalFrame = CreateFrame("Frame")
 firstBotRemovalFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
 
-firstBotRemovalFrame:SetScript("OnEvent", function()
-    if not initialBotRemoved and GetNumGroupMembers() >= 3 then
-    
-        if firstBotName then
-            QueueDebugMessage("Removed first bot: " .. firstBotName, "debuginfo")
-			if totaly > 5 then 
-            UninviteMember(firstBotName, "firstBotRemoved")
-			end
-        end
 
+
+
+
+firstBotRemovalFrame:SetScript("OnEvent", function()
+    if not CanManageRaidBots() then
+        return
+    end
+
+    if starterSequenceRunning then
+        return
+    end
+
+    if not initialBotRemoved and GetNumGroupMembers() >= 3 then
+        if firstBotName and totaly > 5 then
+            initialBotRemoved = true
+            QueueDebugMessage("Removed first bot: " .. firstBotName, "debuginfo")
+            UninviteMember(firstBotName, "firstBotRemoved")
+        end
     end
 end)
 
@@ -957,11 +1192,21 @@ function ProcessMessageQueue()
         end
 
         if recipient == "SAY" then
-            if IsAnyGroupMemberInCombat() then
-                if not incombatmessagesent then 
-                    QueueDebugMessage("Raid member in combat, waiting..", "none")
-                    incombatmessagesent = true	
-                end	
+            local blocked, reason = IsFillBlocked()
+
+            if blocked then
+                if reason == "dead" then
+                    if not fillPausedByDeath then
+                        QueueDebugMessage("INFO: Fill paused while player is dead.", "debugfilling")
+                        fillPausedByDeath = true
+                    end
+                else
+                    if not incombatmessagesent then 
+                        QueueDebugMessage("Raid member in combat, waiting..", "none")
+                        incombatmessagesent = true	
+                    end
+                end
+
                 isInCombat = true
                 if not retryTimerRunning then
                     combatCheckFrame:SetScript("OnUpdate", RetryMessageQueueProcessing)
@@ -971,6 +1216,13 @@ function ProcessMessageQueue()
                 table.insert(messageQueue, 1, messageInfo)
                 return
             else
+                if fillPausedByDeath then
+                    QueueDebugMessage("INFO: Fill resumed after death.", "debugfilling")
+                    fillPausedByDeath = false
+                end
+
+                incombatmessagesent = false
+
                 if recipient == "none" then
                     DEFAULT_CHAT_FRAME:AddMessage(message)
                 else
@@ -1055,7 +1307,13 @@ function ProcessDebugMessageQueue()
                 DebugMessage(message, "debugversion")
             end
             return 
-        end			
+        end
+        if recipient == "debugzones" then
+            if FillRaidBotsSavedSettings.debugMessagesEnabled then
+                DebugMessage(message, "debugzones")
+            end
+            return
+        end
         if recipient == "none" then
             
             DEFAULT_CHAT_FRAME:AddMessage(message)
@@ -1068,6 +1326,9 @@ function ProcessDebugMessageQueue()
 end
 
 local verifiedRealPlayers = {}
+local messagecantremove = false
+local hasWarnedNoPermission = false
+local cantKickYourselfShown = false
 
 local function CreateRemoveDeadBotsButton()
     local removeDeadBotsButton = CreateFrame("Button", "RemoveDeadBotsButton", UIParent, "UIPanelButtonTemplate")
@@ -1082,11 +1343,24 @@ local function CreateRemoveDeadBotsButton()
     removeDeadBotsButton:SetScript("OnDragStart", function(self) self:StartMoving() end)
     removeDeadBotsButton:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
 
-    local function isBotName(name)
+    local function IsBotName(name)
         return name and string.find(name, "%*") ~= nil
     end
 
     function removeDeadBotsFunction()
+        if not CanManageRaidBots() then
+            if not hasWarnedNoPermission then
+                QueueDebugMessage("WARNING: You must be a raid leader or assistant to remove bots.", "debuginfo")
+                hasWarnedNoPermission = true
+            end
+            return
+        end
+        hasWarnedNoPermission = false
+
+        if not UnitIsDead("player") and not UnitIsGhost("player") then
+            cantKickYourselfShown = false
+        end
+
         local playerName = UnitName("player")
         local totalMemberCount = GetNumGroupMembers()
         local activeMemberCount = 0
@@ -1110,7 +1384,7 @@ local function CreateRemoveDeadBotsButton()
                     QueueDebugMessage("INFO: CANNOT KICK YOURSELF", "debuginfo")
                 elseif not UnitIsConnected(unit) then
                     QueueDebugMessage("INFO: CANNOT KICK OFFLINE UNIT: " .. name, "none")
-                elseif not isBotName(name) then
+                elseif not IsBotName(name) then
                     if not verifiedRealPlayers[name] then
                         QueueDebugMessage("INFO: Skipped real player (no *): " .. name, "debugremove")
                         verifiedRealPlayers[name] = true
@@ -1187,10 +1461,10 @@ local function RefreshRaidFrames()
 end
 
 
+
 local removedDeadBots = {}
-local messagecantremove = false
-local hasWarnedNoPermission = false
 local isProcessing = false
+
 
 local function RefreshRaidFrames()
    
@@ -1235,11 +1509,11 @@ local function RefreshRaidFrames()
         QueueDebugMessage("DEBUG: Refresh failed: "..tostring(err), "debugerror")
     end
 end
-local hasWarnedNoPermission = false
-local messagecantremove = false
 local guildDeadStatus = {}
 local lastKickTime = 0
 local KICK_COOLDOWN = 0.1 
+local autoRemoveWaitingForRoster = false
+local autoRemoveResumePending = false
 
 local function CountRealGroupMembers()
     local count = 0
@@ -1261,61 +1535,23 @@ local function CountRealGroupMembers()
 end
 
 
-local function buildGuildRoster()
-	local members = {}
-	for j = 1, GetNumGuildMembers() do
-		local name = GetGuildRosterInfo(j)
-		if name then
-			name = Ambiguate(name, "short")
-			members[name] = true
-		end
-	end
-
-	return members
-end
-
-local function buildFriendList()
-	local friends = {}
-	for i = 1, C_FriendList.GetNumFriends() do
-		local info = C_FriendList.GetFriendInfoByIndex(i)
-		if info and info.connected and info.name then
-			local name = Ambiguate(info.name, "short")
-			friends[name] = true
-		end
-	end
-
-	return friends
-end
-
-local guildCache, friendsCache = {}, {}
-local lastCacheTime = 0
-local CACHE_DURATION = 5 
-
-local function getCachedGuildRoster()
-    if GetTime() - lastCacheTime > CACHE_DURATION then
-        guildCache = buildGuildRoster()
-        friendsCache = buildFriendList()
-        lastCacheTime = GetTime()
-    end
-    return guildCache, friendsCache 
-end
-
-
-
 local function CheckAndRemoveDeadBots()
 	if InCombatLockdown() then return end
+
+	if not UnitIsDead("player") and not UnitIsGhost("player") then
+		cantKickYourselfShown = false
+	end
 
 	local settings = FillRaidBotsSavedSettings or {}
 	local autoRemoveEnabled = settings.isCheckAndRemoveEnabled
 	local showButtonEnabled = settings.isremoveDeadBotsButtonEnabled
 
-	local function isBotName(name)
+	local function IsBotName(name)
 		return name and string.find(name, "%*") ~= nil
 	end
 
-
 	if autoRemoveEnabled then
-		if not (UnitIsGroupLeader("player") or UnitIsGroupAssistant("player")) and IsInGroup() then
+		if not CanManageRaidBots() then
 			if not hasWarnedNoPermission then
 				QueueDebugMessage("WARNING: You must be a raid leader or assistant to remove bots.", "debuginfo")
 				hasWarnedNoPermission = true
@@ -1323,58 +1559,79 @@ local function CheckAndRemoveDeadBots()
 			return
 		end
 		hasWarnedNoPermission = false
+		
+		
+		
+		if not autoRemoveWaitingForRoster then
+			local now = GetTime()
+			
+			
+			
+			
 
-		local now = GetTime()
-		--if now - lastKickTime < KICK_COOLDOWN then
-		--	QueueDebugMessage("Throttled: waiting for kick cooldown.", "debuginfo")
-		--	return
-		--end
+			local isInRaid = IsInRaid()
+			local membersRemaining = CountRealGroupMembers()
+			if membersRemaining == 0 then return end
 
-		local isInRaid = IsInRaid()
-		local membersRemaining = CountRealGroupMembers()
-		if membersRemaining == 0 then return end
+			local minimumAllowed = 2
+			local maxGroupSize = isInRaid and 40 or 5
+			local maxKicks
+			if isInRaid then 
+				if membersRemaining > 20 then
+					maxKicks = 18			
+				elseif membersRemaining > 10 then
+					maxKicks = 8
+				elseif membersRemaining > 5 then
+					maxKicks = 3
+				else
+					maxKicks = 1
+				end
+			else
+				maxKicks = 1
+			end
+			local kicks = 0
 
-		local minimumAllowed = 2
-		local maxGroupSize = isInRaid and 40 or 5
-		local maxKicks = (membersRemaining > 5) and 3 or 1
-		local kicks = 0
+			for i = 1, maxGroupSize do
+				if kicks >= maxKicks then break end
 
-		for i = 1, maxGroupSize do
-			if kicks >= maxKicks then break end
-
-			local unit = isInRaid and ("raid" .. i) or (i == 1 and "player" or "party" .. (i - 1))
-			if UnitExists(unit) then
-				local name = UnitName(unit)
-				if name and UnitIsDead(unit) and not UnitIsGhost(unit) then
+				local unit = isInRaid and ("raid" .. i) or (i == 1 and "player" or "party" .. (i - 1))
+				if UnitExists(unit) then
 					if UnitIsUnit(unit, "player") then
-						QueueDebugMessage("INFO: CANNOT KICK YOURSELF", "debuginfo")
-					elseif not UnitIsConnected(unit) then
-						QueueDebugMessage("INFO: CANNOT KICK OFFLINE UNIT: " .. name, "debuginfo")
-					elseif isBotName(name) and membersRemaining > minimumAllowed then
-						UninviteMember(name, "dead")
-						membersRemaining = membersRemaining - 1
-						kicks = kicks + 1
-					elseif verifiedRealPlayers[name] then
-					
-					elseif not isBotName(name) then
-						QueueDebugMessage("INFO: Skipped real player (no *): " .. name, "debuginfo")
-						verifiedRealPlayers[name] = true
-					else
-						if not messagecantremove then
-							QueueDebugMessage("INFO: Stopped kicking. Members left: " .. membersRemaining .. ". Preventing group disband.", "debuginfo")
-							messagecantremove = true
+						if UnitIsDead(unit) and not UnitIsGhost(unit) and not cantKickYourselfShown then
+							QueueDebugMessage("INFO: CANNOT KICK YOURSELF", "debuginfo")
+							cantKickYourselfShown = true
 						end
-						break
+					else
+						local name = UnitName(unit)
+						if name and UnitIsDead(unit) and not UnitIsGhost(unit) then
+							if not UnitIsConnected(unit) then
+								QueueDebugMessage("INFO: CANNOT KICK OFFLINE UNIT: " .. name, "debuginfo")
+							elseif IsBotName(name) and membersRemaining > minimumAllowed then
+								UninviteMember(name, "dead")
+								membersRemaining = membersRemaining - 1
+								kicks = kicks + 1
+							elseif verifiedRealPlayers[name] then
+							elseif not IsBotName(name) then
+								QueueDebugMessage("INFO: Skipped real player (no *): " .. name, "debuginfo")
+								verifiedRealPlayers[name] = true
+							else
+								if not messagecantremove then
+									QueueDebugMessage("INFO: Stopped kicking. Members left: " .. membersRemaining .. ". Preventing group disband.", "debuginfo")
+									messagecantremove = true
+								end
+								break
+							end
+						end
 					end
 				end
 			end
-		end
 
-		if kicks > 0 then
-			lastKickTime = GetTime()
+			if kicks > 0 then
+				lastKickTime = GetTime()
+				autoRemoveWaitingForRoster = true
+			end
 		end
 	end
-
 
 	local hasDeadBots = false
 	local activeMemberCount = 0
@@ -1384,7 +1641,7 @@ local function CheckAndRemoveDeadBots()
 		local unit = (groupType == "party" and i == 1) and "player" or (groupType .. i)
 		if UnitExists(unit) and not UnitIsUnit(unit, "player") and UnitIsConnected(unit) then
 			local name = UnitName(unit)
-			if name and isBotName(name) then
+			if name and IsBotName(name) then
 				if not UnitIsGhost(unit) then
 					activeMemberCount = activeMemberCount + 1
 				end
@@ -1395,12 +1652,15 @@ local function CheckAndRemoveDeadBots()
 		end
 	end
 
-	if showButtonEnabled then
+	
+	if showButtonEnabled and not autoRemoveEnabled then
 		if hasDeadBots and activeMemberCount >= 2 then
 			removeDeadBotsButton:Show()
 		else
 			removeDeadBotsButton:Hide()
 		end
+	elseif autoRemoveEnabled then
+		removeDeadBotsButton:Hide()
 	end
 
 	isProcessing = false
@@ -1414,10 +1674,31 @@ end
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 eventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
+eventFrame:RegisterEvent("PLAYER_ALIVE")
+eventFrame:RegisterEvent("PLAYER_UNGHOST")
 eventFrame:SetScript("OnEvent", function(self, event)
     if event == "PLAYER_REGEN_ENABLED" then
-       
-        C_Timer.After(2, CheckAndRemoveDeadBots)
+        if not autoRemoveWaitingForRoster then
+            C_Timer.After(2, CheckAndRemoveDeadBots)
+        end
+    elseif event == "GROUP_ROSTER_UPDATE" then
+        if autoRemoveWaitingForRoster then
+            autoRemoveWaitingForRoster = false
+
+            if not autoRemoveResumePending and not InCombatLockdown() then
+                autoRemoveResumePending = true
+                C_Timer.After(0, function() 
+                    autoRemoveResumePending = false
+                    CheckAndRemoveDeadBots()
+                end)
+            end
+        end
+
+        if not InCombatLockdown() then
+            RefreshRaidFrames()
+        end
+    elseif event == "PLAYER_ALIVE" or event == "PLAYER_UNGHOST" then
+        cantKickYourselfShown = false
     elseif not InCombatLockdown() then
         RefreshRaidFrames()
     end
@@ -1425,95 +1706,67 @@ end)
 
 
 
+
+
+
+local function IsBotName(name)
+    return name and string.find(name, "%*") ~= nil
+end
+
 function SaveRaidMembersAndSetFirstBot()
-    local raidMembers = {}
     local playerName = UnitName("player")
-    firstBotName = nil  
-
-    local guildMembers = {}
-    for i = 1, GetNumGuildMembers() do
-        local name, _, _, _, _, _, _, _, online = GetGuildRosterInfo(i)
-        if name and online then
-            local normalizedGuildName = name:match("([^%-]+)"):lower() 
-            guildMembers[normalizedGuildName] = true
-        end
-    end
-
-    local friends = {}
-    local numFriends = C_FriendList.GetNumFriends()
-    for i = 1, numFriends do
-        local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
-        if friendInfo and friendInfo.name and friendInfo.connected then
-            local normalizedFriendName = friendInfo.name:match("([^%-]+)"):lower() 
-            friends[normalizedFriendName] = true
-        end
-    end
+    firstBotName = nil
 
     local numRaidMembers = GetNumRaidMembers and GetNumRaidMembers() or GetNumGroupMembers()
     for i = 1, numRaidMembers do
         local unit = IsInRaid() and "raid" .. i or "party" .. i
         local name = UnitName(unit)
 
-       
-        if name and name ~= playerName then
-            table.insert(raidMembers, name)
-
-            local normalizedName = name:match("([^%-]+)"):lower()
-
-            if not firstBotName and not guildMembers[normalizedName] and not friends[normalizedName] then
-                firstBotName = name
-            end
+        if name and name ~= playerName and IsBotName(name) then
+            firstBotName = name
+            break
         end
     end
 
     if firstBotName then
         QueueDebugMessage("INFO: First bot in raid set to: " .. firstBotName, "debuginfo")
     else
-        QueueDebugMessage("WARNING: No eligible bot found to set as the first bot in raid.", "debuginfo")
+        QueueDebugMessage("WARNING: No bot found in raid to set as first bot.", "debuginfo")
     end
 end
 
 
-
-
 local function SavePartyMembersAndSetFirstBot()
-    local partyMembers = {}
-    local isInRaid = IsInRaid()  
+    local playerName = UnitName("player")
+    firstBotName = nil
 
-    
-    if isInRaid then
+    if IsInRaid() then
         QueueDebugMessage("In a raid group.", "debuginfo")
         for i = 1, GetNumGroupMembers() do
-            local unit = "raid" .. i
-            local name = UnitName(unit)
+            local name = UnitName("raid" .. i)
             if name then
-                table.insert(partyMembers, name)
                 QueueDebugMessage("Found raid member: " .. name, "debuginfo")
             else
                 QueueDebugMessage("No name found for raid unit " .. i, "debuginfo")
             end
+
+            if name and name ~= playerName and IsBotName(name) then
+                firstBotName = name
+                break
+            end
         end
     else
         QueueDebugMessage("In a party group.", "debuginfo")
-        for i = 1, GetNumGroupMembers() - 1 do  
-            local unit = "party" .. i
-            local name = UnitName(unit)
-            if name then
-                table.insert(partyMembers, name)
-            else
+        for i = 1, GetNumGroupMembers() - 1 do
+            local name = UnitName("party" .. i)
+            if not name then
                 QueueDebugMessage("No name found for party unit " .. i, "debuginfo")
             end
-        end
-    end
 
-    
-    local playerName = UnitName("player")
-    QueueDebugMessage("Player name is: " .. playerName, "debuginfo")
-
-    for _, member in ipairs(partyMembers) do
-        if member ~= playerName then
-            firstBotName = member
-            break
+            if name and name ~= playerName and IsBotName(name) then
+                firstBotName = name
+                break
+            end
         end
     end
 
@@ -1527,13 +1780,22 @@ end
 
 
 
+
+
+
+local function ResetStarterSequenceState()
+    starterSequenceRunning = false
+    continueFillAfterStarter = false
+    starterSwapDone = false
+    initialBotRemoved = false
+    firstBotName = nil
+    botCount = 0
+end
+
 function resetfirstbot_OnEvent(self, event)
     if event == "RAID_ROSTER_UPDATE" or event == "GROUP_ROSTER_UPDATE" then
-        
         if GetNumGroupMembers() == 0 then
-            initialBotRemoved = false
-            firstBotName = nil
-            botCount = 0
+            ResetStarterSequenceState()
             QueueDebugMessage("Bot state reset: No members in party or raid.", "debuginfo")
         end
     end
@@ -1578,16 +1840,67 @@ function FillRaid_OnLoad(self, event, ...)
     end
 end
 
+
+
+
+
+
+--========================
+-- Helper: Determine which loot method to apply
+--========================
 local function GetSelectedLootMethod()
-    if AutoFFACheckButton:GetChecked() then
+    if FillRaidBotsSavedSettings.isFFAEnabled then
         return "freeforall"
-    elseif AutoGroupLootCheckButton:GetChecked() then
+    elseif FillRaidBotsSavedSettings.isGroupLootEnabled then
         return "group"
-    elseif AutoMasterLootCheckButton:GetChecked() then
+    elseif FillRaidBotsSavedSettings.isMasterLootEnabled then
         return "master"
     end
-    return "freeforall" 
 end
+
+--========================
+-- Loot Logic
+--========================
+local hasAppliedLoot = false
+
+local function ApplySavedLootMethod()
+    if not isLootTypeEnabled then return end
+    if not UnitIsGroupLeader("player") then return end
+    if hasAppliedLoot then return end
+
+    local selectedMethod = GetSelectedLootMethod()
+    if not selectedMethod then return end
+
+    local currentMethod = GetLootMethod()
+
+    if currentMethod ~= selectedMethod then
+        if selectedMethod == "master" then
+            SetLootMethod("master", UnitName("player"))
+            DEFAULT_CHAT_FRAME:AddMessage("Loot set to Master Loot")
+        else
+            SetLootMethod(selectedMethod)
+            DEFAULT_CHAT_FRAME:AddMessage("Loot set to " .. (selectedMethod == "group" and "Group Loot" or "FFA"))
+        end
+    end
+
+    hasAppliedLoot = true
+end
+
+--==================================================
+-- Event-frame
+--==================================================
+resetBotFrame:SetScript("OnEvent", function(self, event, arg1)
+
+    resetfirstbot_OnEvent(self, event)
+
+    if UnitIsGroupLeader("player") then
+        if not hasAppliedLoot then
+            ApplySavedLootMethod()
+        end
+    else
+        hasAppliedLoot = false
+    end
+end)
 
 local originalSFXVolume = nil
 
@@ -1624,106 +1937,343 @@ local moveQueue = {}
 local healerClasses = {"PALADIN", "PRIEST", "DRUID", "SHAMAN"} 
 local currentPhase = 1
 local FixGroups
+pendingAddOthersFunc = nil
+pendingAddOthersStarted = false
+local starterSwapDone = false
+local function TakeNextPresetBot(healers, others)
+    if table.getn(healers) > 0 then
+        return table.remove(healers, 1)
+    end
+
+    if table.getn(others) > 0 then
+        return table.remove(others, 1)
+    end
+
+    return nil
+end
+
+local FillRaid
 
 
 
-local function FillRaid()
+local function EnsureFirstBotFromCurrentGroup()
+    if firstBotName then
+        return true
+    end
+
+    if IsInRaid() then
+        SaveRaidMembersAndSetFirstBot()
+    else
+        SavePartyMembersAndSetFirstBot()
+    end
+
+    if firstBotName then
+        QueueDebugMessage("Using existing bot as starter bot: " .. firstBotName, "debugfilling")
+        return true
+    end
+
+    QueueDebugMessage("Could not find an existing bot to use as starter bot.", "debugerror")
+    return false
+end
+
+local function TakeNextPresetBot(healers, others)
+    if table.getn(healers) > 0 then
+        return table.remove(healers, 1)
+    end
+
+    if table.getn(others) > 0 then
+        return table.remove(others, 1)
+    end
+
+    return nil
+end
+
+local function QueueRemainingBots(healers, others, totalExpected)
+    QueueDebugMessage("Adding: Going to add healers:" .. table.getn(healers), "debugfilling")
+    QueueDebugMessage("Adding: Going to add classes:" .. table.getn(others), "debugfilling")
+    QueueDebugMessage("Adding: Totaly:" .. totalExpected, "debugfilling")
+
+    for _, healer in ipairs(healers) do
+        QueueMessage(".partybot add " .. string.lower(healer), "SAY", true)
+        QueueDebugMessage("Added " .. healer, "debugfilling")
+    end
+
+    for _, other in ipairs(others) do
+        QueueMessage(".partybot add " .. string.lower(other), "SAY", true)
+        QueueDebugMessage("Added " .. other, "debugfilling")
+    end
+end
+
+
+
+
+
+local function GroupHasAnyBot()
+    local playerName = UnitName("player")
+
+    if IsInRaid() then
+        local numMembers = GetNumRaidMembers and GetNumRaidMembers() or GetNumGroupMembers()
+        for i = 1, numMembers do
+            local name = UnitName("raid" .. i)
+            if name and name ~= playerName and IsBotName(name) then
+                return true
+            end
+        end
+    else
+        local numMembers = GetNumGroupMembers() - 1
+        for i = 1, numMembers do
+            local name = UnitName("party" .. i)
+            if name and name ~= playerName and IsBotName(name) then
+                return true
+            end
+        end
+    end
+
+    return false
+end
+
+
+
+
+
+local function StartStarterBotSequence(healers, others)
+    if not CanManageRaidBots() then
+        QueueDebugMessage("Starter sequence blocked: you are not leader/assistant.", "debuginfo")
+        return
+    end
+
+    if starterSequenceRunning then
+        return
+    end
+
+    starterSequenceRunning = true
+    continueFillAfterStarter = false
+    initialBotRemoved = false
+
+    local starterFrame = CreateFrame("Frame")
+    local stage = 1
+    local secondBotAdded = false
+    local invitedStarterBot = false
+    local replacementBot = nil
+    local stage3StartMembers = 0
+
+    starterFrame:SetScript("OnUpdate", function()
+        
+        
+        
+        if stage == 1 then
+            if IsInRaid() then
+                if not firstBotName then
+                    SaveRaidMembersAndSetFirstBot()
+                end
+
+                if firstBotName then
+                    QueueDebugMessage("Using existing raid bot as starter bot: " .. firstBotName, "debugfilling")
+                    stage = 3
+                else
+                    QueueDebugMessage("Starter sequence aborted: no existing raid bot found to replace.", "debugerror")
+                    ResetStarterSequenceState()
+                    starterFrame:SetScript("OnUpdate", nil)
+                    starterFrame:Hide()
+                end
+
+            elseif GetNumGroupMembers() == 0 then
+                if not invitedStarterBot then
+                    QueueMessage(".partybot add warrior tank", "SAY", true)
+                    QueueDebugMessage("Inviting the first bot to start the party for a raid.", "none")
+                    invitedStarterBot = true
+                end
+
+                if GetNumGroupMembers() > 0 then
+                    SavePartyMembersAndSetFirstBot()
+                    if firstBotName then
+                        QueueDebugMessage("Starter bot joined. Saved first bot.", "debugfilling")
+                        stage = 2
+                    end
+                end
+
+            else
+                if not firstBotName then
+                    SavePartyMembersAndSetFirstBot()
+                end
+
+                if firstBotName then
+                    QueueDebugMessage("Using existing party bot as starter bot: " .. firstBotName, "debugfilling")
+                    stage = 2
+                else
+                    QueueDebugMessage("Starter sequence aborted: no existing party bot found to replace.", "debugerror")
+                    ResetStarterSequenceState()
+                    starterFrame:SetScript("OnUpdate", nil)
+                    starterFrame:Hide()
+                end
+            end
+
+        
+        elseif stage == 2 then
+            if not IsInRaid() then
+                if GetNumGroupMembers() >= 2 then
+                    ConvertToRaid()
+                    QueueDebugMessage("Converted to raid.", "debugfilling")
+                    stage = 3
+                end
+            else
+                stage = 3
+            end
+
+        
+        elseif stage == 3 then
+            if IsInRaid() then
+                if not secondBotAdded then
+                    replacementBot = TakeNextPresetBot(healers, others)
+
+                    if replacementBot then
+                        stage3StartMembers = GetNumGroupMembers()
+                        QueueMessage(".partybot add " .. string.lower(replacementBot), "SAY", true)
+                        QueueDebugMessage("Added replacement bot: " .. replacementBot, "debugfilling")
+                        secondBotAdded = true
+                        stage = 4
+                    else
+                        QueueDebugMessage("No preset bot available for starter sequence.", "debugfilling")
+                        ResetStarterSequenceState()
+                        starterFrame:SetScript("OnUpdate", nil)
+                        starterFrame:Hide()
+                    end
+                end
+            end
+
+        
+        elseif stage == 4 then
+            local currentMembers = GetNumGroupMembers()
+            local replacementJoined = false
+
+            if replacementBot and playerData then
+                local normalizedReplacement = normalizePlayerName(replacementBot)
+                replacementJoined = normalizedReplacement and playerData[normalizedReplacement] ~= nil
+            end
+
+            if replacementJoined or currentMembers >= (stage3StartMembers + 1) then
+                if firstBotName and not initialBotRemoved then
+                    initialBotRemoved = true
+                    QueueDebugMessage("Removed starter bot: " .. firstBotName, "debuginfo")
+                    UninviteMember(firstBotName, "firstBotRemoved")
+                end
+
+                stage = 5
+                C_Timer.After(1, function()
+                    continueFillAfterStarter = true
+                end)
+            end
+
+        
+        elseif stage == 5 then
+            if continueFillAfterStarter then
+                local remainingTotal = table.getn(healers) + table.getn(others)
+
+                ResetStarterSequenceState()
+                starterSwapDone = true
+                starterFrame:SetScript("OnUpdate", nil)
+                starterFrame:Hide()
+                FillRaid(true, healers, others, remainingTotal)
+            end
+        end
+    end)
+
+    starterFrame:Show()
+end
+
+
+
+
+
+
+function FillRaid(skipStarterSequence, existingHealers, existingOthers, existingTotal)
 	shouldStopBotAdding = false
-    local healers = {}
-    local others = {}
+
+    if not skipStarterSequence then
+        starterSwapDone = false
+    end
+
+    local healers = existingHealers or {}
+    local others = existingOthers or {}
     local totalHealers = 0
     local totalOthers = 0
 
     ToggleSoundEffectsVolume("lower")
 
-    
-    for class, count in pairs(classCounts) do
-        if string.find(class, "healer") then
-            for i = 1, count do
-                table.insert(healers, class)
+    if existingHealers and existingOthers then
+        totalHealers = table.getn(healers)
+        totalOthers = table.getn(others)
+        totaly = existingTotal or (totalHealers + totalOthers)
+    else
+        for class, count in pairs(classCounts) do
+            if string.find(class, "healer") then
+                for i = 1, count do
+                    table.insert(healers, class)
+                end
+                totalHealers = totalHealers + count
+            else
+                for i = 1, count do
+                    table.insert(others, class)
+                end
+                totalOthers = totalOthers + count
             end
-            totalHealers = totalHealers + count
-        else
-            for i = 1, count do
-                table.insert(others, class)
-            end
-            totalOthers = totalOthers + count
         end
+
+        totaly = totalHealers + totalOthers
     end
 
+	if IsInRaid() then
+		if not starterSwapDone and totaly > 0 and GroupHasAnyBot() then
+			if not firstBotName then
+				SaveRaidMembersAndSetFirstBot()
+			end
+			StartStarterBotSequence(healers, others)
+			return
+		end
+	else
+ 
 
-    
-    totaly = totalHealers + totalOthers
-    
-    if IsInRaid() then
-        
-        if GetNumGroupMembers() == 2 then
-            SaveRaidMembersAndSetFirstBot()
-            QueueDebugMessage("SaveRaidMembersAndSetFirstBot called", "debugfilling")
-        end
-    else
-        
-        if GetNumGroupMembers() == 0 then
-			if totaly > 5 then
-				QueueMessage(".partybot add warrior tank", "SAY", true)
-				QueueDebugMessage("Inviting the first bot to start the party for a raid.", "none")
+		local currentMembers = GetNumGroupMembers() + 1
+		local targetGroupSize = currentMembers + totaly
+		
+		if targetGroupSize > 5 then
+			if GetNumGroupMembers() == 0 then
+				StartStarterBotSequence(healers, others)
+				return
+			elseif GroupHasAnyBot() then
+				if not firstBotName then
+					SavePartyMembersAndSetFirstBot()
+				end
+				StartStarterBotSequence(healers, others)
+				return
 			else
-			
-				QueueDebugMessage("Creating a party group.", "none")
-				for _, healer in ipairs(healers) do
-					QueueMessage(".partybot add " .. string.lower(healer), "SAY", true)
-				end
-				for _, other in ipairs(others) do
-					QueueMessage(".partybot add " .. string.lower(other), "SAY", true)
-				end
+				ConvertToRaid()
+				QueueDebugMessage("Converted to raid with real players only. No starter bot needed.", "debugfilling")
+				QueueRemainingBots(healers, others, totaly)
 				C_Timer.After(3, function()
 					ToggleSoundEffectsVolume("restore")
 				end)
-			
-			end				
+				return
+			end
+		end
 
-            
-            local waitForPartyFrame = CreateFrame("Frame")
-            waitForPartyFrame:SetScript("OnUpdate", function()
-                if GetNumGroupMembers() > 0 then
-                    waitForPartyFrame:SetScript("OnUpdate", nil)
-                    waitForPartyFrame:Hide()
-                    SavePartyMembersAndSetFirstBot()
-                    local selectedLoot = GetSelectedLootMethod()
-                    if selectedLoot == "master" then
-                       
-                        local playerName = UnitName("player")
-                        SetLootMethod("master", playerName)
-                        QueueDebugMessage("Loot method set to Master Looter. Assigned to: " .. playerName, "debuginfo")
-                    else
-                        SetLootMethod(selectedLoot)
-                        QueueDebugMessage("Loot method set to: " .. selectedLoot, "debuginfo")
-                    end
-					if totaly > 5 then
-                    FillRaid() 
-					end
-                end
-            end)
-            waitForPartyFrame:Show()
-            return
-        end
+		if GetNumGroupMembers() == 0 then
+			QueueDebugMessage("Creating a party group.", "none")
+			QueueRemainingBots(healers, others, totaly)
+			C_Timer.After(3, function()
+				ToggleSoundEffectsVolume("restore")
+			end)
+			return
+		end
 
-        
-        if GetNumGroupMembers() >= 2 then
-            ConvertToRaid()
-            QueueDebugMessage("Converted to raid.", "debugfilling")
-        else
-            QueueDebugMessage("You need at least 2 players in the group to convert to a raid.", "debugfilling")
-            return
-        end
-    end
-
-    
-
-
-    QueueDebugMessage("Adding: Going to add healers:" .. totalHealers, "debugfilling")
-    QueueDebugMessage("Adding: Going to add classes:" .. totalOthers, "debugfilling")
-    QueueDebugMessage("Adding: Totaly:" .. totaly, "debugfilling")
+		if GetNumGroupMembers() >= 2 then
+			ConvertToRaid()
+			QueueDebugMessage("Converted to raid.", "debugfilling")
+		else
+			QueueDebugMessage("You need at least 2 players in the group to convert to a raid.", "debugfilling")
+			return
+		end
+	end
 
 	local function FinalizeFillCheck(totalExpected)
 		local fillCompleteFrame = CreateFrame("Frame")
@@ -1744,7 +2294,6 @@ local function FillRaid()
 
 			local currentMembers = GetNumGroupMembers()
 
-
 			if currentMembers >= totalExpected then
 				fillCompleteFrame:SetScript("OnUpdate", nil)
 				fillCompleteFrame:Hide()
@@ -1754,7 +2303,6 @@ local function FillRaid()
 			end
 
 			local inCombatNow = IsAnyGroupMemberInCombat()
-
 
 			if inCombatNow and not inCombatPause then
 				pauseStart = GetTime()
@@ -1769,7 +2317,6 @@ local function FillRaid()
 			local timeElapsed = GetTime() - startTime - pausedTime
 			local fillTimedOut = timeElapsed >= MAX_WAIT_TIME
 			local fillStalled = timeElapsed > 10 and currentMembers == lastMemberCount
-
 
 			if not inCombatNow and (fillTimedOut or fillStalled) then
 				fillCompleteFrame:SetScript("OnUpdate", nil)
@@ -1791,7 +2338,6 @@ local function FillRaid()
 		fillCompleteFrame:Show()
 	end
 
-    
     local function addBot(class)
         local classColors = {
             warrior = "|cFFC79C6E",
@@ -1809,7 +2355,6 @@ local function FillRaid()
         local plainClass = string.lower(class)
         local coloredClass = plainClass
 
-        
         for className, color in pairs(classColors) do
             if string.find(plainClass, className) then
                 coloredClass = color .. plainClass .. resetColor
@@ -1817,12 +2362,10 @@ local function FillRaid()
             end
         end
 
-        
         QueueMessage(".partybot add " .. plainClass, "SAY", true)
         QueueDebugMessage("Added " .. coloredClass, "debugfilling")
     end
 
-    
     local function addOthers()
         QueueDebugMessage("addOthers called", "debuginfo")
         if #others == 0 then
@@ -1834,24 +2377,19 @@ local function FillRaid()
             addBot(otherClass)
         end
         FinalizeFillCheck(totaly)
-		
     end
 
-
-    
     if totalHealers == 0 then
         QueueDebugMessage("No healers found. Skipping healer addition.", "debugerror")
         addOthers()
         return
     end
 
-    
     local healersAdded = 0
     for _, healerClass in ipairs(healers) do
         addBot(healerClass)
         healersAdded = healersAdded + 1
 
-        
         if healersAdded == totalHealers then
             local waitForHealersFrame = CreateFrame("Frame")
             waitForHealersFrame:SetScript("OnUpdate", function()
@@ -1860,20 +2398,14 @@ local function FillRaid()
                     waitForHealersFrame:Hide()
                     QueueDebugMessage("FixGroups: All healers are in the raid. Starting FixGroups.", "debuginfo")
 
-                    
                     C_Timer.After(1, function()
                         isFixingGroups = true
                         currentPhase = 1
                         lastMoveTime = 0
-						
                         moveQueue = {}
+                        pendingAddOthersFunc = addOthers
+                        pendingAddOthersStarted = false
                         FixGroups()
-
-                        
-                        C_Timer.After(5, function()
-                            QueueDebugMessage("Added: Adding other classes after healers.", "debugfilling")
-                            addOthers()
-                        end)
                     end)
                 end
             end)
@@ -1953,6 +2485,13 @@ local function ProcessMoveQueue()
         else
             QueueDebugMessage("FixGroups: Phase 2 complete, groups organized", "debuginfo")
             isFixingGroups = false
+
+            if pendingAddOthersFunc and not pendingAddOthersStarted then
+                pendingAddOthersStarted = true
+                QueueDebugMessage("Added: Adding other classes after healer grouping completed.", "debugfilling")
+                pendingAddOthersFunc()
+                pendingAddOthersFunc = nil
+            end
         end
     end
 end
@@ -1962,141 +2501,131 @@ end
 
 
 function FixGroups()
-
+    if not CanManageRaidBots() then
+        QueueDebugMessage("FixGroups blocked: you are not leader/assistant.", "debuginfo")
+        isFixingGroups = false
+        return
+    end
 
     local groupSizes = {}
     local groupClasses = {}
     local healers = {}
 
-	
-	for i = 1, MAX_GROUPS do
-		groupSizes[i] = 0
-		groupClasses[i] = {}
-	end
+    for i = 1, MAX_GROUPS do
+        groupSizes[i] = 0
+        groupClasses[i] = {}
+    end
 
+    local playerName = UnitName("player")
+    local healerCount = 0
 
-	
-	local playerName = UnitName("player")
+    for i = 1, GetNumGroupMembers() do
+        local name, _, subgroup, _, _, class, _, online = GetRaidRosterInfo(i)
 
-	local healerCount = 0
-	for i = 1, GetNumGroupMembers() do
-		local name, _, subgroup, _, _, class, _, online = GetRaidRosterInfo(i)
+        if subgroup and subgroup >= 1 and subgroup <= MAX_GROUPS then
+            groupSizes[subgroup] = groupSizes[subgroup] + 1
+        end
 
-		
-		if name ~= playerName and class and TableContains(healerClasses, class) then
-			table.insert(healers, {name = name, index = i, group = subgroup, class = class, online = online, moved = false})
-			healerCount = healerCount + 1
-		elseif name ~= playerName then
-			
-			QueueDebugMessage("Non-healer or non-player found: " .. name .. " (" .. (class or "Unknown") .. ")", "debuginfo")
-		end
-	end
+        if name ~= playerName and class and TableContains(healerClasses, class) then
+            healerCount = healerCount + 1
 
-	
-	QueueDebugMessage("Total healers found (excluding player): " .. healerCount, "debuginfo")
+            if subgroup and subgroup >= 1 and subgroup <= MAX_GROUPS and not TableContains(groupClasses[subgroup], class) then
+                table.insert(groupClasses[subgroup], class)
+            end
 
-	
-	if healerCount == 0 then
-		QueueDebugMessage("Error: No healers found in the group.", "debuginfo")
-	end
+            if IsBotName(name) then
+                table.insert(healers, {name = name, index = i, group = subgroup, class = class, online = online, moved = false})
+            end
+        elseif name ~= playerName then
+            QueueDebugMessage("Non-healer or non-player found: " .. name .. " (" .. (class or "Unknown") .. ")", "debuginfo")
+        end
+    end
 
+    QueueDebugMessage("Total healers found (excluding player): " .. healerCount, "debuginfo")
 
-	
-	local totalHealers = #healers
-	local maxGroups = (totaly <= 20) and 4 or MAX_GROUPS
+    if healerCount == 0 then
+        QueueDebugMessage("Error: No healers found in the group.", "debuginfo")
+    end
 
-	
-	QueueDebugMessage("Total healers: " .. totalHealers .. ", Max groups: " .. maxGroups, "debuginfo")
+    local totalHealers = #healers
+    local maxGroups = (totaly <= 20) and 4 or MAX_GROUPS
 
-	if currentPhase == 1 then
-		
-		local healersByClass = {}
-		for _, healer in ipairs(healers) do
-			healersByClass[healer.class] = healersByClass[healer.class] or {}
-			table.insert(healersByClass[healer.class], healer)
-		end
+    QueueDebugMessage("Total movable bot healers: " .. totalHealers .. ", Max groups: " .. maxGroups, "debuginfo")
 
-		
-		for class, classHealers in pairs(healersByClass) do
-			QueueDebugMessage("Class: " .. class .. " has " .. #classHealers .. " healers", "debuginfo")
-		end
+    if currentPhase == 1 then
+        local healersByClass = {}
+        local groupIndex = 1
 
-		local groupIndex = 1
-		for class, classHealers in pairs(healersByClass) do
-			for _, healer in ipairs(classHealers) do
-				local attempts = 0
-				
-				while TableContains(groupClasses[groupIndex], healer.class) and groupIndex <= maxGroups do
-					groupIndex = groupIndex % maxGroups + 1
-					attempts = attempts + 1
-					if attempts > 20 then
-						QueueDebugMessage("Error: Too many attempts to find a group for healer " .. healer.name .. " (" .. healer.class .. ")", "debugerror")
-						break
-					end
-				end
+        for _, healer in ipairs(healers) do
+            healersByClass[healer.class] = healersByClass[healer.class] or {}
+            table.insert(healersByClass[healer.class], healer)
+        end
 
-				
-				if attempts > 20 then
-					QueueDebugMessage("Error: Unable to assign healer " .. healer.name .. " (" .. healer.class .. ") after 20 attempts.", "debugerror")
-				else
-					
-					QueueMove(healer, groupIndex)
+        for class, classHealers in pairs(healersByClass) do
+            QueueDebugMessage("Class: " .. class .. " has " .. #classHealers .. " movable bot healers", "debuginfo")
+        end
 
-					
-					groupSizes[groupIndex] = groupSizes[groupIndex] + 1
-					table.insert(groupClasses[groupIndex], healer.class)
+        for _, classHealers in pairs(healersByClass) do
+            for _, healer in ipairs(classHealers) do
+                local attempts = 0
 
-					
-					QueueDebugMessage("Assigned healer " .. healer.name .. " to group " .. groupIndex, "debuginfo")
-				end
+                while TableContains(groupClasses[groupIndex], healer.class) and groupIndex <= maxGroups do
+                    groupIndex = groupIndex % maxGroups + 1
+                    attempts = attempts + 1
+                    if attempts > 20 then
+                        QueueDebugMessage("Error: Too many attempts to find a group for healer " .. healer.name .. " (" .. healer.class .. ")", "debugerror")
+                        break
+                    end
+                end
 
-				
-				groupIndex = groupIndex % maxGroups + 1
-			end
-		end
+                if attempts > 20 then
+                    QueueDebugMessage("Error: Unable to assign healer " .. healer.name .. " (" .. healer.class .. ") after 20 attempts.", "debugerror")
+                else
+                    QueueMove(healer, groupIndex)
+                    groupSizes[groupIndex] = groupSizes[groupIndex] + 1
+                    if not TableContains(groupClasses[groupIndex], healer.class) then
+                        table.insert(groupClasses[groupIndex], healer.class)
+                    end
+                    QueueDebugMessage("Assigned healer " .. healer.name .. " to group " .. groupIndex, "debuginfo")
+                end
 
-	elseif currentPhase == 2 then
-		local healersByClass = {}
-		for _, healer in ipairs(healers) do
-			if not healersByClass[healer.class] then
-				healersByClass[healer.class] = {}
-			end
-			table.insert(healersByClass[healer.class], healer)
-		end
+                groupIndex = groupIndex % maxGroups + 1
+            end
+        end
 
-		local groupIndex = 1
-		local allHealersAssigned = false 
+    elseif currentPhase == 2 then
+        local groupIndex = 1
 
-		while not allHealersAssigned do
-			allHealersAssigned = true
+        
+        
+        
+        
+        
+        
+        
+        for i = 1, maxGroups do
+            groupSizes[i] = 0
+            groupClasses[i] = {}
+        end
 
-			for class, classHealers in pairs(healersByClass) do
-				if #classHealers > 0 then
+        table.sort(healers, function(a, b)
+            if a.class == b.class then
+                return a.name < b.name
+            end
+            return a.class < b.class
+        end)
 
-					local healer = table.remove(classHealers, 1)
+        for _, healer in ipairs(healers) do
+            QueueMove(healer, groupIndex)
+            groupSizes[groupIndex] = groupSizes[groupIndex] + 1
+            if not TableContains(groupClasses[groupIndex], healer.class) then
+                table.insert(groupClasses[groupIndex], healer.class)
+            end
+            QueueDebugMessage("Rebalanced healer " .. healer.name .. " to group " .. groupIndex, "debuginfo")
 
-
-					local attempts = 0
-					while TableContains(groupClasses[groupIndex], healer.class) and attempts < maxGroups do
-						groupIndex = groupIndex % maxGroups + 1
-						attempts = attempts + 1
-					end
-
-					
-					QueueMove(healer, groupIndex)
-					groupSizes[groupIndex] = groupSizes[groupIndex] + 1
-					table.insert(groupClasses[groupIndex], healer.class)
-
-					
-					QueueDebugMessage("Rebalanced healer " .. healer.name .. " to group " .. groupIndex, "debuginfo")
-
-					
-					groupIndex = groupIndex % maxGroups + 1
-					allHealersAssigned = false 
-				end
-			end
-		end
-	end
+            groupIndex = groupIndex % maxGroups + 1
+        end
+    end
 
 end
 
@@ -2149,24 +2678,33 @@ local function CreateHelpButton(parentFrame, relativeFrame, offsetX, offsetY, to
 
    
     helpBtn:SetScript("OnClick", function()
-        PlaySound("igMainMenuOptionCheckBoxOn")
+        
+        local _, _, _, tocVersion = GetBuildInfo()
+        if tocVersion == 11402 then
+            PlaySound(856)
+        else
+            PlaySound("igMainMenuOptionCheckBoxOn")
+        end
     end)
 
     return helpBtn
 end
 ----------------------------------------------------------THE UI------------------------------------------------------------------------------------
-local function ShowStaticPopup(message, title, isConfirmation)
+local function ShowStaticPopup(message, title, isConfirmation, onAccept)
     StaticPopupDialogs["FILLRAID_GENERIC_POPUP"] = {
         text = message,
         button1 = "Yes",
         button2 = "No",
         OnAccept = function()
+            if onAccept then
+                onAccept()
+            end
+
             if isConfirmation then
-                ReloadUI() 
+                ReloadUI()
             end
         end,
         OnCancel = function()
-           
         end,
         timeout = 0,
         whileDead = true,
@@ -2175,7 +2713,6 @@ local function ShowStaticPopup(message, title, isConfirmation)
     }
 
     if not isConfirmation then
-       
         StaticPopupDialogs["FILLRAID_GENERIC_POPUP"].button1 = "OK"
         StaticPopupDialogs["FILLRAID_GENERIC_POPUP"].button2 = nil
     end
@@ -2183,6 +2720,599 @@ local function ShowStaticPopup(message, title, isConfirmation)
     StaticPopup_Show("FILLRAID_GENERIC_POPUP", title)
 end
 
+
+
+
+
+local function PerformFactoryReset()
+    local preservedUserID = FillRaidBotsSavedSettings and FillRaidBotsSavedSettings.userID or nil
+    local preservedUserCount = FillRaidBotsSavedSettings and FillRaidBotsSavedSettings.userCount or 0
+    local preservedUniqueUsers = FillRaidBotsSavedSettings and FillRaidBotsSavedSettings.uniqueUsers or {}
+
+    FillRaidBotsSavedSettings = {
+        userID = preservedUserID,
+        userCount = preservedUserCount,
+        uniqueUsers = preservedUniqueUsers,
+    }
+
+    FillRaidPresets = nil
+    FillRaidSuppressBotMsg = nil
+end
+
+function ShowFactoryResetPopup()
+    ShowStaticPopup(
+        "Factory Reset will wipe all FillRaidBots saved settings, presets, and suppress messages.\n\n"
+            .. "This cannot be undone. Accept?",
+        "Factory Reset",
+        true,
+        function()
+            PerformFactoryReset()
+        end
+    )
+end
+
+
+
+
+
+local tutorialLinkPopup
+local tutorialLinkPopupTitle
+local tutorialLinkPopupDescription
+local tutorialLinkPopupEditBox
+local tutorialLinkPopupCopyButton
+local UpdateTutorialLinkButtons
+
+
+
+
+local TUTORIAL_POPUP_IMAGE_SIZE = 200
+local TUTORIAL_POPUP_PADDING = 16
+local TUTORIAL_POPUP_GAP = 14
+local TUTORIAL_POPUP_TOP_OFFSET = -42
+local TUTORIAL_POPUP_RIGHT_WIDTH = 360
+local TUTORIAL_POPUP_BOTTOM_PADDING = 56
+local TUTORIAL_POPUP_MIN_HEIGHT = 300
+local TUTORIAL_POPUP_ROW_HEIGHT = 38
+local TUTORIAL_POPUP_ROW_BUTTON_WIDTH = 90
+local TUTORIAL_POPUP_ROW_BUTTON_GAP = 8
+local TUTORIAL_POPUP_CLOSE_BUTTON_HEIGHT = 22
+local TUTORIAL_POPUP_CLOSE_BUTTON_BOTTOM = 14
+local TUTORIAL_BOSS_IMAGE_BASE_PATH = "Interface\\AddOns\\FillRaidBots\\img\\bosses\\"
+local TUTORIAL_BOSS_IMAGE_DEFAULT = TUTORIAL_BOSS_IMAGE_BASE_PATH .. "default"
+
+local function GetTutorialPopupLayout()
+    local imageSize = TUTORIAL_POPUP_IMAGE_SIZE
+    local padding = TUTORIAL_POPUP_PADDING
+    local gap = TUTORIAL_POPUP_GAP
+    local rightWidth = TUTORIAL_POPUP_RIGHT_WIDTH
+    local buttonWidth = TUTORIAL_POPUP_ROW_BUTTON_WIDTH
+    local buttonGap = TUTORIAL_POPUP_ROW_BUTTON_GAP
+    local popupWidth = padding + imageSize + gap + rightWidth + padding
+    local textLeft = padding + imageSize + gap
+    local editBoxWidth = rightWidth - buttonWidth - buttonGap
+
+    if editBoxWidth < 120 then
+        editBoxWidth = 120
+    end
+
+    return {
+        imageSize = imageSize,
+        padding = padding,
+        gap = gap,
+        rightWidth = rightWidth,
+        buttonWidth = buttonWidth,
+        buttonGap = buttonGap,
+        popupWidth = popupWidth,
+        textLeft = textLeft,
+        textRight = -padding,
+        imageLeft = padding,
+        imageTop = TUTORIAL_POPUP_TOP_OFFSET,
+        topY = TUTORIAL_POPUP_TOP_OFFSET,
+        editBoxWidth = editBoxWidth,
+        rowHeight = TUTORIAL_POPUP_ROW_HEIGHT,
+        bottomPadding = TUTORIAL_POPUP_BOTTOM_PADDING,
+        minHeight = TUTORIAL_POPUP_MIN_HEIGHT,
+        closeButtonHeight = TUTORIAL_POPUP_CLOSE_BUTTON_HEIGHT,
+        closeButtonBottom = TUTORIAL_POPUP_CLOSE_BUTTON_BOTTOM,
+    }
+end
+
+local function SetTutorialBossImage(texture, preset)
+    local texturePath = nil
+    local imageName = nil
+
+    if preset then
+        imageName = preset.fullname or preset.label
+    end
+
+    if imageName and imageName ~= "" then
+        texturePath = TUTORIAL_BOSS_IMAGE_BASE_PATH .. imageName
+    else
+        texturePath = TUTORIAL_BOSS_IMAGE_DEFAULT
+    end
+
+    texture:SetTexture(texturePath)
+end
+
+
+
+
+local function EnsureTutorialLinkPopup()
+    local i
+    local row
+    local layout = GetTutorialPopupLayout()
+
+    if tutorialLinkPopup then
+        return
+    end
+
+    tutorialLinkPopup = CreateFrame("Frame", "FillRaidTutorialLinkPopup", UIParent, "BackdropTemplate")
+    tutorialLinkPopup:SetWidth(layout.popupWidth)
+    tutorialLinkPopup:SetHeight(layout.minHeight)
+    tutorialLinkPopup:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+    tutorialLinkPopup:SetFrameStrata("DIALOG")
+	tutorialLinkPopup:SetFrameLevel(30)
+    tutorialLinkPopup:SetMovable(true)
+    tutorialLinkPopup:EnableMouse(true)
+    tutorialLinkPopup:RegisterForDrag("LeftButton")
+	tutorialLinkPopup.background = tutorialLinkPopup:CreateTexture(nil, "BACKGROUND")
+	tutorialLinkPopup.background:SetAllPoints(tutorialLinkPopup)
+	tutorialLinkPopup.background:SetColorTexture(0, 0, 0, 1) 
+
+
+
+	tutorialLinkPopup.border = CreateFrame("Frame", nil, tutorialLinkPopup, BackdropTemplateMixin and "BackdropTemplate")
+	tutorialLinkPopup.border:SetPoint("TOPLEFT", -4, 4)
+	tutorialLinkPopup.border:SetPoint("BOTTOMRIGHT", 4, -4)
+	tutorialLinkPopup.border:SetFrameStrata(tutorialLinkPopup:GetFrameStrata())
+	tutorialLinkPopup.border:SetFrameLevel(tutorialLinkPopup:GetFrameLevel() - 1)
+	tutorialLinkPopup.border:SetBackdrop({
+		edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+		edgeSize = 16,
+	})
+	tutorialLinkPopup.border:SetBackdropBorderColor(0.8, 0.8, 0.8)
+
+
+	
+	
+
+	tutorialLinkPopup.header = tutorialLinkPopup:CreateTexture(nil, "OVERLAY")
+	tutorialLinkPopup.header:SetWidth(220)
+	tutorialLinkPopup.header:SetHeight(48)
+	tutorialLinkPopup.header:SetPoint("TOP", tutorialLinkPopup, "TOP", 0, 12)
+	tutorialLinkPopup.header:SetTexture("Interface\\DialogFrame\\UI-DialogBox-Header")
+	tutorialLinkPopup.header:SetVertexColor(0.2, 0.2, 0.2)
+
+	tutorialLinkPopup.headerText = tutorialLinkPopup:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+	tutorialLinkPopup.headerText:SetPoint("TOP", tutorialLinkPopup.header, 0, -12)
+	tutorialLinkPopup.headerText:SetText("Tutorial")
+
+	
+    tutorialLinkPopup:Hide()
+    table.insert(UISpecialFrames, "FillRaidTutorialLinkPopup")
+
+    tutorialLinkPopup:SetScript("OnDragStart", function()
+        tutorialLinkPopup:StartMoving()
+    end)
+
+    tutorialLinkPopup:SetScript("OnDragStop", function()
+        tutorialLinkPopup:StopMovingOrSizing()
+    end)
+
+
+
+	
+    tutorialLinkPopupTitle = tutorialLinkPopup:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    tutorialLinkPopupTitle:SetPoint("TOP", tutorialLinkPopup, "TOP", 0, -12)
+    tutorialLinkPopupTitle:SetText("Tutorial Link")
+
+    tutorialLinkPopup.bossImage = tutorialLinkPopup:CreateTexture(nil, "ARTWORK")
+    tutorialLinkPopup.bossImage:SetWidth(layout.imageSize)
+    tutorialLinkPopup.bossImage:SetHeight(layout.imageSize)
+    tutorialLinkPopup.bossImage:SetPoint("TOPLEFT", tutorialLinkPopup, "TOPLEFT", layout.imageLeft, layout.imageTop)
+    tutorialLinkPopup.bossImage:SetTexCoord(0, 1, 0, 1)
+
+    tutorialLinkPopupDescription = tutorialLinkPopup:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    tutorialLinkPopupDescription:SetPoint("TOPLEFT", tutorialLinkPopup, "TOPLEFT", layout.textLeft, layout.topY)
+    tutorialLinkPopupDescription:SetPoint("TOPRIGHT", tutorialLinkPopup, "TOPRIGHT", layout.textRight, layout.topY)
+    tutorialLinkPopupDescription:SetWidth(layout.rightWidth)
+    tutorialLinkPopupDescription:SetJustifyH("LEFT")
+    tutorialLinkPopupDescription:SetJustifyV("TOP")
+    tutorialLinkPopupDescription:SetText("")
+
+	tutorialLinkPopupAudience = tutorialLinkPopup:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+	tutorialLinkPopupAudience:SetPoint("TOPLEFT", tutorialLinkPopup, "TOPLEFT", layout.textLeft, layout.topY - 58)
+	tutorialLinkPopupAudience:SetPoint("TOPRIGHT", tutorialLinkPopup, "TOPRIGHT", layout.textRight, layout.topY - 58)
+	tutorialLinkPopupAudience:SetJustifyH("LEFT")
+	tutorialLinkPopupAudience:SetJustifyV("TOP")
+	tutorialLinkPopupAudience:SetText("")
+
+    tutorialLinkPopupSingleLabel = tutorialLinkPopup:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    tutorialLinkPopupSingleLabel:SetPoint("TOPLEFT", tutorialLinkPopup, "TOPLEFT", layout.textLeft, layout.topY - 82)
+    tutorialLinkPopupSingleLabel:SetText("Copy URL:")
+
+    tutorialLinkPopupEditBox = CreateFrame("EditBox", "FillRaidTutorialLinkEditBox", tutorialLinkPopup, "InputBoxTemplate")
+    tutorialLinkPopupEditBox:SetWidth(layout.editBoxWidth)
+    tutorialLinkPopupEditBox:SetHeight(20)
+    tutorialLinkPopupEditBox:SetPoint("TOPLEFT", tutorialLinkPopup, "TOPLEFT", layout.textLeft, layout.topY - 100)
+    tutorialLinkPopupEditBox:SetAutoFocus(false)
+    tutorialLinkPopupEditBox:SetTextInsets(4, 4, 0, 0)
+    tutorialLinkPopupEditBox:SetScript("OnEscapePressed", function()
+        tutorialLinkPopupEditBox:ClearFocus()
+        tutorialLinkPopup:Hide()
+    end)
+
+    tutorialLinkPopupCopyButton = CreateFrame("Button", nil, tutorialLinkPopup, "GameMenuButtonTemplate")
+    tutorialLinkPopupCopyButton:SetWidth(layout.buttonWidth)
+    tutorialLinkPopupCopyButton:SetHeight(22)
+    tutorialLinkPopupCopyButton:SetPoint("LEFT", tutorialLinkPopupEditBox, "RIGHT", layout.buttonGap, 0)
+    tutorialLinkPopupCopyButton:SetText("Select")
+    tutorialLinkPopupCopyButton:SetScript("OnClick", function()
+        tutorialLinkPopupEditBox:SetFocus()
+        tutorialLinkPopupEditBox:HighlightText()
+    end)
+
+    tutorialLinkPopupRows = {}
+
+    for i = 1, 5 do
+        row = {}
+
+        row.label = tutorialLinkPopup:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        row.label:SetPoint("TOPLEFT", tutorialLinkPopup, "TOPLEFT", layout.textLeft, layout.topY - 82 - ((i - 1) * layout.rowHeight))
+        row.label:SetJustifyH("LEFT")
+        row.label:SetText("Guide")
+        row.label:Hide()
+
+        row.editBox = CreateFrame("EditBox", "FillRaidTutorialLinkEditBox" .. i, tutorialLinkPopup, "InputBoxTemplate")
+        row.editBox:SetWidth(layout.editBoxWidth)
+        row.editBox:SetHeight(20)
+        row.editBox:SetPoint("TOPLEFT", row.label, "BOTTOMLEFT", 0, -4)
+        row.editBox:SetAutoFocus(false)
+        row.editBox:SetTextInsets(4, 4, 0, 0)
+        row.editBox:SetScript("OnEscapePressed", function(self)
+            self:ClearFocus()
+            tutorialLinkPopup:Hide()
+        end)
+        row.editBox:Hide()
+
+        row.copyButton = CreateFrame("Button", nil, tutorialLinkPopup, "GameMenuButtonTemplate")
+        row.copyButton:SetWidth(layout.buttonWidth)
+        row.copyButton:SetHeight(20)
+        row.copyButton:SetPoint("LEFT", row.editBox, "RIGHT", layout.buttonGap, 0)
+        row.copyButton:SetText("Select")
+        row.copyButton:Hide()
+
+        tutorialLinkPopupRows[i] = row
+    end
+
+    local closeButton = CreateFrame("Button", nil, tutorialLinkPopup, "GameMenuButtonTemplate")
+    closeButton:SetWidth(100)
+    closeButton:SetHeight(22)
+    closeButton:SetPoint("BOTTOM", tutorialLinkPopup, "BOTTOM", 0, 14)
+    closeButton:SetText("Close")
+    closeButton:SetScript("OnClick", function()
+        tutorialLinkPopupEditBox:ClearFocus()
+        tutorialLinkPopup:Hide()
+    end)
+end
+
+local function CopyTutorialUrl(url, editBox)
+    local targetBox = editBox or tutorialLinkPopupEditBox
+    targetBox:SetText(url or "")
+    targetBox:SetFocus()
+    targetBox:HighlightText()
+end
+
+
+
+
+
+local function GetTutorialLinksForPlayer(linkInfo)
+    local factionGroup
+    local factionKey
+    local vipKey
+    local variant
+    local fallbackVariant
+    local fallbackFaction
+    local factionText
+    local vipText
+
+    local RED = "|cffff4040"
+    local GRAY = "|cffaaaaaa"
+    local RESET = "|r"
+
+    if not linkInfo then
+        return nil, nil
+    end
+
+    if linkInfo.url then
+        return {
+            {
+                label = "Tutorial",
+                url = linkInfo.url,
+            }
+        }, "General"
+    end
+
+    factionGroup = UnitFactionGroup("player")
+    factionKey = (factionGroup == "Horde") and "horde" or "alliance"
+    vipKey = (FillRaidBotsSavedSettings and FillRaidBotsSavedSettings.isVIP) and "vip" or "nonvip"
+
+    factionText = (factionKey == "horde") and "Horde" or "Alliance"
+    vipText = (vipKey == "vip") and "VIP" or "nonVIP"
+
+    local requestedText = factionText .. " " .. vipText
+
+    
+    
+    
+    variant = linkInfo[factionKey]
+    if variant and variant[vipKey] and table.getn(variant[vipKey]) > 0 then
+        return variant[vipKey], requestedText
+    end
+
+    
+    
+    
+    if variant then
+        fallbackVariant = (vipKey == "vip") and variant.nonvip or variant.vip
+        if fallbackVariant and table.getn(fallbackVariant) > 0 then
+            local fallbackVipText = (vipKey == "vip") and "nonVIP" or "VIP"
+            return fallbackVariant,
+                RED .. "No " .. requestedText .. " tutorial found." .. RESET ..
+                "\n" ..
+                GRAY .. "Using fallback:" .. RESET .. " " .. factionText .. " " .. fallbackVipText
+        end
+    end
+
+    
+    
+    
+    fallbackFaction = (factionKey == "horde") and "alliance" or "horde"
+    variant = linkInfo[fallbackFaction]
+    local fallbackFactionText = (fallbackFaction == "horde") and "Horde" or "Alliance"
+
+    if variant and variant[vipKey] and table.getn(variant[vipKey]) > 0 then
+        return variant[vipKey],
+            RED .. "No " .. requestedText .. " tutorial found." .. RESET ..
+            "\n" ..
+            GRAY .. "Using fallback:" .. RESET .. " " .. fallbackFactionText .. " " .. vipText
+    end
+
+    
+    
+    
+    if variant then
+        fallbackVariant = (vipKey == "vip") and variant.nonvip or variant.vip
+        if fallbackVariant and table.getn(fallbackVariant) > 0 then
+            local fallbackVipText = (vipKey == "vip") and "nonVIP" or "VIP"
+            return fallbackVariant,
+                RED .. "No " .. requestedText .. " tutorial found." .. RESET ..
+                "\n" ..
+                GRAY .. "Using fallback:" .. RESET .. " " .. fallbackFactionText .. " " .. fallbackVipText
+        end
+    end
+
+    
+    
+    
+    if linkInfo.alliance then
+        if linkInfo.alliance.nonvip and table.getn(linkInfo.alliance.nonvip) > 0 then
+            return linkInfo.alliance.nonvip,
+                RED .. "No " .. requestedText .. " tutorial found." .. RESET ..
+                "\n" ..
+                GRAY .. "Using fallback:" .. RESET .. " Alliance nonVIP"
+        end
+        if linkInfo.alliance.vip and table.getn(linkInfo.alliance.vip) > 0 then
+            return linkInfo.alliance.vip,
+                RED .. "No " .. requestedText .. " tutorial found." .. RESET ..
+                "\n" ..
+                GRAY .. "Using fallback:" .. RESET .. " Alliance VIP"
+        end
+    end
+
+    if linkInfo.horde then
+        if linkInfo.horde.nonvip and table.getn(linkInfo.horde.nonvip) > 0 then
+            return linkInfo.horde.nonvip,
+                RED .. "No " .. requestedText .. " tutorial found." .. RESET ..
+                "\n" ..
+                GRAY .. "Using fallback:" .. RESET .. " Horde nonVIP"
+        end
+        if linkInfo.horde.vip and table.getn(linkInfo.horde.vip) > 0 then
+            return linkInfo.horde.vip,
+                RED .. "No " .. requestedText .. " tutorial found." .. RESET ..
+                "\n" ..
+                GRAY .. "Using fallback:" .. RESET .. " Horde VIP"
+        end
+    end
+
+    return nil, nil
+end
+
+
+
+
+
+local function ShowTutorialLinkPopup(preset, linkInfo)
+    local availableLinks
+    local audienceText
+    local rowIndex
+    local row
+    local guideInfo
+    local visibleRowCount
+    local descriptionText
+    local descriptionHeight
+    local audienceHeight
+    local contentStartY
+    local popupHeight
+    local maxRows
+    local layout
+    local imageBottomY
+    local contentBottomY
+    local guideSectionTopY
+	
+    EnsureTutorialLinkPopup()
+
+    layout = GetTutorialPopupLayout()
+    tutorialLinkPopup:SetWidth(layout.popupWidth)
+
+    tutorialLinkPopupTitle:SetText((preset and (preset.fullname or preset.label)) or "Tutorial")
+    tutorialLinkPopup.bossImage:SetWidth(layout.imageSize)
+    tutorialLinkPopup.bossImage:SetHeight(layout.imageSize)
+    tutorialLinkPopup.bossImage:ClearAllPoints()
+    tutorialLinkPopup.bossImage:SetPoint("TOPLEFT", tutorialLinkPopup, "TOPLEFT", layout.imageLeft, layout.imageTop)
+    SetTutorialBossImage(tutorialLinkPopup.bossImage, preset)
+
+    availableLinks, audienceText = GetTutorialLinksForPlayer(linkInfo)
+
+    descriptionText = (linkInfo and linkInfo.description) or ""
+    tutorialLinkPopupDescription:SetText(descriptionText)
+    tutorialLinkPopupDescription:SetWidth(layout.rightWidth)
+    tutorialLinkPopupDescription:SetJustifyH("LEFT")
+    tutorialLinkPopupDescription:SetJustifyV("TOP")
+    tutorialLinkPopupDescription:ClearAllPoints()
+    tutorialLinkPopupDescription:SetPoint("TOPLEFT", tutorialLinkPopup, "TOPLEFT", layout.textLeft, layout.topY)
+    tutorialLinkPopupDescription:SetPoint("TOPRIGHT", tutorialLinkPopup, "TOPRIGHT", layout.textRight, layout.topY)
+
+    tutorialLinkPopupAudience:SetText(audienceText and ("" .. audienceText) or "Showing: No matching guide")
+
+    tutorialLinkPopupSingleLabel:Hide()
+    tutorialLinkPopupEditBox:Hide()
+    tutorialLinkPopupCopyButton:Hide()
+    tutorialLinkPopupEditBox:SetText("")
+    tutorialLinkPopupEditBox:ClearFocus()
+
+    for rowIndex = 1, table.getn(tutorialLinkPopupRows) do
+        row = tutorialLinkPopupRows[rowIndex]
+        row.label:Hide()
+        row.editBox:Hide()
+        row.copyButton:Hide()
+        row.label:SetText("")
+        row.editBox:SetText("")
+        row.editBox:ClearFocus()
+    end
+
+    descriptionHeight = tutorialLinkPopupDescription:GetStringHeight()
+    if not descriptionHeight or descriptionHeight < 14 then
+        descriptionHeight = 14
+    end
+
+    tutorialLinkPopupAudience:SetWidth(layout.rightWidth)
+    tutorialLinkPopupAudience:ClearAllPoints()
+    tutorialLinkPopupAudience:SetPoint("TOPLEFT", tutorialLinkPopup, "TOPLEFT", layout.textLeft, layout.topY - descriptionHeight - 12)
+    tutorialLinkPopupAudience:SetPoint("TOPRIGHT", tutorialLinkPopup, "TOPRIGHT", layout.textRight, layout.topY - descriptionHeight - 12)
+
+    audienceHeight = tutorialLinkPopupAudience:GetStringHeight()
+    if not audienceHeight or audienceHeight < 14 then
+        audienceHeight = 14
+    end
+
+    contentStartY = layout.topY - descriptionHeight - 12 - audienceHeight - 10
+    guideSectionTopY = contentStartY
+
+    tutorialLinkPopupSingleLabel:ClearAllPoints()
+    tutorialLinkPopupSingleLabel:SetPoint("TOPLEFT", tutorialLinkPopup, "TOPLEFT", layout.textLeft, guideSectionTopY)
+
+    tutorialLinkPopupEditBox:SetWidth(layout.editBoxWidth)
+    tutorialLinkPopupEditBox:ClearAllPoints()
+    tutorialLinkPopupEditBox:SetPoint("TOPLEFT", tutorialLinkPopupSingleLabel, "BOTTOMLEFT", 0, -4)
+
+    tutorialLinkPopupCopyButton:SetWidth(layout.buttonWidth)
+    tutorialLinkPopupCopyButton:ClearAllPoints()
+    tutorialLinkPopupCopyButton:SetPoint("LEFT", tutorialLinkPopupEditBox, "RIGHT", layout.buttonGap, 0)
+
+    maxRows = table.getn(tutorialLinkPopupRows)
+    visibleRowCount = 0
+
+    if availableLinks and table.getn(availableLinks) > 0 then
+        visibleRowCount = math.min(table.getn(availableLinks), maxRows)
+
+        for rowIndex = 1, visibleRowCount do
+            row = tutorialLinkPopupRows[rowIndex]
+            guideInfo = availableLinks[rowIndex]
+
+            if not row or not guideInfo then
+                break
+            end
+
+            row.label:ClearAllPoints()
+            row.label:SetPoint("TOPLEFT", tutorialLinkPopup, "TOPLEFT", layout.textLeft, guideSectionTopY - ((rowIndex - 1) * layout.rowHeight))
+            row.label:SetText("Tutorial: " .. (guideInfo.label or ("Guide " .. rowIndex)))
+
+            row.editBox:SetWidth(layout.editBoxWidth)
+            row.editBox:ClearAllPoints()
+            row.editBox:SetPoint("TOPLEFT", row.label, "BOTTOMLEFT", 0, -4)
+            row.editBox:SetText(guideInfo.url or "")
+            row.editBox:SetCursorPosition(0)
+
+            row.copyButton:SetWidth(layout.buttonWidth)
+            row.copyButton:ClearAllPoints()
+            row.copyButton:SetPoint("LEFT", row.editBox, "RIGHT", layout.buttonGap, 0)
+
+            row.label:Show()
+            row.editBox:Show()
+            row.copyButton:Show()
+
+            do
+                local targetEditBox = row.editBox
+                row.copyButton:SetScript("OnClick", function()
+                    CopyTutorialUrl(targetEditBox:GetText(), targetEditBox)
+                end)
+            end
+        end
+    end
+
+    imageBottomY = math.abs(layout.topY) + layout.imageSize
+    if visibleRowCount > 0 then
+        contentBottomY = math.abs(guideSectionTopY) + (visibleRowCount * layout.rowHeight)
+    else
+        contentBottomY = math.abs(guideSectionTopY) + 8
+    end
+
+    popupHeight = math.max(imageBottomY, contentBottomY) + layout.bottomPadding
+    if popupHeight < layout.minHeight then
+        popupHeight = layout.minHeight
+    end
+    tutorialLinkPopup:SetHeight(popupHeight)
+
+    tutorialLinkPopup:Show()
+end
+
+
+
+
+local function GetTutorialLinkInfoForPreset(preset)
+    local info
+
+    if not preset or not FillRaidTutorialLinks then
+        return nil
+    end
+
+    if preset.fullname and FillRaidTutorialLinks[preset.fullname] then
+        return FillRaidTutorialLinks[preset.fullname]
+    end
+
+    if preset.label and FillRaidTutorialLinks[preset.label] then
+        return FillRaidTutorialLinks[preset.label]
+    end
+
+    if preset.bosses then
+        for _, bossName in ipairs(preset.bosses) do
+            info = FillRaidTutorialLinks[bossName]
+            if info then
+                return info
+            end
+        end
+    end
+
+    return nil
+end
+
+
+
+
+
+local savedPositions = {}
 
 function CreateFillRaidUI()
     
@@ -2231,15 +3361,32 @@ function CreateFillRaidUI()
 	})
 	FillRaidFrame.border:SetBackdropBorderColor(0.8, 0.8, 0.8) 
 
-    local versionText = FillRaidFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    versionText:SetPoint("BOTTOMRIGHT", FillRaidFrame, "BOTTOMRIGHT", -10, 8)  
+    FillRaidBotsVersionText = FillRaidFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    FillRaidBotsVersionText:SetPoint("BOTTOMRIGHT", FillRaidFrame, "BOTTOMRIGHT", -10, 8)
 	function newversion(newVersionDetected)
 		if newVersionDetected then
-			versionText:SetText("You are running:" .. versionNumber .. " - Update available: " .. newVersionDetected)
+			FillRaidBotsVersionText:SetText("You are running:" .. versionNumber .. " - Update available: " .. newVersionDetected)
 		else
-			versionText:SetText("Version: " .. versionNumber)
+			FillRaidBotsVersionText:SetText("Version: " .. versionNumber)
 		end
 	end
+
+    FillRaidBotsVersionClickButton = CreateFrame("Button", "FillRaidBotsVersionClickButton", FillRaidFrame)
+    FillRaidBotsVersionClickButton:SetPoint("TOPLEFT", FillRaidBotsVersionText, "TOPLEFT", -4, 2)
+    FillRaidBotsVersionClickButton:SetPoint("BOTTOMRIGHT", FillRaidBotsVersionText, "BOTTOMRIGHT", 4, -2)
+    FillRaidBotsVersionClickButton:EnableMouse(true)
+    FillRaidBotsVersionClickButton:RegisterForClicks("LeftButtonUp")
+    FillRaidBotsVersionClickButton:SetScript("OnClick", function()
+        ShowUpdateVersionPopup(true)
+    end)
+    FillRaidBotsVersionClickButton:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
+        GameTooltip:SetText("Click to show update info.")
+        GameTooltip:Show()
+    end)
+    FillRaidBotsVersionClickButton:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
 
 	
 	FillRaidFrame.header = FillRaidFrame:CreateTexture(nil, 'OVERLAY') 
@@ -2260,6 +3407,117 @@ function CreateFillRaidUI()
     local yOffset = -30
     local xOffset = 10
     local totalBots = 0 
+	
+	
+	
+	local raid20Zones = {
+		["Zul'Gurub"] = true,
+		["Ruins of Ahn'Qiraj"] = true,
+	}
+
+	local raid15Zones = {
+	    ["Blackrock Spire"] = true,
+		["Lower Blackrock Spire"] = true,
+		["Upper Blackrock Spire"] = true,
+	}
+
+	local dungeonZones = {
+		["Ragefire Chasm"] = true,
+		["Wailing Caverns"] = true,
+		["The Deadmines"] = true,
+		["Shadowfang Keep"] = true,
+		["Blackfathom Deeps"] = true,
+		["The Stockade"] = true,
+		["Gnomeregan"] = true,
+		["Razorfen Kraul"] = true,
+		["Scarlet Monastery"] = true,
+		["Razorfen Downs"] = true,
+		["Uldaman"] = true,
+		["Zul'Farrak"] = true,
+		["Maraudon"] = true,
+		["The Temple of Atal'Hakkar"] = true,
+		["Blackrock Depths"] = true,
+		["Dire Maul"] = true,
+		["Scholomance"] = true,
+		["Stratholme"] = true,
+	}
+
+	
+	local raid40Zones = {
+		["Molten Core"] = true,
+		["Blackwing Lair"] = true,
+		["Ahn'Qiraj"] = true,
+		["Naxxramas"] = true,
+		["Onyxia's Lair"] = true,
+		
+	}
+
+	
+	local worldBossSubZones = {
+		["The Tainted Scar"] = true,        -- Blasted Lands (Lord Kazzak)
+		["Dream Bough"] = true,         -- Feralas (Emeriss)
+		["Bough Shadow"] = true,        -- Ashenvale (Ysondre)
+		["Seradane"] = true,            -- Hinterlands (Lethon)
+		["Twilight Grove"] = true,      -- Duskwood (Taerar)
+		["The Crystal Vale"] = true,    -- Silithus (Prince Thunderaan)
+	}
+
+	
+	local lastZoneDebugText = nil
+
+	local function GetMaxBotsForCurrentZone()
+		local zone = GetRealZoneText()
+		local subZone = GetSubZoneText()
+		local maxBots
+		local debugText
+
+		if raid20Zones[zone] then
+			maxBots = 19
+		elseif raid15Zones[zone] then
+			maxBots = 14
+		elseif dungeonZones[zone] then
+			maxBots = 9
+		elseif raid40Zones[zone] then
+			maxBots = 39
+		elseif worldBossSubZones[subZone] then
+			maxBots = 39
+		elseif zone == "Azshara" and (not subZone or subZone == "") then
+			maxBots = 39
+		else
+			maxBots = 4
+		end
+
+		debugText = "Zone: " .. (zone or "nil") .. " | SubZone: " .. (subZone or "nil") .. " | Max bots: " .. maxBots
+		if debugText ~= lastZoneDebugText then
+			lastZoneDebugText = debugText
+			QueueDebugMessage(debugText, "debugzones")
+		end
+
+		return maxBots
+	end
+
+	local function GetOtherRealPlayerCount()
+		local count = 0
+		local playerName = UnitName("player")
+
+		if IsInRaid() then
+			for i = 1, GetNumGroupMembers() do
+				local name = GetRaidRosterInfo(i)
+				if name and name ~= playerName and not IsBotName(name) then
+					count = count + 1
+				end
+			end
+		else
+			for i = 1, GetNumGroupMembers() do
+				local name = UnitName("party" .. i)
+				if name and not IsBotName(name) then
+					count = count + 1
+				end
+			end
+		end
+
+		return count
+	end	
 
     
     local totalBotLabel = FillRaidFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
@@ -2270,7 +3528,7 @@ function CreateFillRaidUI()
     
     local spotsLeftLabel = FillRaidFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
     spotsLeftLabel:SetPoint("TOP", FillRaidFrame, "TOP", 0, yOffset)
-    spotsLeftLabel:SetText("Spots Left: 39") 
+	spotsLeftLabel:SetText("Spots left: " .. math.max(0, GetMaxBotsForCurrentZone() - GetOtherRealPlayerCount())) 
     yOffset = yOffset - 25
 
     
@@ -2280,6 +3538,23 @@ function CreateFillRaidUI()
     roleCountsLabel:SetText("Tanks: 0 Healers: 0 Melee DPS: 0 Ranged DPS: 0")
     yOffset = yOffset - 30
 
+
+	
+	
+	local function UpdateSpotsLeft()
+		local maxBots = GetMaxBotsForCurrentZone()
+		local otherRealPlayers = GetOtherRealPlayerCount()
+		local allowedBots = math.max(0, maxBots - otherRealPlayers)
+		local botsLeftToAdd = math.max(0, allowedBots - totalBots)
+
+		if totalBots <= allowedBots then
+			totalBotLabel:SetText("Total Bots: " .. totalBots)
+			spotsLeftLabel:SetText("Spots left: " .. botsLeftToAdd)
+		else
+			totalBotLabel:SetText("Too many: |cffff0000" .. totalBots .. "|r")
+			spotsLeftLabel:SetText("Spots left: 0")
+		end
+	end
     
     local columns = 2
     local rowsPerColumn = 14
@@ -2306,6 +3581,68 @@ function CreateFillRaidUI()
 
     
     local inputBoxes = {}
+
+    
+    
+    
+    local currentLoadedPreset = nil
+
+    local function GetPresetValues(preset)
+        if not preset then
+            return nil
+        end
+
+        if FillRaidBotsSavedSettings
+            and FillRaidBotsSavedSettings.useVipPresets
+            and preset.vipValues then
+            return preset.vipValues
+        end
+
+        return preset.values
+    end
+
+    function ReapplyCurrentPreset()
+        local selectedValues
+        local classRole
+        local inputBox
+        local value
+        local onTextChanged
+
+        if not currentLoadedPreset then
+            return
+        end
+
+        for classRole, inputBox in pairs(inputBoxes) do
+            if inputBox then
+                inputBox:SetNumber(0)
+                onTextChanged = inputBox:GetScript("OnTextChanged")
+                if onTextChanged then
+                    onTextChanged(inputBox)
+                end
+            end
+        end
+
+        selectedValues = GetPresetValues(currentLoadedPreset)
+        if not selectedValues then
+            return
+        end
+
+        for classRole, value in pairs(selectedValues) do
+            inputBox = inputBoxes[classRole]
+            if inputBox then
+                inputBox:SetNumber(value)
+                onTextChanged = inputBox:GetScript("OnTextChanged")
+                if onTextChanged then
+                    onTextChanged(inputBox)
+                end
+            end
+        end
+
+        if currentPresetLabel and currentLoadedPreset.label then
+            currentPresetLabel:SetText("Preset: " .. currentLoadedPreset.label)
+            currentPresetName = currentLoadedPreset.label
+        end
+    end
 
     
     local function SplitClassRole(classRole)
@@ -2397,42 +3734,45 @@ function CreateFillRaidUI()
 
                 local className = classRole
 
-                classInput:SetScript("OnTextChanged", function()
-                    local newValue = tonumber(classInput:GetText()) or 0
-                    classCounts[className] = newValue
+				
+				
+				
+				classInput:SetScript("OnTextChanged", function()
+					local newValue = tonumber(classInput:GetText()) or 0
+					classCounts[className] = newValue
 
-                    totalBots = 0
-                    roleCounts["tank"] = 0
-                    roleCounts["healer"] = 0
-                    roleCounts["meleedps"] = 0
-                    roleCounts["rangedps"] = 0
+					totalBots = 0
+					roleCounts["tank"] = 0
+					roleCounts["healer"] = 0
+					roleCounts["meleedps"] = 0
+					roleCounts["rangedps"] = 0
 
-                    for role, _ in pairs(roleCounts) do
-                        for clsRole, count in pairs(classCounts) do
-                            if string.find(clsRole, role) then
-                                roleCounts[role] = roleCounts[role] + count
-                            end
-                        end
-                    end
+								 
+										  
+					for role, _ in pairs(roleCounts) do
+						for clsRole, count in pairs(classCounts) do
+							if string.find(clsRole, role) then
+								roleCounts[role] = roleCounts[role] + count
+							end
+						end
+					end
 
-                    for _, count in pairs(classCounts) do
-                        totalBots = totalBots + count
-                    end
+													   
+					for _, count in pairs(classCounts) do
+						totalBots = totalBots + count
+																		   
+							   
+					end
+					   
 
-                    if totalBots < 40 then
-                        totalBotLabel:SetText("Total Bots: " .. totalBots)
-                        spotsLeftLabel:SetText("Spots Left: " .. (39 - totalBots))
-                    else
-                        totalBotLabel:SetText("Too many added: |cffff0000" .. totalBots .. "|r")
-                        spotsLeftLabel:SetText("Spots Left: 0")
-                    end
+					roleCountsLabel:SetText(string.format(
+						"Tanks: %d Healers: %d Melee DPS: %d Ranged DPS: %d",
+						roleCounts["tank"], roleCounts["healer"],
+						roleCounts["meleedps"], roleCounts["rangedps"]
+					))
 
-                    roleCountsLabel:SetText(string.format(
-                        "Tanks: %d Healers: %d Melee DPS: %d Ranged DPS: %d",
-                        roleCounts["tank"], roleCounts["healer"],
-                        roleCounts["meleedps"], roleCounts["rangedps"]
-                    ))
-                end)
+					UpdateSpotsLeft()
+				end)
 
                
                 classGroupYOffset = classGroupYOffset - 18
@@ -2469,7 +3809,21 @@ function CreateFillRaidUI()
 		  FillRaidFrame:Hide()
 		  fillRaidFrameManualClose = true 
 	  end)
-	  
+
+	
+	
+	
+	if not FillRaidBotsZoneFrame then
+	    FillRaidBotsZoneFrame = CreateFrame("Frame")
+	    FillRaidBotsZoneFrame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+	    FillRaidBotsZoneFrame:RegisterEvent("ZONE_CHANGED")
+	    FillRaidBotsZoneFrame:RegisterEvent("ZONE_CHANGED_INDOORS")
+	
+	    FillRaidBotsZoneFrame:SetScript("OnEvent", function()
+	        UpdateSpotsLeft()
+	    end)
+	end
+	
 	local UISettingsFrame = CreateFrame("Frame", "UISettingsFrame", UIParent)
 	UISettingsFrame:SetWidth(200)
 	UISettingsFrame:SetHeight(380)
@@ -2484,6 +3838,8 @@ function CreateFillRaidUI()
 	UISettingsFrame.border = CreateFrame("Frame", nil, UISettingsFrame, BackdropTemplateMixin and "BackdropTemplate")
 	UISettingsFrame.border:SetPoint("TOPLEFT", -4, 4)
 	UISettingsFrame.border:SetPoint("BOTTOMRIGHT", 4, -4)
+	UISettingsFrame.border:SetFrameStrata(UISettingsFrame:GetFrameStrata())
+	UISettingsFrame.border:SetFrameLevel(UISettingsFrame:GetFrameLevel() - 1)	
 	UISettingsFrame.border:SetBackdrop({
 		edgeFile = "Interface/Tooltips/UI-Tooltip-Border", 
 		edgeSize = 16,
@@ -2492,7 +3848,22 @@ function CreateFillRaidUI()
 
 	UISettingsFrame:SetFrameStrata("DIALOG")
 	UISettingsFrame:SetFrameLevel(10)
-	UISettingsFrame:Hide()
+
+	
+	
+
+	UISettingsFrame.header = UISettingsFrame:CreateTexture(nil, "OVERLAY")
+	UISettingsFrame.header:SetWidth(250)
+	UISettingsFrame.header:SetHeight(64)
+	UISettingsFrame.header:SetPoint("TOP", UISettingsFrame, "TOP", 0, 18)
+	UISettingsFrame.header:SetTexture("Interface\\DialogFrame\\UI-DialogBox-Header")
+	UISettingsFrame.header:SetVertexColor(0.2, 0.2, 0.2)
+
+	UISettingsFrame.headerText = UISettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+	UISettingsFrame.headerText:SetPoint("TOP", UISettingsFrame.header, 0, -14)
+	UISettingsFrame.headerText:SetText("Settings")	
+	
+	UISettingsFrame:Show()
 	table.insert(UISpecialFrames, "UISettingsFrame")
 	local openSettingsButton = CreateFrame("Button", "OpenSettingsButton", FillRaidFrame, "GameMenuButtonTemplate")
 	openSettingsButton:SetWidth(80)
@@ -2535,8 +3906,9 @@ function CreateFillRaidUI()
 local KEY_ESCAPE = 27
 local KEY_ENTER = 13
 
+
 local PresetPopup = CreateFrame("Frame", "PresetPopupFrame", UIParent, "BackdropTemplate")
-PresetPopup:SetSize(200, 250)
+PresetPopup:SetSize(300, 250)
 PresetPopup:SetPoint("CENTER", UIParent, "CENTER")
 PresetPopup:SetFrameStrata("DIALOG")
 PresetPopup:SetBackdrop({
@@ -2551,13 +3923,16 @@ PresetPopup:SetMovable(true)
 PresetPopup:EnableMouse(true)
 PresetPopup:RegisterForDrag("LeftButton")
 
+
 PresetPopup:SetScript("OnDragStart", function(self)
     self:StartMoving()
 end)
 
+
 PresetPopup:SetScript("OnDragStop", function(self)
     self:StopMovingOrSizing()
 end)
+
 local function CreateButton(parent, width, height, point, text)
     local button = CreateFrame("Button", nil, parent)
     button:SetWidth(width)
@@ -2594,10 +3969,11 @@ local function CreateButton(parent, width, height, point, text)
     return button
 end
 
+
 local function CreateInputBox(parent, point, autoFocus)
     local inputBox = CreateFrame("EditBox", nil, parent, "BackdropTemplate")
     inputBox:SetSize(180, 20)
-    inputBox:SetPoint(point, parent, "CENTER")
+    inputBox:SetPoint("LEFT", parent, "LEFT", 20, 0)
     inputBox:SetAutoFocus(autoFocus)
     inputBox:SetFontObject(GameFontNormal)
     inputBox:SetBackdrop({
@@ -2614,24 +3990,33 @@ local function CreateInputBox(parent, point, autoFocus)
 end
 
 
+
 local popupLabel = PresetPopup:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 popupLabel:SetPoint("TOP", PresetPopup, "TOP", 0, -10)
 
-local helpButton = CreateHelpButton(PresetPopup, popupLabel, 10, 0, "Enter name:\n  - Preset name to save the current setup\n\nBoss names:\n  - Name of the boss or mob for the Ctrl+Alt+Click function\n\nTip:\n  - Hold Alt and click a mob to add it to the list.", "Preset Help")
+
+local helpButton = CreateHelpButton(PresetPopup, popupLabel, 10, 0, "Enter name:\n  - Preset name to save the current setup\n\nBoss names:\n  - Name of the boss or mob for the Ctrl+Alt+Click function\n\nZone button:\n  - Adds your current zone to the boss list\n\nTip:\n  - Hold Alt and click a mob to add it to the list.", "Preset Help")
+
 
 local presetInput = CreateInputBox(PresetPopup, "TOP", true)
 presetInput:SetPoint("TOP", popupLabel, "BOTTOM", 0, -5)
+
 
 local bossInput = CreateInputBox(PresetPopup, "TOP", false)
 bossInput:SetWidth(120)
 bossInput:SetPoint("TOP", presetInput, "BOTTOM", -30, -10)
 
 local bossInputLabel = PresetPopup:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-bossInputLabel:SetPoint("TOP", bossInput, "TOP", 0, 10)
-bossInputLabel:SetText("Boss Names: (optional)")
+bossInputLabel:SetPoint("TOP", bossInput, "TOP", 30, 12)
+bossInputLabel:SetText("Boss Names or Zone: (optional)")
+
 
 local addBossButton = CreateButton(PresetPopup, 60, 20, "LEFT", "Add")
 addBossButton:SetPoint("LEFT", bossInput, "RIGHT", 5, 0)
+
+local addZoneButton = CreateButton(PresetPopup, 60, 20, "LEFT", "Zone") 
+addZoneButton:SetPoint("LEFT", addBossButton, "RIGHT", 5, 0)
+
 
 local bossListScrollFrame = CreateFrame("ScrollFrame", "BossListScrollFrame", PresetPopup, "UIPanelScrollFrameTemplate")
 bossListScrollFrame:SetPoint("TOPLEFT", 10, -80)
@@ -2645,6 +4030,7 @@ bossListScrollFrame:SetScrollChild(bossListScrollChild)
 local currentBosses = {}
 local bossListItems = {}
 
+
 local function tableSize(t)
     local count = 0
     for _ in pairs(t) do
@@ -2653,36 +4039,37 @@ local function tableSize(t)
     return count
 end
 
+
+local AddBossDirectly
+local AddCurrentZoneToBosses
+
 function RefreshBossList()
-   
     for i = 1, tableSize(bossListItems) do
         local item = bossListItems[i]
-        if item and item.frame then 
-            item.frame:Hide() 
-            item.frame:SetParent(nil) 
+        if item and item.frame then
+            item.frame:Hide()
+            item.frame:SetParent(nil)
         end
     end
     bossListItems = {}
-    
+
     local itemHeight = 28
     local spacing = 5
     local totalHeight = 0
     local width = bossListScrollFrame:GetWidth() - 20
-    
+
     local index = 1
     for i, bossName in pairs(currentBosses) do
         local itemFrame = CreateFrame("Frame", nil, bossListScrollChild)
         itemFrame:SetWidth(width)
         itemFrame:SetHeight(itemHeight)
-        itemFrame:SetPoint("TOPLEFT", 0, -((index-1) * (itemHeight + spacing)))
-        
-       
+        itemFrame:SetPoint("TOPLEFT", 0, -((index - 1) * (itemHeight + spacing)))
+
         local label = itemFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         label:SetPoint("LEFT", itemFrame, "LEFT", 5, 0)
         label:SetText("- " .. bossName)
         label:SetJustifyH("LEFT")
-        
-       
+
         local removeButton = CreateFrame("Button", nil, itemFrame, "UIPanelButtonTemplate")
         removeButton:SetWidth(25)
         removeButton:SetHeight(25)
@@ -2692,16 +4079,14 @@ function RefreshBossList()
             tremove(currentBosses, i)
             RefreshBossList()
         end)
-        
-       
+
         itemFrame:EnableMouse(true)
         itemFrame:SetScript("OnMouseDown", function(self, button)
             if IsAltKeyDown() then
                 AddBossDirectly(bossName)
             end
         end)
-        
-       
+
         itemFrame:SetScript("OnEnter", function()
             GameTooltip:SetOwner(itemFrame, "ANCHOR_RIGHT")
             GameTooltip:SetText("ALT-click to add again")
@@ -2710,55 +4095,80 @@ function RefreshBossList()
         itemFrame:SetScript("OnLeave", function()
             GameTooltip:Hide()
         end)
-        
+
         bossListItems[index] = {
             frame = itemFrame,
             label = label,
             button = removeButton
         }
-        
+
         totalHeight = totalHeight + itemHeight + spacing
         index = index + 1
     end
-    
-   
+
     local visibleHeight = bossListScrollFrame:GetHeight()
     bossListScrollChild:SetHeight(math.max(totalHeight, visibleHeight + 1))
     bossListScrollFrame:UpdateScrollChildRect()
     bossListScrollFrame:SetVerticalScroll(0)
 end
 
-local function AddBossDirectly(bossName)
+AddBossDirectly = function(bossName)
     if not PresetPopup:IsVisible() then return end
-    
+
     bossName = strtrim(bossName)
     if bossName == "" then return end
-    
+
     local lowerName = strlower(bossName)
     for _, existing in pairs(currentBosses) do
-        if strlower(existing) == lowerName then 
-            ShowStaticPopup(bossName.." already in list!", "ERROR")
-            return 
+        if strlower(existing) == lowerName then
+            ShowStaticPopup(bossName .. " already in list!", "ERROR")
+            return
         end
     end
-    
+
     tinsert(currentBosses, bossName)
     RefreshBossList()
-    DEFAULT_CHAT_FRAME:AddMessage(bossName.." added to list!")
+    DEFAULT_CHAT_FRAME:AddMessage(bossName .. " added to list!")
+end
+
+AddCurrentZoneToBosses = function()
+    if not PresetPopup:IsVisible() then return end
+
+    local zone = GetRealZoneText()
+    if not zone or zone == "" then return end
+
+    local lowerZone = strlower(zone)
+    for _, existing in pairs(currentBosses) do
+        if strlower(existing) == lowerZone then
+            ShowStaticPopup(zone .. " already in list!", "ERROR")
+            return
+        end
+    end
+
+    tinsert(currentBosses, zone)
+    RefreshBossList()
+    DEFAULT_CHAT_FRAME:AddMessage(zone .. " added to list!")
 end
 
 addBossButton:SetScript("OnClick", function()
     local name = strtrim(bossInput:GetText())
     if name ~= "" then
-       
-        for _, existing in ipairs(currentBosses) do
-            if existing == name then return end
-        end
-       
-        table.insert(currentBosses, name)
+        AddBossDirectly(name)
         bossInput:SetText("")
-        RefreshBossList()
     end
+end)
+
+addZoneButton:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText("Add current zone")
+    GameTooltip:Show()
+end)
+
+addZoneButton:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+end)
+addZoneButton:SetScript("OnClick", function()
+    AddCurrentZoneToBosses()
 end)
 
 local targetScanFrame = CreateFrame("Frame")
@@ -2771,6 +4181,7 @@ targetScanFrame:SetScript("OnEvent", function()
         end
     end
 end)
+
 
 local keyboardFrame = CreateFrame("Frame")
 keyboardFrame:RegisterEvent("MODIFIER_STATE_CHANGED")
@@ -2785,12 +4196,14 @@ keyboardFrame:SetScript("OnEvent", function(_, _, key, state)
     end
 end)
 
+
 local saveButtonPresetPopup = CreateButton(PresetPopup, 80, 22, "BOTTOMLEFT", "Save")
 saveButtonPresetPopup:SetPoint("BOTTOMLEFT", PresetPopup, "BOTTOMLEFT", 10, 10)
 
 local cancelButton = CreateButton(PresetPopup, 80, 22, "BOTTOMRIGHT", "Cancel")
 cancelButton:SetPoint("BOTTOMRIGHT", PresetPopup, "BOTTOMRIGHT", -10, 10)
 cancelButton:SetScript("OnClick", function() PresetPopup:Hide() end)
+
 
 saveButtonPresetPopup:SetScript("OnClick", function()
     local name = presetInput:GetText()
@@ -2879,6 +4292,7 @@ saveButtonPresetPopup:SetScript("OnClick", function()
     end
 end)
 
+
 presetInput:SetScript("OnEnterPressed", function()
     saveButtonPresetPopup:GetScript("OnClick")()
 end)
@@ -2892,6 +4306,7 @@ PresetPopup:SetScript("OnKeyDown", function()
         PresetPopup:Hide()
     end
 end)
+
 
 function OpenSaveAsPopup()
     PresetPopup.mode = "save"
@@ -2929,7 +4344,7 @@ function OpenEditPopup()
     end
     
     if not currentPreset then
-        ShowStaticPopup("You can only edit presets \n under Others.")
+        ShowStaticPopup("You can only rename presets \n under Others.")
         return
     end
     
@@ -3006,6 +4421,7 @@ function ShowConfirmDeletePopup(presetName)
     end)
 end
 
+
 local saveAsButton = CreateButton(FillRaidFrame, 80, 20, "LEFT", "Save As")
 saveAsButton:SetPoint("LEFT", saveButton, "RIGHT", 10, 0)
 saveAsButton:SetScript("OnClick", OpenSaveAsPopup)
@@ -3037,6 +4453,8 @@ end)
 
 
 
+
+
 local removeButton = CreateButton(FillRaidFrame, 80, 20, "LEFT", "Remove")
 removeButton:SetPoint("TOPLEFT", editButton2, "BOTTOMLEFT", 0, -10)
 removeButton:Hide()
@@ -3058,6 +4476,7 @@ end)
 removeButton:SetScript("OnLeave", function()
     GameTooltip:Hide()
 end)
+
 
 function OpenEditPopup()
     if not currentPresetName then
@@ -3105,6 +4524,7 @@ end
 
 
 
+
 local function OnPresetSelected(presetName)
     currentPresetName = presetName
     if presetName then
@@ -3114,6 +4534,7 @@ local function OnPresetSelected(presetName)
     end
    
 end
+
 
 PresetPopup:SetScript("OnHide", function()
     if not currentPresetName then
@@ -3320,14 +4741,17 @@ SuppressEditor:Show()
 table.insert(UISpecialFrames, "SuppressEditorFrame")
 
 
+
 local title = SuppressEditor:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 title:SetPoint("TOP", 0, -10)
 title:SetText("SuppressBotMsg Editor")
 local helpButton = CreateHelpButton(SuppressEditorFrame, title, 10, 0, "Enter a message pattern to suppress.\n\nCooldown:\n - Time (in seconds) to wait before showing the same message again.\n - Set to 0 to fully suppress that message.\n\nTip:\n - Partial matches are supported. For example, 'joins the party' matches \nmessages like 'Bot123 joins the party.", "Suppress Message Help")
 
+
 local patternLabel = SuppressEditor:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 patternLabel:SetPoint("TOPLEFT", 20, -40)
 patternLabel:SetText("Message Pattern:")
+
 
 local patternInput = CreateFrame("EditBox", nil, SuppressEditor, "InputBoxTemplate")
 patternInput:SetSize(260, 20)
@@ -3335,9 +4759,11 @@ patternInput:SetAutoFocus(false)
 patternInput:SetPoint("TOPLEFT", patternLabel, "BOTTOMLEFT", 0, -5)
 patternInput:SetScript("OnEscapePressed", patternInput.ClearFocus)
 
+
 local cooldownLabel = SuppressEditor:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 cooldownLabel:SetPoint("TOPLEFT", patternInput, "BOTTOMLEFT", 0, -10)
 cooldownLabel:SetText("Cooldown (seconds):")
+
 
 local cooldownInput = CreateFrame("EditBox", nil, SuppressEditor, "InputBoxTemplate")
 cooldownInput:SetSize(80, 20)
@@ -3347,10 +4773,12 @@ cooldownInput:SetNumeric(true)
 cooldownInput:SetScript("OnEscapePressed", cooldownInput.ClearFocus)
 
 CreateSeparatorLine(SuppressEditor, 0, -6, 336, cooldownInput)
+
 local addButton = CreateFrame("Button", nil, SuppressEditor, "UIPanelButtonTemplate")
 addButton:SetSize(100, 24)
 addButton:SetText("Add/Update")
 addButton:SetPoint("LEFT", cooldownInput, "RIGHT", 10, 0)
+
 
 local scrollFrame = CreateFrame("ScrollFrame", nil, SuppressEditor, "UIPanelScrollFrameTemplate")
 scrollFrame:SetPoint("TOPLEFT", 20, -140)
@@ -3394,6 +4822,7 @@ function RefreshSuppressList()
     scrollChild:SetHeight(y + 10)
 end
 CreateSeparatorLine(SuppressEditor, 0, -6, 336, scrollFrame)
+
 addButton:SetScript("OnClick", function()
     local pattern = patternInput:GetText()
     local cooldown = tonumber(cooldownInput:GetText()) or 0
@@ -3407,6 +4836,7 @@ addButton:SetScript("OnClick", function()
     cooldownInput:SetText("")
     RefreshSuppressList()
 end)
+
 
 local saveButtonSuppressEditor = CreateFrame("Button", nil, SuppressEditor, "GameMenuButtonTemplate")
 saveButtonSuppressEditor:SetSize(80, 24)
@@ -3455,6 +4885,7 @@ openSuppressButton:SetHeight(24)
 openSuppressButton:SetPoint("LEFT", restoreSuppressDefaultsButton, "RIGHT", 10, 0)
 openSuppressButton:SetScript("OnClick", OpenSuppressExportFrame)
 openSuppressButton:Show()
+
 
 local cancelButtonSuppressEditor = CreateFrame("Button", nil, SuppressEditor, "GameMenuButtonTemplate")
 cancelButtonSuppressEditor:SetSize(80, 24)
@@ -3509,6 +4940,7 @@ end)
 
 
 -------------------------export/import................................
+
 local ExportFrame = CreateFrame("Frame", "FillRaidExportFrame", UIParent, "BackdropTemplate")
 ExportFrame:SetBackdrop({
     bgFile = "Interface/Tooltips/UI-Tooltip-Background",
@@ -3523,17 +4955,21 @@ ExportFrame:SetHeight(300)
 ExportFrame:SetFrameStrata("DIALOG")
 ExportFrame:Hide()
 
+
 local title = ExportFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 title:SetPoint("TOP", ExportFrame, "TOP", 0, -10)
 title:SetText("Export / Import FillRaidPresets")
 local helpexport = CreateHelpButton(ExportFrame, title, 10, 0, "To export Select all and ctrl+c to copy to a document\n To import remove everything and paste your saved settings", "Another Help")
+
 local scrollFrame = CreateFrame("ScrollFrame", "FillRaidExportScrollFrame", ExportFrame, "UIPanelScrollFrameTemplate")
 scrollFrame:SetPoint("TOPLEFT", ExportFrame, "TOPLEFT", 16, -40)
 scrollFrame:SetPoint("BOTTOMRIGHT", ExportFrame, "BOTTOMRIGHT", -30, 50)
 
+
 local scrollChild = CreateFrame("Frame", nil, scrollFrame)
 scrollChild:SetWidth(scrollFrame:GetWidth()) 
 scrollFrame:SetScrollChild(scrollChild)
+
 
 local editBox = CreateFrame("EditBox", "FillRaidExportEditBox", scrollChild)
 editBox:SetMultiLine(true)
@@ -3543,6 +4979,7 @@ editBox:SetFontObject(GameFontHighlight)
 editBox:SetAutoFocus(false)
 editBox:SetScript("OnEscapePressed", function() editBox:ClearFocus() end)
 editBox:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 0, 0)
+
 
 local function SerializeTable(tbl, indent)
     indent = indent or ""
@@ -3573,6 +5010,7 @@ local function SerializeTable(tbl, indent)
 end
 
 
+
 local function OpenExportFrame()
     if FillRaidPresets then
         editBox:SetText("FillRaidPresets = " .. SerializeTable(FillRaidPresets))
@@ -3601,6 +5039,7 @@ local function OpenExportFrame()
     editBox:SetFocus()
 end
 
+
 local openExportButton = CreateFrame("Button", nil, FillRaidFrame, "GameMenuButtonTemplate")
 openExportButton:SetText("Export")
 openExportButton:SetWidth(80)
@@ -3614,7 +5053,10 @@ openExportButton:Hide()
 
 
 
----SuppressEditorButton:SetScript("OnEnter", function()
+
+
+
+
 
 
 
@@ -3641,6 +5083,7 @@ copyButton:SetScript("OnClick", function()
     editBox:HighlightText()
     editBox:SetFocus()
 end)
+
 
 local importButton = CreateFrame("Button", nil, ExportFrame, "GameMenuButtonTemplate")
 importButton:SetText("Import")
@@ -3692,6 +5135,7 @@ importButton:SetScript("OnClick", function()
     end
 end)
 
+
 local closeButton4 = CreateFrame("Button", nil, ExportFrame, "GameMenuButtonTemplate")
 closeButton4:SetText("Close")
 closeButton4:SetWidth(80)
@@ -3700,6 +5144,15 @@ closeButton4:SetPoint("BOTTOMRIGHT", ExportFrame, "BOTTOMRIGHT", -10, 10)
 closeButton4:SetScript("OnClick", function()
     ExportFrame:Hide()
 end)
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3765,7 +5218,7 @@ end)
 
 local CreditsFrame = CreateFrame("Frame", "CreditsFrame", UIParent)
 CreditsFrame:SetWidth(300)
-CreditsFrame:SetHeight(200)
+CreditsFrame:SetHeight(230)
 CreditsFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 CreditsFrame:SetFrameStrata("DIALOG")  
 CreditsFrame:SetFrameLevel(1)  
@@ -3821,11 +5274,18 @@ CreditsFrame.header.text:SetText('Credits')
 
 local creditsData = {
     {name = "|cffffd700Pumpan|r", contribution = "Creator of the addon"},  
-    {name = "|cffffd700Dedirtyone|r", contribution = "Special thanks to Dedirtyone for his incredible generosity\nin donating €50 to help me get VIP status.\nYour support means so much and has truly motivated me \nto keep contributing to the community. \nThis addon wouldn’t be the same without people like you!"},  
-	{name = "|cffffd700TheSamurai206|r", contribution = "A huge thank you to TheSamurai206 (Zugginator) for his generous donation of €20.\nYour support means a lot and helps me continue improving this addon.\nIt's supporters like you that keep this project going!"},
-	{name = "|cffffd700Spinach|r", contribution = "A heartfelt thank you to Spinach for the generous €20 donation.\nYour support truly means a lot and motivates me to keep improving this addon.\nAmazing supporters like you are what keep this project alive!"},
-    {name = "|cffffffffGemma|r", contribution = "Thanks for Beta testing, and bug reports!"},  
-    {name = "|cffffffffTO EVERYONE ELSE!|r", contribution = "To everyone who has been supporting! \nIf you are interested in contributing in any way, \nbug reporting, beta testing, or whatever, \nplease contact me on the forum, Discord, or in-game."},  
+
+    {name = "|cffffd700Dedirtyone|r", contribution = "Special thanks to Dedirtyone for his incredible generosity\nin donating 50EUR to help me get VIP status.\nYour support means so much and has truly motivated me\nto keep contributing to the community.\nThis addon wouldn't be the same without people like you!"},  
+
+    {name = "|cffffd700TheSamurai206|r", contribution = "A huge thank you to TheSamurai206 (Zugginator) for his generous donation of 20EUR.\nYour support means a lot and helps me continue improving this addon.\nIt's supporters like you that keep this project going!"},
+
+    {name = "|cffffd700Spinach|r", contribution = "A heartfelt thank you to Spinach for the generous 20EU<R donation.\nYour support truly means a lot and motivates me to keep improving this addon.\nAmazing supporters like you are what keep this project alive!"},
+
+    {name = "|cffffffffGemma|r", contribution = "Has been part of the project from the very beginning.\nContributed many great ideas, helped with extensive beta testing,\nand created one of the button themes used in the addon.\nYour support and feedback have been invaluable!"},  
+
+    {name = "|cffffffffNymz|r", contribution = "Since 2026, Nymz has contributed with great ideas,\ncode improvements for the 1.14 client version, bug reports,\nand also created a button theme.\nThese contributions have helped improve both the addon\nand the overall user experience."},	
+
+    {name = "|cffffffffTO EVERYONE ELSE!|r", contribution = "To everyone who has been supporting!\nIf you are interested in contributing in any way,\nbug reporting, beta testing, or whatever,\nplease contact me on the forum, Discord, or in-game."},  
 }
 
 
@@ -3908,15 +5368,25 @@ CreditsFrame:Hide()
 
 
     local instanceButtons = {}
+    local instanceFullNameMap = {
+        ["BWL"] = "Blackwing Lair",
+        ["MC"] = "Molten Core",
+        ["AQ40"] = "Temple of Ahn'Qiraj",
+        ["AQ20"] = "Ruins of Ahn'Qiraj",
+        ["ZG"] = "Zul'Gurub",
+        ["Other"] = "Other Presets",
+    }
+
     local function CreateInstanceButton(label, yOffset, frameName, presetName)
         local button = CreateFrame("Button", nil, InstanceButtonsFrame, "GameMenuButtonTemplate")
         button:SetPoint("TOP", InstanceButtonsFrame, "TOP", 0, yOffset)
         button:SetWidth(180)
         button:SetHeight(30)
         button:SetText(label)
+        button.fullName = instanceFullNameMap[label] or label
         button:SetScript("OnEnter", function()
             GameTooltip:SetOwner(button, "ANCHOR_RIGHT")
-            GameTooltip:SetText(label)
+            GameTooltip:SetText(button.fullName or label, 1, 1, 1)
             GameTooltip:Show()
         end)
         button:SetScript("OnLeave", function()
@@ -3959,115 +5429,477 @@ CreditsFrame:Hide()
 
 
   
+local function TruncateToFit(button, text, maxWidth)
+    if not text then
+        return "", false
+    end
+
+    local fontString = button:GetFontString()
+    if not fontString then
+        return text, false
+    end
+
+    fontString:SetText(text)
+
+    if fontString:GetStringWidth() <= maxWidth then
+        return text, false
+    end
+
+    local truncated = text
+    local ellipsis = "..."
+
+    while string.len(truncated) > 0 do
+        truncated = string.sub(truncated, 1, string.len(truncated) - 1)
+        fontString:SetText(truncated .. ellipsis)
+
+        if fontString:GetStringWidth() <= maxWidth then
+            return truncated .. ellipsis, true
+        end
+    end
+
+    return ellipsis, true
+end
+
+
 function CreateInstanceFrame(name, presets, label)
-	local buttonWidth = 80
-	local buttonHeight = 30
-	local padding = 10
-	local maxButtonsPerColumn = 8
+    local buttonWidth = 80
+    local buttonHeight = 30
+    local padding = 10
+    local maxButtonsPerColumn = 8
+    
+    
+    
+    local tutorialButtonSize = 18
 
-	local totalButtonWidth = buttonWidth + padding
-	local totalButtonHeight = buttonHeight + padding
-	local numButtons = table.getn(presets)
-	local numColumns = math.ceil(numButtons / maxButtonsPerColumn)
-	local numRows = math.min(numButtons, maxButtonsPerColumn)
+    local totalButtonWidth = buttonWidth + padding
+    local totalButtonHeight = buttonHeight + padding
 
-	local dynamicWidth = (totalButtonWidth * numColumns) + padding
-	local dynamicHeight = (totalButtonHeight * numRows) + padding
+    local function GetEffectiveButtonCount()
+        local count = table.getn(presets)
 
-	local frame = CreateFrame("Frame", name, UIParent, "BackdropTemplate")
-	setglobal(name, frame)
-	table.insert(UISpecialFrames, name)	
-	frame:SetWidth(dynamicWidth)
-	frame:SetHeight(dynamicHeight)
-	frame:SetPoint("LEFT", FillRaidFrame, "RIGHT", 10, 0)
-	frame:SetBackdrop({
-		bgFile = "Interface/Tooltips/UI-Tooltip-Background",
-		edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
-		tile = true, tileSize = 16, edgeSize = 16,
-		insets = { left = 4, right = 4, top = 4, bottom = 4 }
-	})
-	frame:SetBackdropColor(0, 0, 0, 1)
-	frame:SetFrameStrata("DIALOG")
-	frame:SetFrameLevel(10)
-	frame:Hide()
+        if name ~= "PresetDungeounOther" and OthersButtonEnabled then
+            count = count + 1
+        end
 
+        return count
+    end
 
-	frame.header = frame:CreateTexture(nil, 'ARTWORK')
-	frame.header:SetWidth(dynamicWidth)
-	frame.header:SetHeight(64)
-	frame.header:SetPoint('TOP', frame, 0, 18)
-	frame.header:SetTexture("Interface\\DialogFrame\\UI-DialogBox-Header")
-	frame.header:SetVertexColor(.2, .2, .2)
+    local numButtons = GetEffectiveButtonCount()
+    local numColumns = math.ceil(numButtons / maxButtonsPerColumn)
+    local numRows = math.min(numButtons, maxButtonsPerColumn)
 
+    local dynamicWidth = (totalButtonWidth * numColumns) + padding
+    local dynamicHeight = (totalButtonHeight * numRows) + padding
+    local tutorialWidthBonus = tutorialButtonSize + 4
 
-	frame.headerText = frame:CreateFontString(nil, 'ARTWORK', 'GameFontNormal')
-	frame.headerText:SetPoint('TOP', frame.header, 0, -14)
-	frame.headerText:SetText(name)
+    local frame = CreateFrame("Frame", name, UIParent, "BackdropTemplate")
+    setglobal(name, frame)
+    table.insert(UISpecialFrames, name)
 
+    frame.baseWidth = dynamicWidth
+    frame.baseHeight = dynamicHeight
+    frame.tutorialWidthBonus = tutorialWidthBonus
+    frame.presetButtons = {}
+    frame:SetWidth(dynamicWidth)
+    frame:SetHeight(dynamicHeight)
+    frame:SetPoint("LEFT", FillRaidFrame, "RIGHT", 10, 0)
 
+    frame:SetBackdrop({
+        bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+        tile = true, tileSize = 16, edgeSize = 16,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 }
+    })
 
-	local fixedStartY = -10
+    frame:SetBackdropColor(0, 0, 0, 1)
+    frame:SetFrameStrata("DIALOG")
+    frame:SetFrameLevel(10)
+    frame:Hide()
 
-	local function CreatePresetButton(preset, index)
-		local button = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
-		button:SetWidth(buttonWidth)
-		button:SetHeight(buttonHeight)
-		button:SetText(preset.label or "Unknown preset")
-		local fontString = button:GetFontString()
-		fontString:SetFont("Fonts\\ARIALN.TTF", 12, "OUTLINE")
-		local column = math.floor((index - 1) / maxButtonsPerColumn)
-		local row = (index - 1) - column * maxButtonsPerColumn
+    frame.header = frame:CreateTexture(nil, 'ARTWORK')
+    frame.header:SetWidth(dynamicWidth)
+    frame.header:SetHeight(64)
+    frame.header:SetPoint('TOP', frame, 0, 18)
+    frame.header:SetTexture("Interface\\DialogFrame\\UI-DialogBox-Header")
+    frame.header:SetVertexColor(.2, .2, .2)
 
-		local xOffset = (frame:GetWidth() - (numColumns * totalButtonWidth - padding)) / 2 + (column * totalButtonWidth)
-		local yOffset = fixedStartY - (row * totalButtonHeight)
+    frame.headerText = frame:CreateFontString(nil, 'ARTWORK', 'GameFontNormal')
+    frame.headerText:SetPoint('TOP', frame.header, 0, -14)
+    frame.headerText:SetText(name)
 
-		button:SetPoint("TOPLEFT", frame, "TOPLEFT", xOffset, yOffset)
+    frame.tutorialButtons = {}
 
-		button:SetScript("OnClick", function()
-			for classRole, inputBox in pairs(inputBoxes) do
-				if inputBox then
-					inputBox:SetNumber(0)
-					local onTextChanged = inputBox:GetScript("OnTextChanged")
-					if onTextChanged then
-						onTextChanged(inputBox)
-					end
-				end
-			end
+    local function IsTutorialLinksEnabled()
+        return FillRaidBotsSavedSettings and FillRaidBotsSavedSettings.showTutorialLinks and true or false
+    end
 
-			if preset.values then
-				for classRole, value in pairs(preset.values) do
-					local inputBox = inputBoxes[classRole]
-					if inputBox then
-						inputBox:SetNumber(value)
-						local onTextChanged = inputBox:GetScript("OnTextChanged")
-						if onTextChanged then
-							onTextChanged(inputBox)
+    local function ColumnHasVisibleTutorial(column)
+        local info
+
+        if not IsTutorialLinksEnabled() then
+            return false
+        end
+
+        if not frame.presetButtons then
+            return false
+        end
+
+        for _, buttonInfo in ipairs(frame.presetButtons) do
+            if buttonInfo.column == column and buttonInfo.tutorialButton then
+                return true
+            end
+        end
+
+        return false
+    end
+
+    local function GetColumnWidth(column)
+        local width = totalButtonWidth
+
+        if ColumnHasVisibleTutorial(column) then
+            width = width + tutorialWidthBonus
+        end
+
+        return width
+    end
+
+    local function GetLayoutWidth()
+        local width = padding
+        local column
+        local effectiveColumns = math.ceil(GetEffectiveButtonCount() / maxButtonsPerColumn)
+
+        for column = 0, effectiveColumns - 1 do
+            width = width + GetColumnWidth(column)
+        end
+
+        return width
+    end
+
+    local fixedStartY = -10
+
+    local function LayoutInstanceButtons()
+        local xOffset = padding
+        local columnOffsets = {}
+        local column
+        local buttonInfo
+        local yOffset
+        local targetWidth = GetLayoutWidth()
+        local effectiveButtonCount = GetEffectiveButtonCount()
+        local effectiveColumns = math.ceil(effectiveButtonCount / maxButtonsPerColumn)
+        local effectiveRows = math.min(effectiveButtonCount, maxButtonsPerColumn)
+        local targetHeight = (totalButtonHeight * effectiveRows) + padding
+
+        frame:SetWidth(targetWidth)
+        frame:SetHeight(targetHeight)
+        frame.baseHeight = targetHeight
+
+        if frame.header then
+            frame.header:SetWidth(targetWidth)
+        end
+
+        for column = 0, effectiveColumns - 1 do
+            columnOffsets[column] = xOffset
+            xOffset = xOffset + GetColumnWidth(column)
+        end
+
+        if frame.presetButtons then
+            for _, buttonInfo in ipairs(frame.presetButtons) do
+                yOffset = fixedStartY - (buttonInfo.row * totalButtonHeight)
+
+                buttonInfo.button:ClearAllPoints()
+                buttonInfo.button:SetPoint("TOPLEFT", frame, "TOPLEFT", columnOffsets[buttonInfo.column] or padding, yOffset)
+
+                if buttonInfo.tutorialButton then
+                    buttonInfo.tutorialButton:ClearAllPoints()
+                    buttonInfo.tutorialButton:SetPoint("LEFT", buttonInfo.button, "RIGHT", 2, 0)
+                end
+            end
+        end
+
+        if frame.othersButton then
+            yOffset = fixedStartY - ((frame.othersButtonRow or 0) * totalButtonHeight)
+            frame.othersButton:ClearAllPoints()
+            frame.othersButton:SetPoint("TOPLEFT", frame, "TOPLEFT", columnOffsets[frame.othersButtonColumn or 0] or padding, yOffset)
+        end
+    end
+
+    frame.UpdateTutorialWidth = LayoutInstanceButtons
+
+    local function CreatePresetButton(preset, index)
+        local button = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
+        button:SetWidth(buttonWidth)
+        button:SetHeight(buttonHeight)
+
+        local column = math.floor((index - 1) / maxButtonsPerColumn)
+        local row = (index - 1) - column * maxButtonsPerColumn
+
+        local yOffset = fixedStartY - (row * totalButtonHeight)
+
+        button:SetPoint("TOPLEFT", frame, "TOPLEFT", padding, yOffset)
+
+        
+        local originalText = preset.label or "Unknown preset"
+        local maxTextWidth = buttonWidth - 16  
+
+        local finalText, wasTruncated = TruncateToFit(button, originalText, maxTextWidth)
+
+        button:SetText(finalText)
+        button.originalText = originalText
+        button.wasTruncated = wasTruncated
+
+        button:SetScript("OnClick", function()
+            for classRole, inputBox in pairs(inputBoxes) do
+                if inputBox then
+                    inputBox:SetNumber(0)
+                    local onTextChanged = inputBox:GetScript("OnTextChanged")
+                    if onTextChanged then
+                        onTextChanged(inputBox)
+                    end
+                end
+            end
+
+            currentLoadedPreset = preset
+            ReapplyCurrentPreset()
+
+            
+            
+            
+            if IsShiftKeyDown() then
+                FillRaid()
+                ReplaceDeadBot = {}
+                resetData()
+                UpdateReFillButtonVisibility()
+                FillRaidFrame:Hide()
+            end
+        end)
+
+		button:SetScript("OnEnter", function()
+			GameTooltip:SetOwner(button, "ANCHOR_RIGHT")
+
+			local labelText = button.originalText or ""
+			local fullName = preset.fullname
+			GameTooltip:SetText(fullName or labelText, 1, 0.82, 0) 
+
+			local selectedValues = GetPresetValues(preset)
+
+			if selectedValues then
+				GameTooltip:AddLine(" ")
+
+				for classRole, value in pairs(selectedValues) do
+					if value and value > 0 then
+
+						local spacePos = string.find(classRole, " ")
+
+						local class, role
+
+						if spacePos then
+							class = string.sub(classRole, 1, spacePos - 1)
+							role  = string.sub(classRole, spacePos + 1)
+						else
+							class = classRole
+						end
+
+						local coloredClass = GetColoredClass(classRole)
+
+						if role then
+							GameTooltip:AddLine(value .. " " .. coloredClass .. " (" .. role .. ")")
+						else
+							GameTooltip:AddLine(value .. " " .. coloredClass)
 						end
 					end
 				end
 			end
 
-			if currentPresetLabel and (preset.label or preset.fullname) then
-				currentPresetLabel:SetText("Preset: " .. preset.label)
-				currentPresetName = preset.label
-			end
-		end)
-
-		button:SetScript("OnEnter", function()
-			GameTooltip:SetOwner(button, "ANCHOR_RIGHT")
-			GameTooltip:SetText(preset.tooltip or "No tooltip available")
 			GameTooltip:Show()
 		end)
 
-		button:SetScript("OnLeave", function()
-			GameTooltip:Hide()
-		end)
-	end
+        button:SetScript("OnLeave", function()
+            GameTooltip:Hide()
+        end)
 
-	for index, preset in ipairs(presets) do
-		CreatePresetButton(preset, index)
-	end
+        
+        
+        
+        if name ~= "PresetDungeounOther" then
+            local tutorialInfo = GetTutorialLinkInfoForPreset(preset)
+            if tutorialInfo then
+                local tutorialButton = CreateFrame("Button", nil, frame)
+                tutorialButton:SetWidth(tutorialButtonSize)
+                tutorialButton:SetHeight(tutorialButtonSize)
+                tutorialButton:SetPoint("LEFT", button, "RIGHT", 2, 0)
 
+                local tutorialTexture = tutorialButton:CreateTexture(nil, "ARTWORK")
+                tutorialTexture:SetWidth(tutorialButtonSize)
+                tutorialTexture:SetHeight(tutorialButtonSize)
+                tutorialTexture:SetPoint("CENTER", tutorialButton, "CENTER", 0, 0)
+                tutorialTexture:SetTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Up")
+                tutorialButton.texture = tutorialTexture
+
+                local tutorialHighlight = tutorialButton:CreateTexture(nil, "HIGHLIGHT")
+                tutorialHighlight:SetAllPoints(tutorialButton)
+                tutorialHighlight:SetTexture("Interface\\Buttons\\UI-Common-MouseHilight")
+                tutorialHighlight:SetBlendMode("ADD")
+
+                tutorialButton:SetScript("OnClick", function()
+                    ShowTutorialLinkPopup(preset, tutorialInfo)
+                end)
+
+                tutorialButton:SetScript("OnEnter", function()
+                    GameTooltip:SetOwner(tutorialButton, "ANCHOR_RIGHT")
+                    GameTooltip:SetText("Tutorial Link")
+                    GameTooltip:AddLine("Open a popup with faction/VIP-aware tutorial links.", 1, 1, 1, 1)
+                    GameTooltip:Show()
+                end)
+
+                tutorialButton:SetScript("OnLeave", function()
+                    GameTooltip:Hide()
+                end)
+
+                tutorialButton.linkInfo = tutorialInfo
+                table.insert(frame.tutorialButtons, tutorialButton)
+                button.tutorialButton = tutorialButton
+            end
+        end
+
+        table.insert(frame.presetButtons, {
+            button = button,
+            tutorialButton = button.tutorialButton,
+            column = column,
+            row = row,
+            preset = preset,
+        })
+    end
+
+    for index, preset in ipairs(presets) do
+        CreatePresetButton(preset, index)
+    end
+
+
+
+if name ~= "PresetDungeounOther" then
+    local othersIndex = table.getn(presets) + 1
+
+    local button = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
+    button:SetWidth(buttonWidth)
+    button:SetHeight(buttonHeight)
+
+    local column = math.floor((othersIndex - 1) / maxButtonsPerColumn)
+    local row = (othersIndex - 1) - column * maxButtonsPerColumn
+
+    local yOffset = fixedStartY - (row * totalButtonHeight)
+
+    button:SetPoint("TOPLEFT", frame, "TOPLEFT", padding, yOffset)
+
+    button:SetText("Others")
+
+    
+    frame.othersButton = button
+    frame.othersButtonColumn = column
+    frame.othersButtonRow = row
+
+    
+    if not OthersButtonEnabled then
+        button:Hide()
+    end
+
+    button:SetScript("OnClick", function()
+        frame:Hide()
+        if instanceFrames and instanceFrames["PresetDungeounOther"] then
+            instanceFrames["PresetDungeounOther"]:Show()
+        end
+    end)
+end
+
+    LayoutInstanceButtons()
+
+
+
+function ToggleOthersButton(value)
+    OthersButtonEnabled = value
+    for _, frame in pairs(instanceFrames) do
+        if frame.othersButton then
+            if value then
+                frame.othersButton:Show()
+            else
+                frame.othersButton:Hide()
+            end
+        end
+
+        if frame.UpdateTutorialWidth then
+            frame.UpdateTutorialWidth()
+        end
+    end
+end
+
+
+
+
+UpdateTutorialLinkButtons = function()
+    local enabled = FillRaidBotsSavedSettings and FillRaidBotsSavedSettings.showTutorialLinks
+
+    if not instanceFrames then
+        return
+    end
+
+    for _, frame in pairs(instanceFrames) do
+        if frame.tutorialButtons then
+            for _, tutorialButton in ipairs(frame.tutorialButtons) do
+                if enabled then
+                    tutorialButton:Show()
+                else
+                    tutorialButton:Hide()
+                end
+            end
+        end
+
+        if frame.UpdateTutorialWidth then
+            frame.UpdateTutorialWidth(enabled)
+        end
+    end
+end
+
+function ToggleTutorialLinks(value)
+    if not FillRaidBotsSavedSettings then
+        FillRaidBotsSavedSettings = {}
+    end
+
+    FillRaidBotsSavedSettings.showTutorialLinks = value and true or false
+
+    if UpdateTutorialLinkButtons then
+        UpdateTutorialLinkButtons()
+    end
+end
+
+-- ==================
+-- open zone presets
+-- ==================
+local ZoneToPreset = {
+    ["Naxxramas"] = "PresetDungeounNaxxramas",
+    ["Blackwing Lair"] = "PresetDungeounBWL",
+    ["Molten Core"] = "PresetDungeounMC",
+    ["Onyxia's Lair"] = "PresetDungeounOnyxia",
+    ["Ahn'Qiraj"] = "PresetDungeounAQ40",      
+    ["Ruins of Ahn'Qiraj"] = "PresetDungeounAQ20",
+    ["Zul'Gurub"] = "PresetDungeounZG",
+}
+function OpenPresetForCurrentZone()
+    local zone = GetRealZoneText()
+    local frameName = ZoneToPreset[zone]
+
+    if frameName then
+        local frame = getglobal(frameName)
+        if frame then
+		    frame.headerText:SetText(zone)
+            frame:Show()
+			ClickBlockerFrame:Show() 
+        end
+    else
+        DEFAULT_CHAT_FRAME:AddMessage("No preset mapped for this zone.")
+    end
+end	
+-- ================================
+-- add bots with a slash command --
+-- ================================
 local allPresets = {
     naxxramasPresets,
     bwlPresets,
@@ -4080,10 +5912,95 @@ local allPresets = {
 }
 
 SLASH_FILLRAID1 = "/fillraid"
+
+local function CollectMatchingPresets(msg, exactMatchOnly)
+    local matches = {}
+    local lowerMsg
+
+    if not msg or type(msg) ~= "string" then
+        return matches
+    end
+
+    lowerMsg = string.lower(strtrim(msg))
+    if lowerMsg == "" then
+        return matches
+    end
+
+    for _, presetTable in pairs(allPresets) do
+        if type(presetTable) == "table" then
+            for _, preset in ipairs(presetTable) do
+                local matchFound = false
+
+                if exactMatchOnly then
+                    matchFound =
+                        (preset.label and string.lower(strtrim(preset.label)) == lowerMsg) or
+                        (preset.fullname and string.lower(strtrim(preset.fullname)) == lowerMsg)
+
+                    if not matchFound and preset.bosses then
+                        for _, bossName in ipairs(preset.bosses) do
+                            if string.lower(strtrim(bossName)) == lowerMsg then
+                                matchFound = true
+                                break
+                            end
+                        end
+                    end
+                else
+                    matchFound =
+                        (preset.label and string.find(string.lower(preset.label), lowerMsg, 1, true)) or
+                        (preset.fullname and string.find(string.lower(preset.fullname), lowerMsg, 1, true))
+
+                    if not matchFound and preset.bosses then
+                        for _, bossName in ipairs(preset.bosses) do
+                            if string.find(string.lower(bossName), lowerMsg, 1, true) then
+                                matchFound = true
+                                break
+                            end
+                        end
+                    end
+                end
+
+                if matchFound then
+                    table.insert(matches, preset)
+                end
+            end
+        end
+    end
+
+    return matches
+end
+
+local function ApplyPresetAndFill(preset)
+    if not preset then
+        QueueDebugMessage("FillRaid: ApplyPresetAndFill called with nil preset.", "debugerror")
+        return
+    end
+
+    
+    DEFAULT_CHAT_FRAME:AddMessage("Applying preset: " .. (preset.fullname or preset.label))
+    QueueDebugMessage("FillRaid: Applying preset -> " .. (preset.fullname or preset.label), "debugfilling")
+
+    for classRole, inputBox in pairs(inputBoxes) do
+        if inputBox then
+            inputBox:SetNumber(0)
+            local onTextChanged = inputBox:GetScript("OnTextChanged")
+            if onTextChanged then
+                onTextChanged(inputBox)
+            end
+        end
+    end
+
+    currentLoadedPreset = preset
+    ReapplyCurrentPreset()
+    FillRaid()
+end
+
+_G.CollectMatchingPresets = CollectMatchingPresets
+_G.ApplyPresetAndFill = ApplyPresetAndFill
+
 SlashCmdList["FILLRAID"] = function(msg)
     if not msg or type(msg) ~= "string" or strtrim(msg) == "" then
         DEFAULT_CHAT_FRAME:AddMessage("Available presets:")
-        
+
         for _, presetTable in pairs(allPresets) do
             if type(presetTable) == "table" then
                 for _, preset in ipairs(presetTable) do
@@ -4098,63 +6015,15 @@ SlashCmdList["FILLRAID"] = function(msg)
         return
     end
 
-    msg = string.lower(msg)
-    local foundPreset = false
+    local matches = CollectMatchingPresets(msg)
+    QueueDebugMessage("FillRaid: Search matches for '" .. msg .. "' -> " .. table.getn(matches), "debuginfo")
 
-    for _, presetTable in pairs(allPresets) do
-        if type(presetTable) == "table" then
-            for _, preset in ipairs(presetTable) do
-                local matchFound = 
-                    (preset.label and string.find(string.lower(preset.label), msg, 1, true)) or
-                    (preset.fullname and string.find(string.lower(preset.fullname), msg, 1, true))
-                
-                if not matchFound and preset.bosses then
-                    for _, bossName in ipairs(preset.bosses) do
-                        if string.find(string.lower(bossName), msg, 1, true) then
-                            matchFound = true
-                            break
-                        end
-                    end
-                end
-
-                if matchFound then
-                    DEFAULT_CHAT_FRAME:AddMessage("Applying preset: " .. (preset.fullname or preset.label), "debugfilling")
-                    
-                   
-                    for classRole, inputBox in pairs(inputBoxes) do
-                        if inputBox then
-                            inputBox:SetNumber(0)
-                            local onTextChanged = inputBox:GetScript("OnTextChanged")
-                            if onTextChanged then
-                                onTextChanged(inputBox)
-                            end
-                        end
-                    end
-                    
-                   
-                    if preset.values then
-                        for classRole, value in pairs(preset.values) do
-                            if inputBoxes[classRole] then
-                                inputBoxes[classRole]:SetNumber(value)
-                                local onTextChanged = inputBoxes[classRole]:GetScript("OnTextChanged")
-                                if onTextChanged then
-                                    onTextChanged(inputBoxes[classRole])
-                                end
-                            end
-                        end
-                    end
-                    
-                    FillRaid()
-                    foundPreset = true
-                    return
-                end
-            end
-        end
+    if table.getn(matches) > 0 then
+        ApplyPresetAndFill(matches[1])
+        return
     end
 
-    if not foundPreset then
-        QueueDebugMessage("Preset not found: " .. msg, "debugerror")
-    end
+    QueueDebugMessage("Error: Preset not found: " .. string.lower(msg), "debugerror")
 end
 
 
@@ -4163,60 +6032,366 @@ end
 end
 
 
-local detectBossFrame = CreateFrame("Frame")
-detectBossFrame:Hide() 
 
-local lastDetectedBoss = nil 
-local keyPressCooldown = false 
 
 function ToggleClickToFill(isChecked)
     ClickToFillEnabled = isChecked 
-
 end
-local function DetectBossAndFillRaid()
-    if keyPressCooldown then return end 
 
-    if ClickToFillEnabled and IsControlKeyDown() and IsAltKeyDown() then 
-        local bossName = UnitName("target") or UnitName("mouseover") 
-        if bossName and bossName ~= lastDetectedBoss then
-            lastDetectedBoss = bossName 
-            keyPressCooldown = true 
-            
-            SlashCmdList["FILLRAID"](bossName)
-            detectBossFrame:Hide() 
-        end
-    end
-end
+local detectBossFrame = CreateFrame("Frame")
+
+local lastDetectedBoss = nil
+local keyPressCooldown = false
+ClickToFillEnabled = ClickToFillEnabled or false
 
 local function ResetCooldown()
-    keyPressCooldown = false 
-    lastDetectedBoss = nil 
+    keyPressCooldown = false
+    lastDetectedBoss = nil
 end
 
-local function CheckAndEnableDetection()
-    if ClickToFillEnabled and IsControlKeyDown() and IsAltKeyDown() then  
-        detectBossFrame:Show()
-        DetectBossAndFillRaid() 
-    else
-        detectBossFrame:Hide()
-        ResetCooldown() 
+local clickToFillChooser = CreateFrame("Frame", "FillRaidBotsClickToFillChooser", UIParent, "BackdropTemplate")
+clickToFillChooser:SetWidth(210)
+clickToFillChooser:SetHeight(46)
+clickToFillChooser:SetFrameStrata("DIALOG")
+clickToFillChooser:SetFrameLevel(120)
+clickToFillChooser:SetBackdrop({
+    bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    tile = true,
+    tileSize = 16,
+    edgeSize = 12,
+    insets = { left = 3, right = 3, top = 3, bottom = 3 }
+})
+
+clickToFillChooser:SetBackdropColor(0, 0, 0, 0.95)
+clickToFillChooser:EnableMouse(true)
+clickToFillChooser:Hide()
+
+local chooserLeftButton = CreateFrame("Button", nil, clickToFillChooser, "GameMenuButtonTemplate")
+chooserLeftButton:SetWidth(95)
+chooserLeftButton:SetHeight(24)
+chooserLeftButton:SetPoint("LEFT", clickToFillChooser, "LEFT", 8, 0)
+
+local chooserRightButton = CreateFrame("Button", nil, clickToFillChooser, "GameMenuButtonTemplate")
+chooserRightButton:SetWidth(95)
+chooserRightButton:SetHeight(24)
+chooserRightButton:SetPoint("RIGHT", clickToFillChooser, "RIGHT", -8, 0)
+
+local clickToFillListChooser = CreateFrame("Frame", "FillRaidBotsClickToFillListChooser", UIParent, "BackdropTemplate")
+clickToFillListChooser:SetWidth(170)
+clickToFillListChooser:SetHeight(40)
+clickToFillListChooser:SetFrameStrata("DIALOG")
+clickToFillListChooser:SetFrameLevel(160)
+clickToFillListChooser:SetBackdrop({
+    bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    tile = true,
+    tileSize = 16,
+    edgeSize = 12,
+    insets = { left = 3, right = 3, top = 3, bottom = 3 }
+})
+clickToFillListChooser:SetBackdropColor(0, 0, 0, 0.95)
+clickToFillListChooser:EnableMouse(true)
+clickToFillListChooser:Hide()
+
+local clickToFillListButtons = {}
+local chooserTimeoutToken = 0
+
+local clickToFillListTitle = clickToFillListChooser:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+clickToFillListTitle:SetPoint("TOP", clickToFillListChooser, "TOP", 0, -8)
+clickToFillListTitle:SetText("Choose preset")
+
+local function HideClickToFillChooser()
+    local i
+
+    chooserTimeoutToken = chooserTimeoutToken + 1
+
+    clickToFillChooser:Hide()
+    clickToFillChooser.leftPreset = nil
+    clickToFillChooser.rightPreset = nil
+    clickToFillChooser.sourceText = nil
+
+    clickToFillListChooser:Hide()
+    clickToFillListChooser.sourceText = nil
+    clickToFillListChooser.matches = nil
+
+    for i = 1, table.getn(clickToFillListButtons) do
+        clickToFillListButtons[i]:Hide()
+        clickToFillListButtons[i].preset = nil
     end
 end
 
+local function StartClickToFillChooserTimeout()
+    local token = chooserTimeoutToken + 1
+    chooserTimeoutToken = token
 
-detectBossFrame:SetScript("OnUpdate", DetectBossAndFillRaid)
+    C_Timer.After(6, function()
+        if chooserTimeoutToken == token and (clickToFillChooser:IsShown() or clickToFillListChooser:IsShown()) then
+            QueueDebugMessage("Error: Chooser: Preset chooser timed out.", "debugerror")
+            HideClickToFillChooser()
+        end
+    end)
+end
 
-local detectBossEventFrame = CreateFrame("Frame")
-detectBossEventFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
-detectBossEventFrame:RegisterEvent("UPDATE_MOUSEOVER_UNIT")
-detectBossEventFrame:RegisterEvent("MODIFIER_STATE_CHANGED") 
-detectBossEventFrame:SetScript("OnEvent", function(_, event, key)
-    if event == "MODIFIER_STATE_CHANGED" then
-        if not IsControlKeyDown() and not IsAltKeyDown() then
-            ResetCooldown() 
+local function GetClickToFillCursorPosition()
+    local cursorX, cursorY = GetCursorPosition()
+    local scale = UIParent:GetEffectiveScale()
+
+    return cursorX / scale, cursorY / scale
+end
+
+local function PositionClickToFillChooser()
+    local cursorX, cursorY = GetClickToFillCursorPosition()
+
+    clickToFillChooser:ClearAllPoints()
+    clickToFillChooser:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", cursorX - 105, cursorY)
+end
+
+local function PositionClickToFillListChooser()
+    local cursorX, cursorY = GetClickToFillCursorPosition()
+
+    clickToFillListChooser:ClearAllPoints()
+    clickToFillListChooser:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", cursorX - 85, cursorY + 14)
+end
+
+local function ChooseClickToFillPreset(preset, sourceText)
+    if not preset then
+        HideClickToFillChooser()
+        return
+    end
+
+    HideClickToFillChooser()
+    keyPressCooldown = true
+    lastDetectedBoss = sourceText or preset.label or preset.fullname
+    QueueDebugMessage("Info: Chooser: Chosen zone preset -> " .. (preset.fullname or preset.label), "debuginfo")
+    ApplyPresetAndFill(preset)
+end
+
+chooserLeftButton:SetScript("OnClick", function()
+    ChooseClickToFillPreset(clickToFillChooser.leftPreset, clickToFillChooser.sourceText)
+end)
+
+chooserRightButton:SetScript("OnClick", function()
+    ChooseClickToFillPreset(clickToFillChooser.rightPreset, clickToFillChooser.sourceText)
+end)
+
+local function GetOrCreateClickToFillListButton(index)
+    local button
+
+    if clickToFillListButtons[index] then
+        return clickToFillListButtons[index]
+    end
+
+    button = CreateFrame("Button", nil, clickToFillListChooser, "GameMenuButtonTemplate")
+    button:SetWidth(150)
+    button:SetHeight(20)
+    button:SetPoint("TOP", clickToFillListChooser, "TOP", 0, -24 - ((index - 1) * 22))
+    button:SetScript("OnClick", function()
+        ChooseClickToFillPreset(button.preset, clickToFillListChooser.sourceText)
+    end)
+
+    clickToFillListButtons[index] = button
+    return button
+end
+
+local function ShowClickToFillChooser(matches, sourceText)
+    local count = table.getn(matches)
+    local i
+    local button
+
+    if count < 2 then
+        return false
+    end
+
+    HideClickToFillChooser()
+
+    if count == 2 then
+        clickToFillChooser.leftPreset = matches[1]
+        clickToFillChooser.rightPreset = matches[2]
+        clickToFillChooser.sourceText = sourceText
+
+        chooserLeftButton:SetText(matches[1].label or matches[1].fullname or "Preset 1")
+        chooserRightButton:SetText(matches[2].label or matches[2].fullname or "Preset 2")
+
+        PositionClickToFillChooser()
+        clickToFillChooser:Show()
+        StartClickToFillChooserTimeout()
+        QueueDebugMessage("Info: Chooser: Two zone presets found for " .. sourceText .. ". Waiting for left/right choice.", "debuginfo")
+        return true
+    end
+
+    clickToFillListChooser.sourceText = sourceText
+    clickToFillListChooser.matches = matches
+    clickToFillListTitle:SetText("Choose preset (" .. count .. ")")
+    clickToFillListChooser:SetHeight(34 + (count * 22))
+
+    for i = 1, count do
+        button = GetOrCreateClickToFillListButton(i)
+        button.preset = matches[i]
+        button:SetText(matches[i].label or matches[i].fullname or ("Preset " .. i))
+        button:Show()
+    end
+
+    for i = count + 1, table.getn(clickToFillListButtons) do
+        clickToFillListButtons[i]:Hide()
+        clickToFillListButtons[i].preset = nil
+    end
+
+    PositionClickToFillListChooser()
+    clickToFillListChooser:Show()
+    StartClickToFillChooserTimeout()
+    QueueDebugMessage("Info: FillRaid: " .. count .. " zone presets found for " .. sourceText .. ". Waiting for popup list choice.", "debuginfo")
+    return true
+end
+
+
+
+
+
+
+
+
+local function DetectBossAndFillRaid()
+    if keyPressCooldown then return end
+    if not (IsControlKeyDown() and IsAltKeyDown()) then return end
+
+    local targetName = UnitName("target")
+    local bossName = targetName or UnitName("mouseover")
+    local zone = GetRealZoneText()
+    local matches
+
+    
+
+
+
+
+
+    
+    
+    if targetName and UnitIsDead("target") then
+        HideClickToFillChooser()
+        keyPressCooldown = true
+        QueueDebugMessage("FillRaid: Won't fill because target is dead -> " .. targetName .. " (probably already killed / misclick).", "debugfilling")
+        return
+    end
+
+    
+    if bossName then
+        if bossName == "Ossirian the Unscarred" then
+            bossName = "Ossirian"
+        elseif bossName == "Lieutenant General Andorov" then
+            bossName = "General Rajaxx"
+        elseif bossName == "Vilebranch Speaker" then
+            bossName = "Bloodlord Mandokir"
+        elseif bossName == "Zealot Zath" then
+            bossName = "High Priest Thekal"
+        elseif bossName == "Zealot Lor'Khan" then
+            bossName = "High Priest Thekal"
         end
     end
-    CheckAndEnableDetection()
+    
+    
+    if bossName then
+        HideClickToFillChooser()
+        if bossName ~= lastDetectedBoss then
+            lastDetectedBoss = bossName
+            keyPressCooldown = true
+            QueueDebugMessage("FillRaid: Boss detected -> " .. bossName, "debuginfo")
+            SlashCmdList["FILLRAID"](bossName)
+        else
+            QueueDebugMessage("FillRaid: Same boss, skipping -> " .. bossName, "debuginfo")
+        end
+        return
+    
+    
+    elseif zone then
+        
+        if zone == "Onyxia's Lair" then
+            zone = "Onyxia"
+        end
+
+        if CollectMatchingPresets then
+            matches = CollectMatchingPresets(zone, true)
+        elseif _G.CollectMatchingPresets then
+            QueueDebugMessage("Info: Chooser: Using global CollectMatchingPresets fallback.", "debuginfo")
+            matches = _G.CollectMatchingPresets(zone, true)
+        else
+            QueueDebugMessage("Error: Chooser: CollectMatchingPresets is missing.", "debugerror")
+            matches = {}
+        end
+
+        QueueDebugMessage("Info: Chooser: Zone match count for " .. zone .. " -> " .. table.getn(matches), "debuginfo")
+
+        if table.getn(matches) == 1 then
+            HideClickToFillChooser()
+            keyPressCooldown = true
+            QueueDebugMessage("Info: Chooser: Single zone preset found -> " .. (matches[1].fullname or matches[1].label or zone), "debuginfo")
+            ApplyPresetAndFill(matches[1])
+            return
+        elseif table.getn(matches) == 2 then
+            QueueDebugMessage("Info: Chooser: Two zone presets found for " .. zone .. ". Showing left/right chooser.", "debuginfo")
+            ShowClickToFillChooser(matches, zone)
+            return
+        elseif table.getn(matches) > 2 then
+            QueueDebugMessage("Info: Chooser: " .. table.getn(matches) .. " zone presets found for " .. zone .. ". Showing popup list.", "debuginfo")
+            ShowClickToFillChooser(matches, zone)
+            return
+        end
+
+        HideClickToFillChooser()
+        keyPressCooldown = true
+        QueueDebugMessage("Info: Chooser: Zone fallback -> " .. zone .. " (no preset match)", "debuginfo")
+        SlashCmdList["FILLRAID"](zone)
+    end
+end
+
+
+detectBossFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
+detectBossFrame:RegisterEvent("UPDATE_MOUSEOVER_UNIT")
+detectBossFrame:RegisterEvent("MODIFIER_STATE_CHANGED")
+
+
+
+
+
+
+detectBossFrame:SetScript("OnEvent", function(_, event, key, state)
+
+    if event == "MODIFIER_STATE_CHANGED" then
+        if IsControlKeyDown() and IsAltKeyDown() then
+            
+            if ClickToFillEnabled then
+                DetectBossAndFillRaid()
+            end
+        else
+            
+            HideClickToFillChooser()
+            ResetCooldown()
+        end
+        return
+    end
+
+    if ClickToFillEnabled then
+        DetectBossAndFillRaid()
+    else
+        HideClickToFillChooser()
+    end
+
+end)
+
+
+
+
+
+
+WorldFrame:HookScript("OnMouseDown", function(_, button)
+
+    if not (IsControlKeyDown() and IsAltKeyDown()) then
+        if clickToFillChooser:IsShown() then
+            HideClickToFillChooser()
+        end
+    end
+
 end)
 
 function SavePresetValues()
@@ -4268,15 +6443,28 @@ function SavePresetValues()
         }
     end
 
+
+
+
+
+
+
    
+    local useVipPresets = FillRaidBotsSavedSettings and FillRaidBotsSavedSettings.useVipPresets
+    local targetValuesKey = useVipPresets and "vipValues" or "values"
+
+    if type(presetList[presetIndex][targetValuesKey]) ~= "table" then
+        presetList[presetIndex][targetValuesKey] = {}
+    end
+
     for classRole, inputBox in pairs(inputBoxes) do
         if inputBox then
             local value = inputBox:GetText()
             local numValue = tonumber(value)
             if numValue and numValue > 0 then
-                presetList[presetIndex].values[classRole] = numValue
+                presetList[presetIndex][targetValuesKey][classRole] = numValue
             else
-                presetList[presetIndex].values[classRole] = nil
+                presetList[presetIndex][targetValuesKey][classRole] = nil
             end
         end
     end
@@ -4294,6 +6482,10 @@ end
     instanceFrames["PresetDungeounAQ20"] = CreateInstanceFrame("PresetDungeounAQ20", aq20Presets)	
     instanceFrames["PresetDungeounZG"] = CreateInstanceFrame("PresetDungeounZG", ZGPresets)	
 	instanceFrames["PresetDungeounOther"] = CreateInstanceFrame("PresetDungeounOther", otherPresets)
+
+    if UpdateTutorialLinkButtons then
+        UpdateTutorialLinkButtons()
+    end
 
     
     local openPresetButton = CreateFrame("Button", "OpenPresetButton", FillRaidFrame, "GameMenuButtonTemplate")
@@ -4329,12 +6521,11 @@ end
 			end
 		end
 
-		
-		totalBotLabel:SetText("Total Bots: 0")
-		spotsLeftLabel:SetText("Spots Left: 39")
-		roleCountsLabel:SetText("Tanks: 0 Healers: 0 Melee DPS: 0 Ranged DPS: 0")
-	end)
+		totalBots = 0
+		UpdateSpotsLeft() 
+		roleCountsLabel:SetText("Tanks: 0 Healers: 0 Melee DPS: 0 Ranged DPS: 0")			
 
+	end)
 
 
 	  
@@ -4358,70 +6549,316 @@ end
 
 
 		
-local savedPositions = {}
-
 local openFillRaidButton = CreateFrame("Button", "OpenFillRaidButton", PCPFrame)  
+
+FRB_openFillRaidButton = openFillRaidButton
 openFillRaidButton:SetMovable(true)  
 openFillRaidButton:EnableMouse(true)  
+
+
+openFillRaidButton:SetUserPlaced(true)
 openFillRaidButton:RegisterForDrag("LeftButton")  
 
 
 local defaultPosition = {x = -20, y = 250}
 
+local function GetPCPFrame()
+    return PCPFrame or PCPFrameRemake
+end
+
+
 
 function InitializeButtonPosition()
-    local position = savedPositions["OpenFillRaidButton"] or defaultPosition
-    if PCPFrame then 
-        openFillRaidButton:SetPoint("CENTER", PCPFrame, "LEFT", position.x, position.y)
-    elseif PCPFrameRemake then
-        openFillRaidButton:SetPoint("LEFT", PCPFrameRemake, "LEFT", position.x -20, 0 + 100) 
+    if not savedPositions["OpenFillRaidButton"] then
+        local saved = FillRaidBotsSavedSettings.buttonPositionRelative
+        if saved then
+            savedPositions["OpenFillRaidButton"] = saved
+        end
+    end
+    local savedPosition = savedPositions["OpenFillRaidButton"]
+    local PCPVersionCheck = GetPCPFrame()
+
+    local offsetX = 0
+    local offsetY = 0
+
+    if FillRaidBotsSavedSettings and FillRaidBotsSavedSettings.buttonStyle then
+        local styleKey = FillRaidBotsSavedSettings.buttonStyle
+        for _, section in ipairs(SettingsConfig.sections) do
+            for _, item in ipairs(section.items) do
+                if item.type == "radio" and item.group == "buttonTheme" then
+                    for _, option in ipairs(item.options) do
+                        if option.key == styleKey then
+                            offsetX = option.offsetX or 0
+                            offsetY = option.offsetY or 0
+                            break
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    if PCPVersionCheck then
+        openFillRaidButton:ClearAllPoints()
+
+        if savedPosition and savedPosition.offsetX then
+            local uiScale = UIParent:GetEffectiveScale()
+            if FillRaidBotsSavedSettings.moveButtonsRelative then
+                
+                local pcp = PCPVersionCheck
+                local pcpPhysX = pcp:GetLeft() * pcp:GetEffectiveScale()
+                local pcpPhysY = pcp:GetTop()  * pcp:GetEffectiveScale()
+                openFillRaidButton:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT",
+                    (pcpPhysX + savedPosition.offsetX) / uiScale,
+                    (pcpPhysY + savedPosition.offsetY) / uiScale)
+            elseif savedPosition.absX then
+                
+                openFillRaidButton:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT",
+                    savedPosition.absX / uiScale, savedPosition.absY / uiScale)
+            end
+        elseif PCPVersionCheck == PCPFrameRemake then
+			
+            openFillRaidButton:SetPoint("RIGHT", PCPVersionCheck, "LEFT",
+                defaultPosition.x + 10 + offsetX, 100 + offsetY)
+        else
+            openFillRaidButton:SetPoint("CENTER", PCPVersionCheck, "LEFT",
+                defaultPosition.x + offsetX, defaultPosition.y + offsetY)
+        end
+		
+		
+		
+		
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
     end
 end
 
 
 
 
-function ToggleButtonMovement(button)
-    if FillRaidBotsSavedSettings.moveButtonsEnabled then
+
+
+
+
+
+function ToggleButtonMovement()
+    local isFree     = FillRaidBotsSavedSettings.moveButtonsEnabled
+    local isRelative = FillRaidBotsSavedSettings.moveButtonsRelative
+
+    if isFree or isRelative then
+        
+        openFillRaidButton:SetParent(UIParent)
         openFillRaidButton:SetMovable(true)
+
+        
+        
+        if openFillRaidButton:GetLeft() then
+            local physX  = openFillRaidButton:GetLeft() * openFillRaidButton:GetEffectiveScale()
+            local physY  = openFillRaidButton:GetTop()  * openFillRaidButton:GetEffectiveScale()
+            local uiScale = UIParent:GetEffectiveScale()
+            openFillRaidButton:ClearAllPoints()
+            openFillRaidButton:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", physX / uiScale, physY / uiScale)
+        end
+		
+		
+		
+        if isFree and openFillRaidButton:GetLeft() then
+            local btnPhysX = openFillRaidButton:GetLeft() * openFillRaidButton:GetEffectiveScale()
+            local btnPhysY = openFillRaidButton:GetTop()  * openFillRaidButton:GetEffectiveScale()
+
+            local pcp = GetPCPFrame()
+            if pcp then
+                local pcpPhysX = pcp:GetLeft() * pcp:GetEffectiveScale()
+                local pcpPhysY = pcp:GetTop()  * pcp:GetEffectiveScale()
+                local offsetX  = btnPhysX - pcpPhysX
+                local offsetY  = btnPhysY - pcpPhysY
+
+                savedPositions["OpenFillRaidButton"] = {
+                    offsetX = offsetX,
+                    offsetY = offsetY,
+                    absX = btnPhysX,
+                    absY = btnPhysY
+                }
+
+                FillRaidBotsSavedSettings.buttonPositionRelative = {
+                    offsetX = offsetX,
+                    offsetY = offsetY,
+                    absX = btnPhysX,
+                    absY = btnPhysY
+                }
+            end
+        end
+        if isRelative then
+            
+            
+            local pcp = GetPCPFrame()
+            if pcp and openFillRaidButton:GetLeft() then
+                local btnPhysX = openFillRaidButton:GetLeft() * openFillRaidButton:GetEffectiveScale()
+                local btnPhysY = openFillRaidButton:GetTop()  * openFillRaidButton:GetEffectiveScale()
+                local pcpPhysX = pcp:GetLeft() * pcp:GetEffectiveScale()
+                local pcpPhysY = pcp:GetTop()  * pcp:GetEffectiveScale()
+                local offsetX  = btnPhysX - pcpPhysX
+                local offsetY  = btnPhysY - pcpPhysY
+                savedPositions["OpenFillRaidButton"] = {offsetX = offsetX, offsetY = offsetY}
+                FillRaidBotsSavedSettings.buttonPositionRelative = {offsetX = offsetX, offsetY = offsetY}
+            end
+        end
 
         openFillRaidButton:SetScript("OnDragStart", function(self)
             self:StartMoving()
-            self.isMoving = true  
+            self.isMoving = true
         end)
 
         openFillRaidButton:SetScript("OnDragStop", function(self)
+            
+            local btnPhysX = self:GetLeft() * self:GetEffectiveScale()
+            local btnPhysY = self:GetTop()  * self:GetEffectiveScale()
             self:StopMovingOrSizing()
-            self.isMoving = false  
-            local point, _, _, x, y = self:GetPoint()
-            savedPositions["OpenFillRaidButton"] = {x = x, y = y}
-            QueueDebugMessage("Coordinates saved: x = " .. tostring(x) .. ", y = " .. tostring(y), "debuginfo")
+            
+            self:SetParent(UIParent)
+
+            local uiScale = UIParent:GetEffectiveScale()
+            self:ClearAllPoints()
+            self:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", btnPhysX / uiScale, btnPhysY / uiScale)
+
+            
+            
+            local pcp = GetPCPFrame()
+            local pcpPhysX = pcp:GetLeft() * pcp:GetEffectiveScale()
+            local pcpPhysY = pcp:GetTop()  * pcp:GetEffectiveScale()
+            local offsetX  = btnPhysX - pcpPhysX
+            local offsetY  = btnPhysY - pcpPhysY
+
+            savedPositions["OpenFillRaidButton"] = {offsetX = offsetX, offsetY = offsetY, absX = btnPhysX, absY = btnPhysY}
+            FillRaidBotsSavedSettings.buttonPositionRelative = {offsetX = offsetX, offsetY = offsetY, absX = btnPhysX, absY = btnPhysY}
+
+            
+            
+            self.isMoving = false
         end)
+
+        
+        
+        
+        if isFree and FillRaidBotsSavedSettings.buttonMoveLocked then
+            openFillRaidButton:SetScript("OnDragStart", nil)
+            openFillRaidButton:SetScript("OnDragStop",  nil)
+            openFillRaidButton:SetMovable(false)
+        end
+
     else
         
         openFillRaidButton:SetScript("OnDragStart", nil)
         openFillRaidButton:SetScript("OnDragStop", nil)
+        openFillRaidButton:SetMovable(false)
+        savedPositions["OpenFillRaidButton"] = nil
+        FillRaidBotsSavedSettings.buttonPosition = nil
+        FillRaidBotsSavedSettings.buttonPositionRelative = nil
+		
+		
+		
+        local pcp    = GetPCPFrame()
+        local layout = FillRaidBotsSavedSettings.ButtonLayout or "vertical"
+
+		if layout == "horizontal" then
+			if FRB_openFillRaidButton then FRB_openFillRaidButton:SetParent(UIParent) end
+			if FRB_kickAllButton      then FRB_kickAllButton:SetParent(UIParent) end
+			if FRB_reFillButton       then FRB_reFillButton:SetParent(UIParent) end
+
+			ApplyButtonStyle(FillRaidBotsSavedSettings.selectedButtonTheme)
+			UpdateButtonSizes()
+		else
+			if pcp then
+				if FRB_openFillRaidButton then FRB_openFillRaidButton:SetParent(pcp) end
+				if FRB_kickAllButton      then FRB_kickAllButton:SetParent(pcp) end
+				if FRB_reFillButton       then FRB_reFillButton:SetParent(pcp) end
+			end
+		end
+
+
+        InitializeButtonPosition()
     end
 end
 
 
 InitializeButtonPosition()
-ToggleButtonMovement(openFillRaidButton)
+ToggleButtonMovement()
 
 
 
 
 
-SLASH_RFB1 = "/rfb"
-SlashCmdList["RFB"] = function()
-    savedPositions["OpenFillRaidButton"] = defaultPosition
-    InitializeButtonPosition()
-    QueueDebugMessage("OpenFillRaidButton position reset to default: x = " .. tostring(defaultPosition.x) .. ", y = " .. tostring(defaultPosition.y), "debuginfo")
+
+function ToggleButtonMoveLock(isLocked)
+    local isFree = FillRaidBotsSavedSettings.moveButtonsEnabled
+
+    
+    
+    if not isFree then
+        if FRB_FreeModeLocBtn_Refresh then FRB_FreeModeLocBtn_Refresh() end
+        return
+    end
+
+    if isLocked then
+        openFillRaidButton:SetScript("OnDragStart", nil)
+        openFillRaidButton:SetScript("OnDragStop",  nil)
+        openFillRaidButton:SetMovable(false)
+    else
+        openFillRaidButton:SetMovable(true)
+
+        openFillRaidButton:SetScript("OnDragStart", function(self)
+            self:StartMoving()
+            self.isMoving = true
+        end)
+
+        openFillRaidButton:SetScript("OnDragStop", function(self)
+            local btnPhysX = self:GetLeft() * self:GetEffectiveScale()
+            local btnPhysY = self:GetTop()  * self:GetEffectiveScale()
+            self:StopMovingOrSizing()
+            self:SetParent(UIParent)
+
+            local uiScale = UIParent:GetEffectiveScale()
+            self:ClearAllPoints()
+            self:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", btnPhysX / uiScale, btnPhysY / uiScale)
+
+            local pcp = GetPCPFrame()
+            local pcpPhysX = pcp:GetLeft() * pcp:GetEffectiveScale()
+            local pcpPhysY = pcp:GetTop()  * pcp:GetEffectiveScale()
+            local offsetX  = btnPhysX - pcpPhysX
+            local offsetY  = btnPhysY - pcpPhysY
+
+            savedPositions["OpenFillRaidButton"] = {offsetX = offsetX, offsetY = offsetY, absX = btnPhysX, absY = btnPhysY}
+            FillRaidBotsSavedSettings.buttonPositionRelative = {offsetX = offsetX, offsetY = offsetY, absX = btnPhysX, absY = btnPhysY}
+
+            self.isMoving = false
+        end)
+    end
+
+    if FRB_FreeModeLocBtn_Refresh then FRB_FreeModeLocBtn_Refresh() end
 end
 
 
 
-ToggleButtonMovement(openFillRaidButton)
 
 
 function openFillRaid()
@@ -4440,17 +6877,48 @@ function openFillRaid()
     else
         FillRaidFrame:Show()
         fillRaidFrameManualClose = false
+        UpdateSpotsLeft() 
+		if FillRaidBotsSavedSettings.isZonePresetsEnabled then
+			OpenPresetForCurrentZone()			
+		end			
+		
     end
 end
 
-openFillRaidButton:SetScript("OnClick", openFillRaid)
+
+
+
+openFillRaidButton:SetScript("OnClick", function()
+    if IsShiftKeyDown() then
+        if debuggerFrame then
+            if debuggerFrame:IsShown() then
+                if SetDebuggerVisibility then SetDebuggerVisibility(false) end
+                debuggerFrame:Hide()
+            else
+                if SetDebuggerVisibility then SetDebuggerVisibility(true) end
+                debuggerFrame:Show()
+            end
+        end
+        return
+    end
+	
+	
+	
+	
+	if UpdateTutorialLinkButtons then
+		UpdateTutorialLinkButtons()
+	end			
+    openFillRaid()
+end)
 
 
 	openFillRaidButton:Hide()
 
 	
-	local kickAllButton = CreateFrame("Button", "OpenFillRaidButton", UIParent)
 
+	local kickAllButton = CreateFrame("Button", "KickAllButton", GetPCPFrame())
+	
+	FRB_kickAllButton = kickAllButton
 	kickAllButton:SetScript("OnClick", function()
 		UninviteAllRaidMembers()
 		ReplaceDeadBot = {}
@@ -4459,156 +6927,581 @@ openFillRaidButton:SetScript("OnClick", openFillRaid)
 	end)
 	kickAllButton:Hide() 
 
-local reFillButton = CreateFrame("Button", "reFillButton", UIParent)
+local reFillButton = CreateFrame("Button", "reFillButton", GetPCPFrame())
+
+FRB_reFillButton = reFillButton
 function ToggleSmallbuttonCheck(isChecked)
     SmallbuttonEnabled = isChecked
-
-   
-    if SmallbuttonEnabled then 
-		openFillRaidButton:SetWidth(32)  
-		openFillRaidButton:SetHeight(32) 
-        openFillRaidButton:SetNormalTexture("Interface\\AddOns\\fillraidbots\\img\\fillraidmini")
-		openFillRaidButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")
-        openFillRaidButton:SetPushedTexture("Interface\\AddOns\\fillraidbots\\img\\fillraidmini")
-
-		kickAllButton:SetWidth(32)  
-		kickAllButton:SetHeight(32) 
-		kickAllButton:SetNormalTexture("Interface\\AddOns\\fillraidbots\\img\\kickallmini")
-		kickAllButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")  
-		kickAllButton:SetPushedTexture("Interface\\AddOns\\fillraidbots\\img\\kickallmini")  
-
-		reFillButton:SetWidth(32)  
-		reFillButton:SetHeight(32) 
-
-		reFillButton:SetNormalTexture("Interface\\AddOns\\fillraidbots\\img\\refillmini")
-		reFillButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")  
-		reFillButton:SetPushedTexture("Interface\\AddOns\\fillraidbots\\img\\refillmini")  		
-    else
-		openFillRaidButton:SetWidth(40)  
-		openFillRaidButton:SetHeight(100) 
-        openFillRaidButton:SetNormalTexture("Interface\\AddOns\\fillraidbots\\img\\fillraid")
-		openFillRaidButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")
-        openFillRaidButton:SetPushedTexture("Interface\\AddOns\\fillraidbots\\img\\fillraid")
-		kickAllButton:SetWidth(40)  
-		kickAllButton:SetHeight(100) 
-
-		kickAllButton:SetNormalTexture("Interface\\AddOns\\fillraidbots\\img\\kickall")
-		kickAllButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")  
-		kickAllButton:SetPushedTexture("Interface\\AddOns\\fillraidbots\\img\\kickall") 
-		reFillButton:SetWidth(40)  
-		reFillButton:SetHeight(100) 
-
-		reFillButton:SetNormalTexture("Interface\\AddOns\\fillraidbots\\img\\refill")
-		reFillButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")  
-		reFillButton:SetPushedTexture("Interface\\AddOns\\fillraidbots\\img\\refill")   		
-    end  
 end
-local savedPositions = {}
+
+function ApplyButtonStyle(styleKey)
+    local selectedStyle = nil
+
+    
+    local buttonThemeSection = nil
+    for _, section in ipairs(SettingsConfig.sections) do
+        for _, item in ipairs(section.items) do
+            if item.type == "radio" and item.group == "buttonTheme" then
+                buttonThemeSection = item
+                break
+            end
+        end
+        if buttonThemeSection then break end
+    end
+
+    if not buttonThemeSection then
+        print("Fel: ButtonTheme-radio group saknas!")
+        return
+    end
+
+    local options = buttonThemeSection.options or {}
+    for _, style in ipairs(options) do
+        if style.key == styleKey then
+            selectedStyle = style
+            break
+        end
+    end
+
+    if not selectedStyle then return end
+    local buttons = selectedStyle.buttons or {}
+
+    
+    if buttons.openFillRaidButton then
+        openFillRaidButton:SetWidth(buttons.openFillRaidButton.width)
+        openFillRaidButton:SetHeight(buttons.openFillRaidButton.height)
+        openFillRaidButton:SetNormalTexture(buttons.openFillRaidButton.normal)
+        openFillRaidButton:SetHighlightTexture(buttons.openFillRaidButton.highlight)
+        openFillRaidButton:SetPushedTexture(buttons.openFillRaidButton.pushed)
+    end
+
+    
+    if buttons.kickAllButton then
+        kickAllButton:SetWidth(buttons.kickAllButton.width)
+        kickAllButton:SetHeight(buttons.kickAllButton.height)
+        kickAllButton:SetNormalTexture(buttons.kickAllButton.normal)
+        kickAllButton:SetHighlightTexture(buttons.kickAllButton.highlight)
+        kickAllButton:SetPushedTexture(buttons.kickAllButton.pushed)
+    end
+
+    
+    if buttons.reFillButton then
+        reFillButton:SetWidth(buttons.reFillButton.width)
+        reFillButton:SetHeight(buttons.reFillButton.height)
+        reFillButton:SetNormalTexture(buttons.reFillButton.normal)
+        reFillButton:SetHighlightTexture(buttons.reFillButton.highlight)
+        reFillButton:SetPushedTexture(buttons.reFillButton.pushed)
+    end
+end
+
+function UpdateButtonSizes()
+    if not FillRaidBotsSavedSettings then return end
+
+    local pct = FillRaidBotsSavedSettings.ButtonSize or 100
+    local themeKey = FillRaidBotsSavedSettings.selectedButtonTheme or "Mini"
+    
+    local defaultSize = GetThemeDefaultSize()
+    local size = math.floor(defaultSize * (pct / 100) + 0.5)
+
+    local w, h = size, size 
+
+    
+    for _, section in ipairs(SettingsConfig.sections) do
+        for _, item in ipairs(section.items) do
+            if item.type == "radio" and item.group == "buttonTheme" then
+                for _, option in ipairs(item.options) do
+                    if option.key == themeKey and option.buttons then
+                        local btn = option.buttons.openFillRaidButton
+                        if btn then
+                            local origW = btn.width or 32
+                            local origH = btn.height or 32
+
+                            if origW >= origH then
+                                
+                                w = size
+                                h = math.floor(size * (origH / origW) + 0.5)
+                            else
+                                
+                                h = size
+                                w = math.floor(size * (origW / origH) + 0.5)
+                            end
+
+                        end
+                        break
+                    end
+                end
+            end
+        end
+    end
+
+    
+    for _, btn in pairs({openFillRaidButton, kickAllButton, reFillButton}) do
+        btn:SetWidth(w)
+        btn:SetHeight(h)
+    end
+
+    RepositionButtonsFromOffset()
+end
 
 
 
+
+
+
+
+
+function ApplyButtonLayout(layout)
+    FillRaidBotsSavedSettings.ButtonLayout = layout
+    
+    ToggleButtonMovement()
+
+    RepositionButtonsFromOffset()
+end
 
 ToggleSmallbuttonCheck(SmallbuttonEnabled or false) 
 
 
 
+
+ResetRefillLoopState = function()
+    refillLoopRunning = false
+    refillRecheckPending = false
+    PendingRefill = {}
+    refillFinalCheckPending = false
+end
+
+FinishRefillLoop = function()
+    ResetRefillLoopState()
+    ToggleSoundEffectsVolume("restore")
+    UpdateReFillButtonVisibility()
+end
+
 function UpdateReFillButtonVisibility()
-    if next(ReplaceDeadBot) == nil then
-	
-        reFillButton:Hide()
+    if refillLoopRunning or next(ReplaceDeadBot) ~= nil or next(PendingRefill) ~= nil then
+        if refillLoopRunning then
+            reFillButton:Hide()
+        else
+            if FillRaidBotsSavedSettings.isRefillEnabled then
+                reFillButton:Show()
+            end
+        end
     else
-	if FillRaidBotsSavedSettings.isRefillEnabled then
-        reFillButton:Show()
-		
-	end
+        reFillButton:Hide()
     end
 end
 
 
-function RefillBots()
-    if next(ReplaceDeadBot) == nil then
-        QueueDebugMessage("Replaced Bot List is empty.", "debugfilling")
-    else
-        ToggleSoundEffectsVolume("lower")
-        QueueDebugMessage("Replaced Bot List:", "debugfilling")
 
-        local count = 0
-        for playerName, data in pairs(ReplaceDeadBot) do
-            count = count + 1
-            QueueDebugMessage(playerName .. " - Class: " .. data.classColored .. ", Role: " .. data.role, "debugfilling")
-            QueueMessage(".partybot add " .. data.ClassNoColor .. " " .. data.role, "SAY", true)
+
+local function GetRefillDelay()
+    local maxBots = GetMaxBotsForCurrentZone()
+
+    if maxBots == 39 then
+        return 0
+    elseif maxBots == 19 then
+        return 0.3
+    elseif maxBots == 14 then
+        return 0.5
+    elseif maxBots == 9 then
+        return 0.5
+    end
+
+    return 0
+end
+
+
+
+
+
+local function GetRefillBatchLimit()
+    local maxBots = GetMaxBotsForCurrentZone()
+
+    if maxBots == 39 then
+        return nil
+    elseif maxBots == 19 then
+        return 3
+    elseif maxBots == 14 then
+        return 2
+    elseif maxBots == 9 then
+        return 1
+    end
+
+    return 1
+end
+
+ScheduleRefillRecheck = function(delay)
+    if refillRecheckPending then
+        return
+    end
+
+    refillRecheckPending = true
+    C_Timer.After(delay or 0.8, function()
+        refillRecheckPending = false
+
+        if not refillLoopRunning then
+            UpdateReFillButtonVisibility()
+            return
         end
 
-        ReplaceDeadBot = {}
-        QueueDebugMessage("Replaced Bot List has been cleared.", "debugfilling")
+        RecheckRefillState()
+    end)
+end
 
-       
-        local delay = 1 + math.max(0, (count - 1) * 0.5)
-        C_Timer.After(delay, function()
-            ToggleSoundEffectsVolume("restore")
-        end)
+RecheckRefillState = function()
+    local playerName, pendingData
+    local retryCount = 0
 
+    if not refillLoopRunning then
+        return
+    end
+
+    UpdateGroupMembers()
+
+    for playerName, pendingData in pairs(PendingRefill) do
+        if not groupMembers[playerName] then
+            PendingRefill[playerName] = nil
+            QueueDebugMessage("Refill settled for: " .. playerName, "debugfilling")
+        elseif GetTime() - pendingData.requestedAt >= 2.5 then
+            if pendingData.attempts < 3 then
+                ReplaceDeadBot[playerName] = pendingData.data
+                retryCount = retryCount + 1
+                QueueDebugMessage("Refill retry queued for: " .. playerName, "debugfilling")
+            else
+                QueueDebugMessage("Refill gave up after 3 attempts for: " .. playerName, "debugerror")
+            end
+            PendingRefill[playerName] = nil
+        end
+    end
+
+    if next(ReplaceDeadBot) ~= nil then
+        QueueDebugMessage("Refill pass incomplete, running another pass.", "debugfilling")
+        RunRefillPass()
+        return
+    end
+
+    if next(PendingRefill) ~= nil then
+        QueueDebugMessage("Refill waiting for pending removals to settle.", "debugfilling")
+        ScheduleRefillRecheck(0.8)
+        return
+    end
+
+    if not refillFinalCheckPending then
+        refillFinalCheckPending = true
+        QueueDebugMessage("Refill looks complete, doing one final safety check.", "debugfilling")
+        ScheduleRefillRecheck(0.6)
+        return
+    end
+
+    QueueDebugMessage("Refill finished with no missing bots left.", "debugfilling")
+    FinishRefillLoop()
+end
+
+RunRefillPass = function()
+    local count = 0
+    local delay
+    local batchLimit = GetRefillBatchLimit()
+    local playerName, data, pendingData
+
+    if not refillLoopRunning then
+        return
+    end
+
+    if next(ReplaceDeadBot) == nil then
+        if next(PendingRefill) ~= nil then
+            ScheduleRefillRecheck(0.8)
+        else
+            QueueDebugMessage("Refill complete. Replaced Bot List is empty.", "debugfilling")
+            FinishRefillLoop()
+        end
+        return
+    end
+
+    QueueDebugMessage("Replaced Bot List:", "debugfilling")
+
+    for playerName, data in pairs(ReplaceDeadBot) do
+        if batchLimit and count >= batchLimit then
+            break
+        end
+
+        if data and data.ClassNoColor and data.role then
+            pendingData = PendingRefill[playerName]
+
+            if pendingData then
+                QueueDebugMessage("Refill already pending for: " .. playerName, "debugfilling")
+            else
+                count = count + 1
+                QueueDebugMessage(playerName .. " - Class: " .. data.classColored .. ", Role: " .. data.role, "debugfilling")
+                QueueMessage(".partybot add " .. data.ClassNoColor .. " " .. data.role, "SAY", true)
+
+                PendingRefill[playerName] = {
+                    data = data,
+                    requestedAt = GetTime(),
+                    attempts = (data._refillAttempts or 0) + 1
+                }
+                data._refillAttempts = PendingRefill[playerName].attempts
+                ReplaceDeadBot[playerName] = nil
+            end
+        else
+            ReplaceDeadBot[playerName] = nil
+        end
+    end
+
+    QueueDebugMessage("Processed refill batch: " .. count, "debugfilling")
+
+    
+    delay = GetRefillDelay() + math.max(0, (count - 1) * 0.2)
+    ScheduleRefillRecheck(delay)
+end
+
+function RefillBots()
+    if refillLoopRunning then
+        QueueDebugMessage("Refill already running.", "debugfilling")
+        return
+    end
+
+    if next(ReplaceDeadBot) == nil and next(PendingRefill) == nil then
+        QueueDebugMessage("Replaced Bot List is empty.", "debugfilling")
         UpdateReFillButtonVisibility()
-    end  
+        return
+    end
+
+    refillLoopRunning = true
+    refillRecheckPending = false
+    refillFinalCheckPending = false
+    ToggleSoundEffectsVolume("lower")
+    UpdateReFillButtonVisibility()
+
+    if next(ReplaceDeadBot) ~= nil then
+        RunRefillPass()
+    else
+        ScheduleRefillRecheck(0.2)
+    end
 end
 
 reFillButton:SetScript("OnClick", RefillBots)
 
 UpdateReFillButtonVisibility()
+--=====================================================
+-- GetButtonLayout - vertical or horizontal
+--=====================================================
+function GetButtonLayout()
+
+    if FillRaidBotsSavedSettings
+    and FillRaidBotsSavedSettings.ButtonLayout ~= nil then
+
+        if FillRaidBotsSavedSettings.ButtonLayout == true then
+            return "horizontal"
+        end
+
+        return FillRaidBotsSavedSettings.ButtonLayout
+    end
+
+    return "vertical"
+end
+-- =====================================================
+-- Refractored to allow spacing from the UIsettings file
+-- =====================================================
+
+
+function GetButtonSpacing()
+    
+    if FillRaidBotsSavedSettings
+    and FillRaidBotsSavedSettings.ButtonSpacing ~= nil then
+        return FillRaidBotsSavedSettings.ButtonSpacing
+    end
+
+    
+    local spacing = 10
+
+    if FillRaidBotsSavedSettings and FillRaidBotsSavedSettings.selectedButtonTheme then
+        local styleKey = FillRaidBotsSavedSettings.selectedButtonTheme
+
+        for _, section in ipairs(SettingsConfig.sections) do
+            for _, item in ipairs(section.items) do
+                if item.type == "radio" and item.group == "buttonTheme" then
+                    for _, option in ipairs(item.options) do
+                        if option.key == styleKey then
+                            spacing = option.spacing or spacing
+                            break
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return spacing
+end
 
 
 
+
+
+
+function RepositionButtonsFromOffset()
+    if openFillRaidButton.isMoving then return end
+
+    local savedPosition = savedPositions["OpenFillRaidButton"]
+    local uiScale = UIParent:GetEffectiveScale()
+    local layout = GetButtonLayout()
+    local spacing = GetButtonSpacing()
+
+    local pcp = GetPCPFrame()
+    if not pcp then return end
+
+    local pcpPhysX = pcp:GetLeft() * pcp:GetEffectiveScale()
+    local pcpPhysY = pcp:GetTop()  * pcp:GetEffectiveScale()
+
+    local handled = false
+
+    if FillRaidBotsSavedSettings.moveButtonsRelative then
+        
+        if not savedPosition or not savedPosition.offsetX then return end
+
+        openFillRaidButton:ClearAllPoints()
+        openFillRaidButton:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT",
+            (pcpPhysX + savedPosition.offsetX) / uiScale,
+            (pcpPhysY + savedPosition.offsetY) / uiScale)
+
+    elseif FillRaidBotsSavedSettings.moveButtonsEnabled then
+        
+        if not savedPosition or not savedPosition.absX then return end
+
+        openFillRaidButton:ClearAllPoints()
+        openFillRaidButton:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT",
+            savedPosition.absX / uiScale,
+            savedPosition.absY / uiScale)
+
+    else
+
+
+
+        if layout == "horizontal" then
+            
+            reFillButton:ClearAllPoints()
+            reFillButton:SetPoint("TOPRIGHT", UIParent, "BOTTOMLEFT",
+                pcpPhysX / uiScale,
+                pcpPhysY / uiScale)
+
+            kickAllButton:ClearAllPoints()
+            kickAllButton:SetPoint("RIGHT", reFillButton, "LEFT", -spacing, 0)
+
+            openFillRaidButton:ClearAllPoints()
+            openFillRaidButton:SetPoint("RIGHT", kickAllButton, "LEFT", -spacing, 0)
+
+            handled = true
+        end
+    end
 	
-	local function UpdateButtonPosition()
-		if (PCPFrame and PCPFrame:IsVisible()) or (PCPFrameRemake and PCPFrameRemake:IsVisible()) then
+	
+	
+	
+	
+	if not handled then
+		
+		kickAllButton:ClearAllPoints()
+		reFillButton:ClearAllPoints()
 
+		if layout == "horizontal" then
+			kickAllButton:SetPoint("LEFT", openFillRaidButton, "RIGHT", spacing, 0)
+			reFillButton:SetPoint("LEFT", kickAllButton, "RIGHT", spacing, 0)
+		else
 			InitializeButtonPosition()
-
-			
-			kickAllButton:ClearAllPoints()
-			kickAllButton:SetPoint("TOP", openFillRaidButton, "BOTTOM", 0, -10) 
-			reFillButton:ClearAllPoints()
-			reFillButton:SetPoint("TOP", kickAllButton, "BOTTOM", 0, -10) 			
+			kickAllButton:SetPoint("TOP", openFillRaidButton, "BOTTOM", 0, -spacing)
+			reFillButton:SetPoint("TOP", kickAllButton, "BOTTOM", 0, -spacing)
 		end
 	end
+end
 
-	
-	local visibilityFrame = CreateFrame("Frame")
-	visibilityFrame:SetScript("OnUpdate", function()
-		if (PCPFrame and PCPFrame:IsVisible()) or (PCPFrameRemake and PCPFrameRemake:IsVisible()) then
-			UpdateButtonPosition()
-			if not fillRaidFrameManualClose and not openFillRaidButton:IsShown() then
-				openFillRaidButton:Show()
-			end
-			if not kickAllButton:IsShown() then
-				kickAllButton:Show()
-			end
-			if not reFillButton:IsShown() then
 
-				UpdateReFillButtonVisibility()
-			end				
-		elseif (PCPFrame and not PCPFrame:IsVisible()) or (PCPFrameRemake and not PCPFrameRemake:IsVisible()) then
-			openFillRaidButton:Hide()
-			kickAllButton:Hide()
-			FillRaidFrame:Hide()   
-			fillRaidFrameManualClose = false
-		else
-			if openFillRaidButton:IsShown() and not fillRaidFrameManualClose then
-				openFillRaidButton:Hide()
-			end
-			if kickAllButton:IsShown() then
-				kickAllButton:Hide()
+local lastPcpPhysX, lastPcpPhysY
+
+local visibilityFrame = CreateFrame("Frame")
+
+visibilityFrame:SetScript("OnUpdate", function(self, elapsed)
+	local PCPVersionCheck = GetPCPFrame()
+
+	if PCPVersionCheck and PCPVersionCheck:IsVisible() then
+
+		
+		if not fillRaidFrameManualClose and not openFillRaidButton:IsShown() then
+			openFillRaidButton:Show()
+		end
+		if not kickAllButton:IsShown() then
+			kickAllButton:Show()
+		end
+
+		if not reFillButton:IsShown() then
+			UpdateReFillButtonVisibility()
+		end
+
+		
+		RepositionButtonsFromOffset()
+
+		
+		
+		if not openFillRaidButton.isMoving then
+			local pcpPhysX = PCPVersionCheck:GetLeft() * PCPVersionCheck:GetEffectiveScale()
+			local pcpPhysY = PCPVersionCheck:GetTop()  * PCPVersionCheck:GetEffectiveScale()
+			if pcpPhysX ~= lastPcpPhysX or pcpPhysY ~= lastPcpPhysY then
+				lastPcpPhysX = pcpPhysX
+				lastPcpPhysY = pcpPhysY
+				RepositionButtonsFromOffset()
 			end
 		end
-	end)
-	visibilityFrame:Show()
+
+	else
+		openFillRaidButton:Hide()
+		kickAllButton:Hide()
+		FillRaidFrame:Hide()
+		fillRaidFrameManualClose = false
+	end
+end)
+visibilityFrame:Show()
 
 end
 
 
 CreateFillRaidUI()
 InitializeSettings()
+InitializeButtonPosition() 
 
+
+local fillRaidInitFrame = CreateFrame("Frame")
+fillRaidInitFrame:RegisterEvent("PLAYER_LOGIN")
+fillRaidInitFrame:SetScript("OnEvent", function(self)
+    self:UnregisterEvent("PLAYER_LOGIN")
+
+    
+	
+    
+    if FRB_openFillRaidButton then FRB_openFillRaidButton:SetParent(UIParent) end
+    if FRB_kickAllButton      then FRB_kickAllButton:SetParent(UIParent) end
+    if FRB_reFillButton       then FRB_reFillButton:SetParent(UIParent) end
+
+    
+    InitializeButtonPosition()
+    ApplyButtonStyle(FillRaidBotsSavedSettings.selectedButtonTheme)
+    UpdateButtonSizes() 
+    RepositionButtonsFromOffset()
+
+    
+    
+    
+    
+    ToggleButtonMovement()
+
+    local isFree = FillRaidBotsSavedSettings.moveButtonsEnabled
+    if isFree then
+        
+        
+        local lockBtn = getglobal("FRB_FreeModeLocBtn")
+        if lockBtn then lockBtn:Show() end
+        if FRB_FreeModeLocBtn_Refresh then FRB_FreeModeLocBtn_Refresh() end
+    else
+        local lockBtn = getglobal("FRB_FreeModeLocBtn")
+        if lockBtn then lockBtn:Hide() end
+    end
+end)
 
 
 local messageCooldowns = {}
@@ -4684,11 +7577,9 @@ end
 
 function UninviteAllRaidMembers()
 	local myName = UnitName("player")
-	initialBotRemoved = false
-	firstBotName = nil
-	botCount = 0
+	ResetStarterSequenceState()
 
-	local function isBotName(name)
+	local function IsBotName(name)
 		return name and string.find(name, "%*") ~= nil
 	end
 
@@ -4706,7 +7597,7 @@ function UninviteAllRaidMembers()
 	for i = #remainingMembers, 1, -1 do
 		local name = remainingMembers[i]
 		if name then
-			if isBotName(name) then
+			if IsBotName(name) then
 				if #remainingMembers > 1 then
 					QueueDebugMessage("REMOVING BOT: " .. name, "debugremove")
 					UninviteUnit(name)
@@ -4723,8 +7614,95 @@ function UninviteAllRaidMembers()
 	end
 end
 
-local c = 2
+local c = 0
 
+
+
+function GetThemeDefaultSize()
+
+    local themeKey = FillRaidBotsSavedSettings.selectedButtonTheme or "Mini"
+
+    for _, section in ipairs(SettingsConfig.sections) do
+        for _, item in ipairs(section.items) do
+            if item.type == "radio" and item.group == "buttonTheme" then
+                for _, option in ipairs(item.options) do
+                    if option.key == themeKey and option.buttons then
+                        local btn = option.buttons.openFillRaidButton
+                        if btn then
+                            local w = btn.width or 32
+                            local h = btn.height or 32
+                            return math.max(w, h) 
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return 40
+end
+
+
+
+
+
+function FillRaidBots_ResetButtonPositions()
+
+    FillRaidBotsSavedSettings.buttonMoveModeFixed    = true
+    FillRaidBotsSavedSettings.buttonModeMoveFree     = false
+    FillRaidBotsSavedSettings.buttonMoveModeRelative = false
+    FillRaidBotsSavedSettings.moveButtonsEnabled     = false
+    FillRaidBotsSavedSettings.moveButtonsRelative    = false
+
+    savedPositions["OpenFillRaidButton"] = nil
+    FillRaidBotsSavedSettings.buttonPosition = nil
+    FillRaidBotsSavedSettings.buttonPositionRelative = nil
+
+    
+    
+    FillRaidBotsSavedSettings.ButtonSize = 100
+
+    
+    FillRaidBotsSavedSettings.ButtonSpacing = 4
+    FillRaidBotsSavedSettings.ButtonLayout = "vertical"
+
+    
+    
+    
+    
+    
+    
+    if FRB_openFillRaidButton then FRB_openFillRaidButton:SetParent(UIParent) end
+    if FRB_kickAllButton      then FRB_kickAllButton:SetParent(UIParent) end
+    if FRB_reFillButton       then FRB_reFillButton:SetParent(UIParent) end
+
+    if ApplySavedSettings then
+        ApplySavedSettings()
+    end
+
+    
+    
+    
+    local layoutCb = GetSettingsCheckbox("ButtonLayout")
+    if layoutCb then
+        layoutCb:SetChecked(FillRaidBotsSavedSettings.ButtonLayout == "horizontal")
+    end
+
+    
+    
+    InitializeButtonPosition()
+    ApplyButtonStyle(FillRaidBotsSavedSettings.selectedButtonTheme)
+    UpdateButtonSizes()
+    RepositionButtonsFromOffset()
+
+    DEFAULT_CHAT_FRAME:AddMessage("FillRaidBots: Buttons reset to theme default.", 0.0, 1.0, 0.0)
+
+    
+    FillRaidBotsSavedSettings.buttonMoveLocked = false
+    if FRB_ResetLockButton then FRB_ResetLockButton() end
+    if ToggleButtonMoveLock then ToggleButtonMoveLock(false) end
+
+end
 
 SLASH_FRB1 = "/frb"
 SlashCmdList["FRB"] = function(cmd)
@@ -4744,6 +7722,9 @@ SlashCmdList["FRB"] = function(cmd)
         FixGroups()
 	elseif cmd == "list" then
         SlashCmdList["FILLRAID"]("")
+    
+    elseif cmd == "resetbuttons" then
+        FillRaidBots_ResetButtonPositions()
     else
        
         if cmd == "" or cmd == "help" then
@@ -4754,6 +7735,7 @@ SlashCmdList["FRB"] = function(cmd)
             DEFAULT_CHAT_FRAME:AddMessage("/frb open - Toggle FillRaid window", 1.0, 1.0, 0.0)
             DEFAULT_CHAT_FRAME:AddMessage("/frb refill - Replace recently removed bots", 1.0, 1.0, 0.0)
             DEFAULT_CHAT_FRAME:AddMessage("/frb fixgroups - Reorganize raid groups", 1.0, 1.0, 0.0)
+            DEFAULT_CHAT_FRAME:AddMessage("/frb resetbuttons - Reset button position to default", 1.0, 1.0, 0.0) 
 
         else
            
@@ -4772,16 +7754,26 @@ local function ShowVersionPopupOnce()
 
    
     if FillRaidBotsSavedSettings.lastPopupVersionSeen ~= versionNumber then
-        local versionDetails = {
-			{"Auto Remove", "Auto removes first bot and auto remove dead bots"},
-            {"Auto Repair", "Auto repairs when you ress (VIP only option)"},
-            {"Auto Join Guild", "Automatically checks if you are in a guild on login. If not, it joins SoloCraft (to prevent removal after inactivity)."},
-            {"Reload UI", "Now you can reload UI using /rl or /reload ui without /console."},
-            {"Party Bots", "(Add less than 5 bots won’t convert to raid) – useful for leveling."},
-            {"Edit Presets In-Game", "You can now edit presets directly in-game."},
-            {"Release Notes", "Only shown on first login for new releases."},
-            {"Other Fixes", "• More accurate \"raid filling complete\" message."}
-        }
+	local versionDetails = {
+		{"Fast Fill", "Hold Ctrl + Alt and click a boss to automatically fill using presets."},
+		{"Refill System", "Automatically replaces dead bots until your group is full again."},
+		{"Auto Remove", "Automatically removes the starter bot and dead bots."},
+		{"Auto Repair", "Automatically repairs after resurrection (VIP only)."},
+		{"Auto Join Guild", "Joins SoloCraft automatically if you are not in a guild."},
+
+		{"Party Bots", "Adding fewer than 5 bots keeps the group as a party."},
+		{"Edit Presets In-Game", "Edit and save presets directly in-game."},
+		{"VIP Presets", "Use enhanced preset values when VIP mode is enabled."},
+
+		{"Tutorial Links", "Optional in-game boss guides with multiple sources and fallback support."},
+		{"Export / Import", "Share presets between accounts using export/import."},
+
+		{"Customizable Buttons", "Move, resize, and change button layouts in settings."},
+
+		{"Reload UI", "Reload UI using /rl or /reload without /console."},
+		{"Release Notes", "Shown once after updating to a new version."},
+		{"Other Fixes", "Improved \"raid filling complete\" accuracy."}
+	}
 
        
         local message = "|cffffff00FillRaidBots v" .. versionNumber .. "|r\n\n"
@@ -4801,11 +7793,262 @@ local function ShowVersionPopupOnce()
     end
 end
 
+
 local popupFrame = CreateFrame("Frame")
 popupFrame:RegisterEvent("PLAYER_LOGIN")
 popupFrame:SetScript("OnEvent", function()
     ShowVersionPopupOnce()
 end)
+
+frbGITHUB_URL = "https://github.com/pumpan/FillRaidBots-Client-1.14"
+frbUpdateVersionPopup = frbUpdateVersionPopup or nil
+frbUpdateVersionPopupLinkBox = frbUpdateVersionPopupLinkBox or nil
+frbUpdateVersionPopupCurrentText = frbUpdateVersionPopupCurrentText or nil
+frbUpdateVersionPopupLatestText = frbUpdateVersionPopupLatestText or nil
+frbVersionClickButton = frbVersionClickButton or nil
+
+function HasTrackedUpdateVersion()
+    if not FillRaidBotsSavedSettings then
+        return false
+    end
+    if not FillRaidBotsSavedSettings.lastNotifiedVersion or FillRaidBotsSavedSettings.lastNotifiedVersion == "" then
+        return false
+    end
+    return isNewerVersion(versionNumber, FillRaidBotsSavedSettings.lastNotifiedVersion)
+end
+
+function EnsureUpdateVersionPopup()
+    if frbUpdateVersionPopup then
+        return frbUpdateVersionPopup
+    end
+
+    frbUpdateVersionPopup = CreateFrame("Frame", "FillRaidBotsUpdateVersionPopup", UIParent, "BackdropTemplate")
+    frbUpdateVersionPopup:SetWidth(460)
+    frbUpdateVersionPopup:SetHeight(180)
+    frbUpdateVersionPopup:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+    frbUpdateVersionPopup:SetFrameStrata("DIALOG")
+    frbUpdateVersionPopup:SetMovable(true)
+    frbUpdateVersionPopup:EnableMouse(true)
+    frbUpdateVersionPopup:RegisterForDrag("LeftButton")
+    frbUpdateVersionPopup:SetScript("OnDragStart", function(self) self:StartMoving() end)
+    frbUpdateVersionPopup:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
+    frbUpdateVersionPopup:SetBackdrop({
+        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 16, edgeSize = 16,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 }
+    })
+    frbUpdateVersionPopup:SetBackdropColor(0, 0, 0, 1)
+    frbUpdateVersionPopup:Hide()
+    table.insert(UISpecialFrames, "FillRaidBotsUpdateVersionPopup")
+
+    frbUpdateVersionPopup.header = frbUpdateVersionPopup:CreateTexture(nil, "ARTWORK")
+    frbUpdateVersionPopup.header:SetWidth(220)
+    frbUpdateVersionPopup.header:SetHeight(64)
+    frbUpdateVersionPopup.header:SetPoint("TOP", frbUpdateVersionPopup, 0, 18)
+    frbUpdateVersionPopup.header:SetTexture("Interface\\DialogFrame\\UI-DialogBox-Header")
+    frbUpdateVersionPopup.header:SetVertexColor(.2, .2, .2)
+
+    frbUpdateVersionPopup.headerText = frbUpdateVersionPopup:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    frbUpdateVersionPopup.headerText:SetPoint("TOP", frbUpdateVersionPopup.header, 0, -14)
+    frbUpdateVersionPopup.headerText:SetText("Update Available")
+
+    frbUpdateVersionPopupCurrentText = frbUpdateVersionPopup:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    frbUpdateVersionPopupCurrentText:SetPoint("TOPLEFT", frbUpdateVersionPopup, "TOPLEFT", 20, -42)
+    frbUpdateVersionPopupCurrentText:SetJustifyH("LEFT")
+
+    frbUpdateVersionPopupLatestText = frbUpdateVersionPopup:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    frbUpdateVersionPopupLatestText:SetPoint("TOPLEFT", frbUpdateVersionPopupCurrentText, "BOTTOMLEFT", 0, -12)
+    frbUpdateVersionPopupLatestText:SetJustifyH("LEFT")
+
+    frbUpdateVersionPopup.linkLabel = frbUpdateVersionPopup:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    frbUpdateVersionPopup.linkLabel:SetPoint("TOPLEFT", frbUpdateVersionPopupLatestText, "BOTTOMLEFT", 0, -18)
+    frbUpdateVersionPopup.linkLabel:SetJustifyH("LEFT")
+    frbUpdateVersionPopup.linkLabel:SetText("GitHub:")
+
+    frbUpdateVersionPopupLinkBox = CreateFrame("EditBox", "frbUpdateVersionPopupLinkBox", frbUpdateVersionPopup, "InputBoxTemplate")
+    frbUpdateVersionPopupLinkBox:SetPoint("TOPLEFT", frbUpdateVersionPopup.linkLabel, "BOTTOMLEFT", 0, -6)
+    frbUpdateVersionPopupLinkBox:SetWidth(410)
+    frbUpdateVersionPopupLinkBox:SetHeight(20)
+    frbUpdateVersionPopupLinkBox:SetAutoFocus(false)
+    frbUpdateVersionPopupLinkBox:SetText(frbGITHUB_URL)
+    frbUpdateVersionPopupLinkBox:SetScript("OnEscapePressed", function(self)
+        self:ClearFocus()
+        self:HighlightText(0, 0)
+    end)
+    frbUpdateVersionPopupLinkBox:SetScript("OnEditFocusGained", function(self)
+        self:HighlightText()
+    end)
+    frbUpdateVersionPopupLinkBox:SetScript("OnMouseUp", function(self)
+        self:SetFocus()
+        self:HighlightText()
+    end)
+
+    frbUpdateVersionPopup.okButton = CreateFrame("Button", nil, frbUpdateVersionPopup, "UIPanelButtonTemplate")
+    frbUpdateVersionPopup.okButton:SetWidth(100)
+    frbUpdateVersionPopup.okButton:SetHeight(22)
+    frbUpdateVersionPopup.okButton:SetPoint("BOTTOMRIGHT", frbUpdateVersionPopup, "BOTTOMRIGHT", -20, 16)
+    frbUpdateVersionPopup.okButton:SetText("OK")
+    frbUpdateVersionPopup.okButton:SetScript("OnClick", function()
+        frbUpdateVersionPopup:Hide()
+    end)
+
+    frbUpdateVersionPopup.ignoreButton = CreateFrame("Button", nil, frbUpdateVersionPopup, "UIPanelButtonTemplate")
+    frbUpdateVersionPopup.ignoreButton:SetWidth(140)
+    frbUpdateVersionPopup.ignoreButton:SetHeight(22)
+    frbUpdateVersionPopup.ignoreButton:SetPoint("RIGHT", frbUpdateVersionPopup.okButton, "LEFT", -10, 0)
+    frbUpdateVersionPopup.ignoreButton:SetText("Ignore this version")
+    frbUpdateVersionPopup.ignoreButton:SetScript("OnClick", function()
+        if not FillRaidBotsSavedSettings then
+            FillRaidBotsSavedSettings = {}
+        end
+        if HasTrackedUpdateVersion() then
+            FillRaidBotsSavedSettings.ignoredUpdateVersion = FillRaidBotsSavedSettings.lastNotifiedVersion
+        end
+        frbUpdateVersionPopup:Hide()
+    end)
+
+    return frbUpdateVersionPopup
+end
+
+function ShowUpdateVersionPopup()
+    EnsureUpdateVersionPopup()
+    frbUpdateVersionPopupCurrentText:SetText("You are using: " .. versionNumber)
+    frbUpdateVersionPopupLatestText:SetText("Latest version: " .. (FillRaidBotsSavedSettings and FillRaidBotsSavedSettings.lastNotifiedVersion or versionNumber))
+    frbUpdateVersionPopupLinkBox:SetText(frbGITHUB_URL)
+    frbUpdateVersionPopupLinkBox:ClearFocus()
+    frbUpdateVersionPopupLinkBox:HighlightText(0, 0)
+    frbUpdateVersionPopup:Show()
+end
+
+function MaybeShowUpdateVersionPopup()
+    if not HasTrackedUpdateVersion() then
+        return
+    end
+    if FillRaidBotsSavedSettings.ignoredUpdateVersion == FillRaidBotsSavedSettings.lastNotifiedVersion then
+        return
+    end
+    ShowUpdateVersionPopup()
+end
+
+function HookVersionTextUpdatePopup()
+    if not FillRaidFrame or not FillRaidBotsVersionText then
+        return
+    end
+    if frbVersionClickButton then
+        return
+    end
+    frbVersionClickButton = CreateFrame("Button", "frbVersionClickButton114", FillRaidFrame)
+    frbVersionClickButton:SetPoint("TOPLEFT", FillRaidBotsVersionText, "TOPLEFT", -4, 2)
+    frbVersionClickButton:SetPoint("BOTTOMRIGHT", FillRaidBotsVersionText, "BOTTOMRIGHT", 4, -2)
+    frbVersionClickButton:EnableMouse(true)
+    frbVersionClickButton:RegisterForClicks("LeftButtonUp")
+    frbVersionClickButton:SetScript("OnClick", function()
+        ShowUpdateVersionPopup()
+    end)
+    frbVersionClickButton:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
+        GameTooltip:SetText("Click to show update info.")
+        GameTooltip:Show()
+    end)
+    frbVersionClickButton:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+end
+
+local frbUpdatePopupInitFrame = CreateFrame("Frame")
+frbUpdatePopupInitFrame:RegisterEvent("PLAYER_LOGIN")
+frbUpdatePopupInitFrame:SetScript("OnEvent", function()
+    HookVersionTextUpdatePopup()
+    MaybeShowUpdateVersionPopup()
+end)
+-- ================== ==
+-- Daily tips in chat --
+-- =====================
+local function ShowDailyTipInChat()
+	if not DailyTipEnabled then return end
+
+    if not FillRaidBotsSavedSettings then
+        FillRaidBotsSavedSettings = {}
+    end
+
+    local today = date("%Y-%m-%d")
+    if FillRaidBotsSavedSettings.lastDailyTipDate == today then
+        return
+    end
+
+    C_Timer.After(15, function()
+
+	local CMD  = "|cff00ccff"   
+	local FEAT = "|cff00ff00"   
+	local END  = "|r"
+
+	local tips = {
+		"Adding fewer than 5 bots keeps you in party mode.",
+		"Large fills (5+ bots) automatically convert your group to a raid.",
+		"Auto Repair works automatically if you're VIP.",
+		"You can edit presets directly in-game.",
+		"Use SuppressEditor to silence bot spam.",
+		"Dead bots are automatically replaced when using Refill.",
+		"Refill continues until all dead bots are replaced.",
+
+		"Use " .. CMD .. "/frb help" .. END .. " to see available commands.",
+		"Use " .. FEAT .. "Fast Fill" .. END .. " (Ctrl + Alt + click a boss) to automatically fill the raid.",
+		"Fast Fill will not trigger if the target is already dead.",
+		"You can use boss, mob, or instance names in presets for Fast Fill.",
+		"You can use instance names to create default presets.",
+
+		"Kick All will not remove real players.",
+		"Use " .. CMD .. "/frb fixgroups" .. END .. " to rebalance raid groups.",
+		"Use " .. CMD .. "/frb refill" .. END .. " to instantly replace dead bots.",
+
+		"You can export and import presets between accounts.",
+		"VIP presets can override normal presets if enabled.",
+		"You must be leader or assistant for some features to work.",
+		"Zone-based presets automatically adjust raid size limits.",
+
+		"You can move and resize buttons in the settings.",
+		"You can enable tutorial links in settings to see boss guides.",
+		"Negative button spacing allows compact layouts.",
+		"Enable the debugger in settings for advanced troubleshooting.",
+
+		"Support the addon to get your name in the credits."
+	}
+
+        if not FillRaidBotsSavedSettings.usedDailyTips then
+            FillRaidBotsSavedSettings.usedDailyTips = {}
+        end
+
+        local used = FillRaidBotsSavedSettings.usedDailyTips
+        local availableIndexes = {}
+
+        for i = 1, #tips do
+            if not used[i] then
+                table.insert(availableIndexes, i)
+            end
+        end
+
+        if #availableIndexes == 0 then
+            FillRaidBotsSavedSettings.usedDailyTips = {}
+            used = FillRaidBotsSavedSettings.usedDailyTips
+
+            for i = 1, #tips do
+                table.insert(availableIndexes, i)
+            end
+        end
+
+        local randomPoolIndex = math.random(1, #availableIndexes)
+        local selectedTipIndex = availableIndexes[randomPoolIndex]
+        local selectedTip = tips[selectedTipIndex]
+
+        used[selectedTipIndex] = true
+        FillRaidBotsSavedSettings.lastDailyTipDate = today
+
+        DEFAULT_CHAT_FRAME:AddMessage("|cffffff00[FillRaidBots Tip]|r " .. selectedTip)
+
+    end)
+end
+
 --------------------------------------------------------------------------------------------------------------------
 
 
@@ -4939,7 +8182,7 @@ local function splitVersion(version)
 end
 
 
-local function isNewerVersion(current, received)
+function isNewerVersion(current, received)
     local cMajor, cMinor, cPatch = splitVersion(current)
     local rMajor, rMinor, rPatch = splitVersion(received)
 
@@ -4964,7 +8207,7 @@ frame:RegisterEvent("CHAT_MSG_ADDON")
 
 frame:SetScript("OnEvent", function(self, event, ...)
     if event == "PLAYER_LOGIN" then
-        
+		ShowDailyTipInChat()
         if not FillRaidBotsSavedSettings.userID then
             FillRaidBotsSavedSettings.userID = generateUserID()
         end
@@ -4990,6 +8233,7 @@ frame:SetScript("OnEvent", function(self, event, ...)
             QueueDebugMessage("INFO: New update available: " .. FillRaidBotsSavedSettings.lastNotifiedVersion, "debuginfo")
             sendVersionMessage(FillRaidBotsSavedSettings.lastNotifiedVersion, SessionUserID)  
             newversion(FillRaidBotsSavedSettings.lastNotifiedVersion) 
+            MaybeShowUpdateVersionPopup()
         else
 			if versionNumber == Guard then
 				sendVersionMessage(versionNumber, SessionUserID)
@@ -5044,8 +8288,10 @@ frame:SetScript("OnEvent", function(self, event, ...)
                         FillRaidBotsSavedSettings.lastNotifiedVersion = receivedVersion
                         sendVersionMessage(receivedVersion, SessionUserID)  
                         newversion(receivedVersion) 
+                        MaybeShowUpdateVersionPopup()
                     else
                         QueueDebugMessage("INFO: Version " .. receivedVersion .. " already notified.", "debugversion")
+                        MaybeShowUpdateVersionPopup()						
                     end
                 else
                     QueueDebugMessage("INFO: Your version is up to date.", "debugversion")
@@ -5064,6 +8310,7 @@ SLASH_RL3 = "/reloadui"
 SlashCmdList["RL"] = function()
     ReloadUI()
 end
+
 
 
 ----------------------------------------------------------------------------------------------------------------------
