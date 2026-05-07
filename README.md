@@ -156,6 +156,7 @@ Rules:
 
 ---
 
+
 ### 📦 Built-in Presets
 
 Supports:
@@ -171,6 +172,25 @@ Each preset includes:
 - Tooltip auto-generation  
 - Boss mapping support  
 
+### 🧠 Advanced Bot Configuration (NEW)
+
+Configure bots directly before filling:
+
+- Paladin blessing assignments
+- Shaman totem setups
+- Mage Frost/Fire spec selection
+- Role icons in configuration UI
+- Supports:
+  - Same setup for all
+  - Individual setup per bot
+  - 50/50 Mage spec mode
+  - Copy/Paste Shaman setups
+- Saved directly in presets
+
+<p align="center">
+  <img src="/ScreenShots/totems.png" width="100">
+  <img src="/ScreenShots/blessings.png" width="100">
+</p>
 ---
 
 ### 🧠 Smart Preset Detection (NEW) (ctrl + alt)
