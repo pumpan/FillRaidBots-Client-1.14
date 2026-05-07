@@ -87,9 +87,16 @@ SettingsConfig = {
                     key = "isCheckAndRemoveEnabled",
                     toggle = "removeDeadBotsEnabled",
                     label = "Auto Remove Dead Bots",
-                    tooltip = "Automatically removes dead bots from raid/party.",
-                    default = true
+                    tooltip = "Automatically removes dead bots.\nWhen this is enabled, the manual Remove Dead Bots button stays hidden.",
+                    default = true,
+                    onApply = function()
+                        if UpdateRemoveDeadBotsButtonVisibility then
+                            UpdateRemoveDeadBotsButtonVisibility()
+                        end
+                    end
                 },
+
+
 
                 {
                     type = "checkbox",
@@ -286,7 +293,19 @@ SettingsConfig = {
                     end
                 },
 
-                
+                {
+                    type = "checkbox",
+                    key = "isremoveDeadBotsButtonEnabled",
+                    toggle = "removeDeadBotsButtonEnabled",
+                    label = "Enable Remove Dead Bots Button",
+                    tooltip = "Shows a manual button when dead bots are found.\nOnly appears when Auto Remove Dead Bots is disabled.",
+                    default = true,
+                    onApply = function()
+                        if UpdateRemoveDeadBotsButtonVisibility then
+                            UpdateRemoveDeadBotsButtonVisibility()
+                        end
+                    end
+                },                
                 
                 
                 
@@ -628,6 +647,47 @@ end
 --==================================================
 -- CHECKBUTTON CREATOR 
 --==================================================
+local function ShowSettingsTooltip(owner, tooltip)
+    local startPos, lineStart, lineEnd, lineText, firstLine
+
+    if not tooltip or tooltip == "" then
+        return
+    end
+
+    GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
+    GameTooltip:ClearLines()
+
+    startPos = 1
+    firstLine = true
+
+    while true do
+        lineStart, lineEnd = string.find(tooltip, "\n", startPos, true)
+        if lineStart then
+            lineText = string.sub(tooltip, startPos, lineStart - 1)
+        else
+            lineText = string.sub(tooltip, startPos)
+        end
+
+        if firstLine then
+            GameTooltip:SetText(lineText, 1, 1, 1, 1, true)
+            firstLine = false
+        else
+            if lineText == "" then
+                GameTooltip:AddLine(" ")
+            else
+                GameTooltip:AddLine(lineText, 0.8, 0.8, 0.8, true)
+            end
+        end
+
+        if not lineStart then
+            break
+        end
+        startPos = lineEnd + 1
+    end
+
+    GameTooltip:Show()
+end
+
 local function CreateCheckButton(parent, name, anchor, x, y, label, tooltip, value, onClick, framename)
 
     
@@ -647,7 +707,9 @@ local function CreateCheckButton(parent, name, anchor, x, y, label, tooltip, val
     
     cb.text = cb:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 	cb.text:SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
-    cb.text:SetPoint("LEFT", cb, "RIGHT", 5, 0)
+	cb.text:SetPoint("TOPLEFT", cb, "TOPRIGHT", 5, -2)
+	cb.text:SetWidth(120) -- adjust to your column width
+	cb.text:SetJustifyH("LEFT")
     cb.text:SetText(label)
 
     
@@ -672,9 +734,7 @@ local function CreateCheckButton(parent, name, anchor, x, y, label, tooltip, val
     
     cb:SetScript("OnEnter", function()
         if tooltip and tooltip ~= "" then
-            GameTooltip:SetOwner(cb, "ANCHOR_RIGHT")
-            GameTooltip:SetText(tooltip)
-            GameTooltip:Show()
+            ShowSettingsTooltip(cb, tooltip)
         end
     end)
 
@@ -947,9 +1007,7 @@ function CreateSettingsUI()
 
 					if tooltipText then
 						cb:SetScript("OnEnter", function(self)
-							GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-							GameTooltip:SetText(tooltipText, 1,1,1,1)
-							GameTooltip:Show()
+							ShowSettingsTooltip(self, tooltipText)
 						end)
 
 						cb:SetScript("OnLeave", function()
@@ -1297,9 +1355,7 @@ function CreateSettingsUI()
 
 				btn:SetScript("OnEnter", function()
 					if currentItem.tooltip then
-						GameTooltip:SetOwner(btn, "ANCHOR_RIGHT")
-						GameTooltip:SetText(currentItem.tooltip)
-						GameTooltip:Show()
+						ShowSettingsTooltip(btn, currentItem.tooltip)
 					end
 				end)
 
@@ -1369,9 +1425,7 @@ function CreateSettingsUI()
 				
 				if currentItem.tooltip then
 				    slider:SetScript("OnEnter", function(self)
-				        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-				        GameTooltip:SetText(currentItem.tooltip)
-				        GameTooltip:Show()
+				        ShowSettingsTooltip(self, currentItem.tooltip)
 				    end)
 				
 				    slider:SetScript("OnLeave", function()

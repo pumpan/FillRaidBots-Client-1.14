@@ -21,7 +21,7 @@ local classes = {
 
 local addonName = "FillRaidBots"
 local addonPrefix = "FillRaid1142"
-local versionNumber = "5.0.0"
+local versionNumber = "5.1.0"
 local a = "5"
 local botCount = 0
 local initialBotRemoved = false
@@ -49,10 +49,1527 @@ local function InitializeSettings()
     if FillRaidBotsSavedSettings.isCheckAndRemoveEnabled == nil then
         FillRaidBotsSavedSettings.isCheckAndRemoveEnabled = false  
     end
+
+    if FillRaidBotsSavedSettings.isremoveDeadBotsButtonEnabled == nil then
+        FillRaidBotsSavedSettings.isremoveDeadBotsButtonEnabled = true
+    end
 end
---=================================================
--- Generate toggle functions from UISettings.lua --
---=================================================
+
+
+
+
+
+frb_CurrentPaladinBlessings = frb_CurrentPaladinBlessings or {}
+frb_CurrentShamanTotems = frb_CurrentShamanTotems or {}
+frb_CurrentMageSpecs = frb_CurrentMageSpecs or {}
+frb_UseAllShamanTotems = frb_UseAllShamanTotems or false
+frb_UseAllMageSpecs = frb_UseAllMageSpecs or false
+frb_UseHalfMageSpecs = frb_UseHalfMageSpecs or false
+frb_AddCounters = frb_AddCounters or { paladin = 0, shaman = 0, mage = 0 }
+frb_CopiedShamanTotems = frb_CopiedShamanTotems or nil
+
+frb_PaladinBlessingOrder = { "bom", "bok", "bol", "bos", "bow", "random" }
+frb_PaladinBlessingLabels = {
+    bom = "Blessing of Might",
+    bok = "Blessing of Kings",
+    bol = "Blessing of Light",
+    bos = "Blessing of Salvation",
+    bow = "Blessing of Wisdom",
+    random = "Random",
+}
+
+frb_MageSpecOrder = { "frost", "fire", "random" }
+frb_MageSpecLabels = {
+    frost = "Frost",
+    fire = "Fire",
+    random = "Random",
+}
+frb_MageSpecSpellNames = {
+    frost = "Frostbolt",
+    fire = "Fireball",
+}
+frb_MageSpecIcons = {
+    frost = "Interface\\Icons\\Spell_Frost_FrostBolt02",
+    fire = "Interface\\Icons\\Spell_Fire_FlameBolt",
+    random = "Interface\\Icons\\INV_Misc_QuestionMark",
+}
+frb_MageSpecSpellIDs = {
+    frost = 25304,
+    fire = 25306,
+}
+frb_MageSpecCommandNames = {
+    frost = "frost",
+    fire = "fire",
+}
+
+frb_TotemSlots = { "air", "earth", "fire", "water" }
+frb_TotemSlotLabels = { earth = "Earth", fire = "Fire", water = "Water", air = "Air" }
+frb_TotemOptions = {
+    air = { "windfury", "grace", "tranquil air", "nature resistance", "random" },
+    earth = { "strength", "stoneskin", "earthbind", "tremor", "random" },
+    fire = { "searing", "magma", "fire nova", "flametongue", "frost resistance", "random" },
+    water = { "mana", "healing", "poison cleansing", "disease cleansing", "fire resistance", "mana tide", "random" },
+}
+frb_TotemLabels = {
+    strength = "Strength of Earth",
+    stoneskin = "Stoneskin",
+    tremor = "Tremor",
+    earthbind = "Earthbind",
+    searing = "Searing",
+    flametongue = "Flametongue",
+    magma = "Magma",
+    ["fire nova"] = "Fire Nova",
+    ["frost resistance"] = "Frost Resistance",
+    mana = "Mana Spring",
+    healing = "Healing Stream",
+    ["poison cleansing"] = "Poison Cleansing",
+    ["disease cleansing"] = "Disease Cleansing",
+    ["fire resistance"] = "Fire Resistance",
+    ["mana tide"] = "Mana Tide",
+    windfury = "Windfury",
+    grace = "Grace of Air",
+    ["tranquil air"] = "Tranquil Air",
+    ["nature resistance"] = "Nature Resistance",
+    grounding = "Grounding",
+    random = "Random",
+}
+
+frb_PaladinBlessingSpellNames = {
+    bom = "Blessing of Might",
+    bok = "Blessing of Kings",
+    bol = "Blessing of Light",
+    bos = "Blessing of Salvation",
+    bow = "Blessing of Wisdom",
+}
+frb_TotemSpellNames = {
+    strength = "Strength of Earth Totem",
+    stoneskin = "Stoneskin Totem",
+    tremor = "Tremor Totem",
+    earthbind = "Earthbind Totem",
+    searing = "Searing Totem",
+    flametongue = "Flametongue Totem",
+    magma = "Magma Totem",
+    ["fire nova"] = "Fire Nova Totem",
+    ["frost resistance"] = "Frost Resistance Totem",
+    mana = "Mana Spring Totem",
+    healing = "Healing Stream Totem",
+    ["poison cleansing"] = "Poison Cleansing Totem",
+    ["disease cleansing"] = "Disease Cleansing Totem",
+    ["fire resistance"] = "Fire Resistance Totem",
+    ["mana tide"] = "Mana Tide Totem",
+    windfury = "Windfury Totem",
+    grace = "Grace of Air Totem",
+    ["tranquil air"] = "Tranquil Air Totem",
+    ["nature resistance"] = "Nature Resistance Totem",
+    grounding = "Grounding Totem",
+}
+
+frb_PaladinBlessingIcons = {
+    bom = "Interface\\Icons\\Spell_Holy_FistOfJustice",
+    bok = "Interface\\Icons\\Spell_Magic_MageArmor",
+    bol = "Interface\\Icons\\Spell_Holy_PrayerOfHealing02",
+    bos = "Interface\\Icons\\Spell_Holy_SealOfSalvation",
+    bow = "Interface\\Icons\\Spell_Holy_SealOfWisdom",
+    random = "Interface\\Icons\\INV_Misc_QuestionMark",
+}
+
+frb_TotemIcons = {
+    strength = "Interface\\Icons\\Spell_Nature_EarthBindTotem",
+    stoneskin = "Interface\\Icons\\Spell_Nature_StoneSkinTotem",
+    tremor = "Interface\\Icons\\Spell_Nature_TremorTotem",
+    earthbind = "Interface\\Icons\\Spell_Nature_StrengthOfEarthTotem02",
+    searing = "Interface\\Icons\\Spell_Fire_SearingTotem",
+    flametongue = "Interface\\Icons\\Spell_Nature_GuardianWard",
+    magma = "Interface\\Icons\\Spell_Fire_SelfDestruct",
+    ["fire nova"] = "Interface\\Icons\\Spell_Fire_SealOfFire",
+    ["frost resistance"] = "Interface\\Icons\\Spell_FireResistanceTotem_01",
+    mana = "Interface\\Icons\\Spell_Nature_ManaRegenTotem",
+    healing = "Interface\\Icons\\INV_Spear_04",
+    ["poison cleansing"] = "Interface\\Icons\\Spell_Nature_NullifyPoison",
+    ["disease cleansing"] = "Interface\\Icons\\Spell_Nature_DiseaseCleansingTotem",
+    ["fire resistance"] = "Interface\\Icons\\Spell_FireResistanceTotem_01",
+    windfury = "Interface\\Icons\\Spell_Nature_Windfury",
+    grace = "Interface\\Icons\\Spell_Nature_InvisibilityTotem",
+    ["tranquil air"] = "Interface\\Icons\\Spell_Nature_Brilliance",
+    ["nature resistance"] = "Interface\\Icons\\Spell_Nature_NatureResistanceTotem",
+    grounding = "Interface\\Icons\\Spell_Nature_GroundingTotem",
+	["mana tide"] = "Interface\\Icons\\Spell_Frost_SummonWaterElemental",
+    random = "Interface\\Icons\\INV_Misc_QuestionMark",
+}
+
+frb_RoleIcons = {
+    tank = "Interface\\Icons\\Ability_Defend",
+    meleedps = "Interface\\Icons\\Ability_DualWield",
+    rangedps = "Interface\\Icons\\Ability_Marksmanship",
+    healer = "Interface\\Icons\\Spell_Holy_Heal",
+}
+
+function frb_GetRoleFromClassRole(classRole)
+    local _, _, role
+    if type(classRole) ~= "string" then return "" end
+    _, _, role = string.find(classRole, "^shaman%s+(.+)$")
+    return role or ""
+end
+
+function frb_GetPaladinRoleFromClassRole(classRole)
+    local _, _, role
+    if type(classRole) ~= "string" then return "" end
+    _, _, role = string.find(classRole, "^paladin%s+(.+)$")
+    return role or ""
+end
+
+function frb_FormatRoleText(role)
+    if role == "meleedps" then return "Melee DPS" end
+    if role == "rangedps" then return "Ranged DPS" end
+    if role == "healer" then return "Healer" end
+    if role == "tank" then return "Tank" end
+    return role or ""
+end
+
+function frb_BuildPaladinRoleList()
+    local list = {}
+    local i, classRole, count, role, n
+
+    for i = 1, table.getn(classes or {}) do
+        classRole = classes[i]
+        if type(classRole) == "string" and string.find(classRole, "^paladin%s") then
+            count = tonumber(classCounts and classCounts[classRole]) or 0
+            role = frb_GetPaladinRoleFromClassRole(classRole)
+            for n = 1, count do
+                table.insert(list, role)
+            end
+        end
+    end
+
+    return list
+end
+
+function frb_GetPaladinRoleForIndex(index)
+    local list = frb_BuildPaladinRoleList()
+    return list[index] or ""
+end
+
+function frb_BuildShamanRoleList()
+    local list = {}
+    local i, classRole, count, role, n
+
+    for i = 1, table.getn(classes or {}) do
+        classRole = classes[i]
+        if type(classRole) == "string" and string.find(classRole, "^shaman%s") then
+            count = tonumber(classCounts and classCounts[classRole]) or 0
+            role = frb_GetRoleFromClassRole(classRole)
+            for n = 1, count do
+                table.insert(list, role)
+            end
+        end
+    end
+
+    return list
+end
+
+function frb_GetShamanRoleForIndex(index)
+    local list = frb_BuildShamanRoleList()
+    return list[index] or ""
+end
+
+function frb_GetMageRoleFromClassRole(classRole)
+    local _, _, role
+    if type(classRole) ~= "string" then return "" end
+    _, _, role = string.find(classRole, "^mage%s+(.+)$")
+    return role or ""
+end
+
+function frb_BuildMageRoleList()
+    local list = {}
+    local i, classRole, count, role, n
+
+    for i = 1, table.getn(classes or {}) do
+        classRole = classes[i]
+        if type(classRole) == "string" and string.find(classRole, "^mage%s") then
+            count = tonumber(classCounts and classCounts[classRole]) or 0
+            role = frb_GetMageRoleFromClassRole(classRole)
+            for n = 1, count do
+                table.insert(list, role)
+            end
+        end
+    end
+
+    return list
+end
+
+function frb_GetMageRoleForIndex(index)
+    local list = frb_BuildMageRoleList()
+    return list[index] or ""
+end
+
+
+frb_PaladinBlessingSpellIDs = {
+    bom = 25291, 
+    bok = 20217,
+    bol = 19979,
+    bos = 1038,
+    bow = 25290, 
+}
+
+frb_TotemSpellIDs = {
+    
+    
+    strength = 10442,
+    stoneskin = 10408,
+    tremor = 8143,
+    earthbind = 2484,
+    searing = 10438,
+    flametongue = 16387,
+    magma = 10587,
+    ["fire nova"] = 11315,
+    ["frost resistance"] = 10479,
+    mana = 10497,
+    healing = 10463,
+    ["poison cleansing"] = 8166,
+    ["disease cleansing"] = 8170,
+    ["fire resistance"] = 10538,
+    ["mana tide"] = 16190,
+    windfury = 10614,
+    grace = 10627,
+    ["tranquil air"] = 25908,
+    ["nature resistance"] = 10601,
+    grounding = 8177,
+}
+
+
+
+frb_TotemSpellIDFallbacks = {
+    strength = { 10442, 8161, 8160, 8075 },
+    stoneskin = { 10408, 10407, 8155, 8154, 8071 },
+    tremor = { 8143 },
+    earthbind = { 2484 },
+    searing = { 10438, 10437, 6365, 6364, 3599 },
+    flametongue = { 16387, 10526, 8249, 8227 },
+    magma = { 10587, 10586, 8190 },
+    ["fire nova"] = { 11315, 11314, 8504, 8503, 1535 },
+    ["frost resistance"] = { 10479, 10478, 8181 },
+    mana = { 10497, 10496, 5675 },
+    healing = { 10463, 10462, 6377, 6375, 5394 },
+    ["poison cleansing"] = { 8166 },
+    ["disease cleansing"] = { 8170 },
+    ["fire resistance"] = { 10538, 10537, 8184 },
+    ["mana tide"] = { 16190 },
+    windfury = { 10614, 10613, 8512 },
+    grace = { 10627, 8835 },
+    ["tranquil air"] = { 25908 },
+    ["nature resistance"] = { 10601, 10595, 10596 },
+    grounding = { 8177 },
+}
+
+
+
+frb_TotemCommandNames = {
+    windfury = "windfury",
+    grace = "graceofair",
+    ["tranquil air"] = "tranquilair",
+    ["nature resistance"] = "natureresistance",
+
+    strength = "strengthofearth",
+    stoneskin = "stoneskin",
+    earthbind = "earthbind",
+    tremor = "tremor",
+
+    searing = "searing",
+    magma = "magma",
+    ["fire nova"] = "firenova",
+    flametongue = "flametongue",
+    ["frost resistance"] = "frostresistance",
+
+    mana = "manaspring",
+    healing = "healingstream",
+    ["poison cleansing"] = "poisoncleansing",
+    ["disease cleansing"] = "diseasecleansing",
+    ["fire resistance"] = "fireresistance",
+    ["mana tide"] = "manatide",
+}
+
+function frb_CopyTable(source)
+    local copy = {}
+    local k, v
+    if type(source) ~= "table" then
+        return copy
+    end
+    for k, v in pairs(source) do
+        if type(v) == "table" then
+            copy[k] = frb_CopyTable(v)
+        else
+            copy[k] = v
+        end
+    end
+    return copy
+end
+
+function frb_EnsureBotSettings(preset)
+    if type(preset) ~= "table" then return end
+    if type(preset.botSettings) ~= "table" then preset.botSettings = {} end
+    if type(preset.botSettings.paladinBlessings) ~= "table" then preset.botSettings.paladinBlessings = {} end
+    if type(preset.botSettings.shamanTotems) ~= "table" then preset.botSettings.shamanTotems = {} end
+    if type(preset.botSettings.mageSpecs) ~= "table" then preset.botSettings.mageSpecs = {} end
+end
+
+function frb_LoadBotSettingsFromPreset(preset)
+    frb_CurrentPaladinBlessings = {}
+    frb_CurrentShamanTotems = {}
+    frb_CurrentMageSpecs = {}
+    frb_UseAllMageSpecs = false
+    frb_UseHalfMageSpecs = false
+    if type(preset) ~= "table" then return end
+    frb_EnsureBotSettings(preset)
+    frb_CurrentPaladinBlessings = frb_CopyTable(preset.botSettings.paladinBlessings)
+    frb_CurrentShamanTotems = frb_CopyTable(preset.botSettings.shamanTotems)
+    frb_CurrentMageSpecs = frb_CopyTable(preset.botSettings.mageSpecs)
+    frb_UseAllShamanTotems = preset.botSettings.shamanUseAllTotems and true or false
+    frb_UseAllMageSpecs = preset.botSettings.mageUseAllSpecs and true or false
+    frb_UseHalfMageSpecs = preset.botSettings.mageUseHalfSpecs and true or false
+    if frb_UseHalfMageSpecs then frb_UseAllMageSpecs = false end
+end
+
+function frb_SaveBotSettingsToPreset(preset)
+    if type(preset) ~= "table" then return end
+    frb_EnsureBotSettings(preset)
+    preset.botSettings.paladinBlessings = frb_CopyTable(frb_CurrentPaladinBlessings)
+    preset.botSettings.shamanTotems = frb_CopyTable(frb_CurrentShamanTotems)
+    preset.botSettings.shamanUseAllTotems = frb_UseAllShamanTotems and true or false
+    preset.botSettings.mageUseAllSpecs = frb_UseAllMageSpecs and true or false
+    preset.botSettings.mageUseHalfSpecs = frb_UseHalfMageSpecs and true or false
+
+    if frb_UseHalfMageSpecs then
+        preset.botSettings.mageUseAllSpecs = false
+        preset.botSettings.mageSpecs = nil
+    else
+        preset.botSettings.mageSpecs = frb_CopyTable(frb_CurrentMageSpecs)
+    end
+end
+
+function frb_CountClassInCurrentSetup(className)
+    local count = 0
+    local role, value
+    if not classCounts then return 0 end
+    for role, value in pairs(classCounts) do
+        if string.find(role, className) then
+            count = count + (tonumber(value) or 0)
+        end
+    end
+    return count
+end
+
+function frb_GetDefaultPaladinBlessing(index)
+    local defaults = { "bom", "bok", "bol", "bos", "bow" }
+    local count = table.getn(defaults)
+    if count == 0 then return nil end
+    return defaults[((index - 1) - math.floor((index - 1) / count) * count) + 1]
+end
+
+function frb_GetPaladinBlessing(index)
+    local selected = frb_CurrentPaladinBlessings and frb_CurrentPaladinBlessings[index]
+    if selected and selected ~= "" then return selected end
+    return frb_GetDefaultPaladinBlessing(index)
+end
+
+function frb_GetDefaultShamanTotem(slot, index)
+    local defaults = {
+        
+        air = { "windfury" },
+        earth = { "strength" },
+        fire = { "searing" },
+        water = { "poison cleansing" },
+    }
+    local list = defaults[slot]
+    local count
+    if not list then return nil end
+    count = table.getn(list)
+    if count == 0 then return nil end
+    return list[((index - 1) - math.floor((index - 1) / count) * count) + 1]
+end
+
+function frb_GetShamanTotem(index, slot)
+    local row
+
+    if frb_UseAllShamanTotems and frb_CurrentShamanTotems then
+        row = frb_CurrentShamanTotems[0]
+        if row and row[slot] and row[slot] ~= "" then return row[slot] end
+    end
+
+    row = frb_CurrentShamanTotems and frb_CurrentShamanTotems[index]
+    if row and row[slot] and row[slot] ~= "" then return row[slot] end
+    return frb_GetDefaultShamanTotem(slot, index)
+end
+
+function frb_GetDefaultMageSpec(index)
+    if frb_UseHalfMageSpecs then
+        local mageCount = frb_CountClassInCurrentSetup("mage")
+        local halfPoint = math.ceil((tonumber(mageCount) or 0) / 2)
+        if (tonumber(index) or 1) <= halfPoint then
+            return "frost"
+        end
+        return "fire"
+    end
+    return "frost"
+end
+
+function frb_ApplyMageHalfSpecs()
+    local count = frb_CountClassInCurrentSetup("mage")
+    local i, halfPoint
+
+    frb_CurrentMageSpecs = {}
+    halfPoint = math.ceil((tonumber(count) or 0) / 2)
+    for i = 1, count do
+        if i <= halfPoint then
+            frb_CurrentMageSpecs[i] = "frost"
+        else
+            frb_CurrentMageSpecs[i] = "fire"
+        end
+    end
+end
+
+function frb_ConvertHalfMageSpecsToIndividual()
+    if frb_UseHalfMageSpecs then
+        frb_ApplyMageHalfSpecs()
+        frb_UseHalfMageSpecs = false
+    end
+end
+
+function frb_GetMageSpec(index)
+    local selected
+
+    if frb_UseHalfMageSpecs then
+        return frb_GetDefaultMageSpec(index)
+    end
+
+    if frb_UseAllMageSpecs and frb_CurrentMageSpecs then
+        selected = frb_CurrentMageSpecs[0]
+        if selected and selected ~= "" then return selected end
+    end
+
+    selected = frb_CurrentMageSpecs and frb_CurrentMageSpecs[index]
+    if selected and selected ~= "" then return selected end
+    return frb_GetDefaultMageSpec(index)
+end
+
+function frb_ResetBotCommandCounters()
+    frb_AddCounters = { paladin = 0, shaman = 0, mage = 0 }
+end
+
+function frb_BuildAddBotCommand(classRole)
+    local plain = string.lower(classRole or "")
+    local blessing, earth, fire, water, air, mageSpec
+    local cmd
+
+    if string.find(plain, "paladin") then
+        frb_AddCounters.paladin = (frb_AddCounters.paladin or 0) + 1
+        blessing = frb_GetPaladinBlessing(frb_AddCounters.paladin)
+        if blessing and blessing ~= "random" then
+            cmd = ".partybot add " .. plain .. " " .. blessing
+            if QueueDebugMessage then QueueDebugMessage("CMD: " .. cmd, "debugfilling") end
+            return cmd
+        end
+    elseif string.find(plain, "shaman") then
+        frb_AddCounters.shaman = (frb_AddCounters.shaman or 0) + 1
+        air = frb_GetShamanTotem(frb_AddCounters.shaman, "air")
+        earth = frb_GetShamanTotem(frb_AddCounters.shaman, "earth")
+        fire = frb_GetShamanTotem(frb_AddCounters.shaman, "fire")
+        water = frb_GetShamanTotem(frb_AddCounters.shaman, "water")
+        if air ~= "random" and earth ~= "random" and fire ~= "random" and water ~= "random" then
+            air = frb_TotemCommandNames[air] or air
+            earth = frb_TotemCommandNames[earth] or earth
+            fire = frb_TotemCommandNames[fire] or fire
+            water = frb_TotemCommandNames[water] or water
+            cmd = ".partybot add " .. plain .. " " .. air .. " " .. earth .. " " .. fire .. " " .. water
+            if QueueDebugMessage then QueueDebugMessage("CMD: " .. cmd, "debugfilling") end
+            return cmd
+        end
+    elseif string.find(plain, "mage") then
+        frb_AddCounters.mage = (frb_AddCounters.mage or 0) + 1
+        mageSpec = frb_GetMageSpec(frb_AddCounters.mage)
+        if mageSpec and mageSpec ~= "random" then
+            mageSpec = frb_MageSpecCommandNames[mageSpec] or mageSpec
+            cmd = ".partybot add " .. plain .. " " .. mageSpec
+            if QueueDebugMessage then QueueDebugMessage("CMD: " .. cmd, "debugfilling") end
+            return cmd
+        end
+    end
+
+    cmd = ".partybot add " .. plain
+    if QueueDebugMessage then QueueDebugMessage("CMD: " .. cmd, "debugfilling") end
+    return cmd
+end
+
+function frb_CycleValue(currentValue, options)
+    local i
+    local count = table.getn(options)
+    if count == 0 then return nil end
+    if not currentValue or currentValue == "" then return options[1] end
+    for i = 1, count do
+        if options[i] == currentValue then
+            if i == count then return options[1] end
+            return options[i + 1]
+        end
+    end
+    return options[1]
+end
+
+function frb_GetDisplayLabel(value, labelTable)
+    if not value or value == "" then return "Default" end
+    return labelTable[value] or value
+end
+
+function frb_GetIcon(value, iconTable)
+    if not value or value == "" then return "Interface\\Icons\\INV_Misc_QuestionMark" end
+    return (iconTable and iconTable[value]) or "Interface\\Icons\\INV_Misc_QuestionMark"
+end
+
+
+function frb_CloseBotSettingFrames()
+    if frb_PickerFrame then frb_PickerFrame:Hide() end
+    if frb_PaladinSettingsFrame then frb_PaladinSettingsFrame:Hide() end
+    if frb_ShamanSettingsFrame then frb_ShamanSettingsFrame:Hide() end
+    if frb_MageSettingsFrame then frb_MageSettingsFrame:Hide() end
+    if frb_BotSettingsClickCatcher then frb_BotSettingsClickCatcher:Hide() end
+    GameTooltip:Hide()
+end
+
+function frb_CloseTopBotSettingFrame()
+    if frb_PickerFrame and frb_PickerFrame:IsShown() then
+        frb_PickerFrame:Hide()
+    elseif frb_ShamanSettingsFrame and frb_ShamanSettingsFrame:IsShown() then
+        frb_ShamanSettingsFrame:Hide()
+    elseif frb_PaladinSettingsFrame and frb_PaladinSettingsFrame:IsShown() then
+        frb_PaladinSettingsFrame:Hide()
+    elseif frb_MageSettingsFrame and frb_MageSettingsFrame:IsShown() then
+        frb_MageSettingsFrame:Hide()
+    end
+
+    frb_UpdateClickCatcherVisibility()
+    GameTooltip:Hide()
+end
+
+function frb_UpdateClickCatcherVisibility()
+    if not frb_BotSettingsClickCatcher then return end
+    if (frb_PickerFrame and frb_PickerFrame:IsShown())
+        or (frb_PaladinSettingsFrame and frb_PaladinSettingsFrame:IsShown())
+        or (frb_ShamanSettingsFrame and frb_ShamanSettingsFrame:IsShown())
+        or (frb_MageSettingsFrame and frb_MageSettingsFrame:IsShown()) then
+        frb_BotSettingsClickCatcher:Show()
+    else
+        frb_BotSettingsClickCatcher:Hide()
+    end
+end
+
+function frb_EnsureClickCatcher()
+    if frb_BotSettingsClickCatcher then return end
+    frb_BotSettingsClickCatcher = CreateFrame("Frame", "FRB_BotSettingsClickCatcher", UIParent)
+    frb_BotSettingsClickCatcher:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 0, 0)
+    frb_BotSettingsClickCatcher:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", 0, 0)
+    frb_BotSettingsClickCatcher:SetFrameStrata("DIALOG")
+    frb_BotSettingsClickCatcher:SetFrameLevel(50)
+    frb_BotSettingsClickCatcher:EnableMouse(true)
+    frb_BotSettingsClickCatcher:SetScript("OnMouseDown", function()
+        frb_CloseTopBotSettingFrame()
+    end)
+    frb_BotSettingsClickCatcher:Hide()
+end
+
+function frb_TooltipHasLines()
+    if GameTooltip and GameTooltip.NumLines then
+        local ok, count = pcall(function() return GameTooltip:NumLines() end)
+        if ok and count and count > 0 then
+            return true
+        end
+    end
+    if GameTooltipTextLeft1 and GameTooltipTextLeft1:GetText() then
+        return true
+    end
+    return false
+end
+
+function frb_TrySetTooltipSpellID(spellID)
+    local ok
+    if not spellID then return false end
+
+    if GameTooltip.SetHyperlink then
+        ok = pcall(function() GameTooltip:SetHyperlink("spell:" .. spellID) end)
+        if ok and frb_TooltipHasLines() then return true end
+        GameTooltip:ClearLines()
+    end
+
+    if GameTooltip.SetSpellByID then
+        ok = pcall(function() GameTooltip:SetSpellByID(spellID) end)
+        if ok and frb_TooltipHasLines() then return true end
+        GameTooltip:ClearLines()
+    end
+
+    return false
+end
+
+function frb_SaveFloatingFramePosition(frame, key)
+    local point, relativeTo, relativePoint, xOfs, yOfs
+    if not frame or not key then return end
+    if not FillRaidBotsSavedSettings then FillRaidBotsSavedSettings = {} end
+    if not FillRaidBotsSavedSettings.botSettingsFramePositions then
+        FillRaidBotsSavedSettings.botSettingsFramePositions = {}
+    end
+
+    point, relativeTo, relativePoint, xOfs, yOfs = frame:GetPoint()
+    FillRaidBotsSavedSettings.botSettingsFramePositions[key] = {
+        point = point or "CENTER",
+        relativePoint = relativePoint or "CENTER",
+        x = xOfs or 0,
+        y = yOfs or 0,
+    }
+end
+
+function frb_RestoreFloatingFramePosition(frame, key, defaultPoint, defaultX, defaultY)
+    local pos
+    if not frame then return end
+
+    if FillRaidBotsSavedSettings and FillRaidBotsSavedSettings.botSettingsFramePositions then
+        pos = FillRaidBotsSavedSettings.botSettingsFramePositions[key]
+    end
+
+    frame:ClearAllPoints()
+    if pos and pos.point and pos.relativePoint then
+        frame:SetPoint(pos.point, UIParent, pos.relativePoint, pos.x or 0, pos.y or 0)
+    else
+        frame:SetPoint(defaultPoint or "CENTER", UIParent, defaultPoint or "CENTER", defaultX or 0, defaultY or 0)
+    end
+end
+
+function frb_MakeFloatingFrameMovable(frame, key)
+    if not frame then return end
+
+    frame:SetMovable(true)
+    frame:SetClampedToScreen(true)
+    frame:EnableMouse(true)
+    frame:RegisterForDrag("LeftButton")
+    frame:SetScript("OnDragStart", function(self)
+        self:StartMoving()
+    end)
+    frame:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        frb_SaveFloatingFramePosition(self, key)
+    end)
+end
+
+function frb_RegisterEscCloseFrame(frameName)
+    local i
+    if not frameName or not UISpecialFrames then return end
+    for i = 1, table.getn(UISpecialFrames) do
+        if UISpecialFrames[i] == frameName then
+            return
+        end
+    end
+    table.insert(UISpecialFrames, frameName)
+end
+
+function frb_ShowSpellTooltip(owner, value, labels, spellNames, fallbackTitle, actionText, spellIDs, spellIDFallbacks)
+    local spellName = nil
+    local spellID = nil
+    local shownSpell = false
+    local i
+
+    if value and value ~= "" and value ~= "random" then
+        if spellIDs and spellIDs[value] then
+            spellID = spellIDs[value]
+        end
+        if spellNames and spellNames[value] then
+            spellName = spellNames[value]
+        elseif labels and labels[value] then
+            spellName = labels[value]
+        end
+    end
+
+    GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
+    GameTooltip:ClearLines()
+
+    
+    
+    if value and spellIDFallbacks and spellIDFallbacks[value] then
+        for i = 1, table.getn(spellIDFallbacks[value]) do
+            if frb_TrySetTooltipSpellID(spellIDFallbacks[value][i]) then
+                shownSpell = true
+                break
+            end
+        end
+    end
+
+    if (not shownSpell) and spellID then
+        shownSpell = frb_TrySetTooltipSpellID(spellID)
+    end
+
+    if (not shownSpell) and spellName and GameTooltip.SetSpellByName then
+        shownSpell = pcall(function() GameTooltip:SetSpellByName(spellName) end)
+        if not (shownSpell and frb_TooltipHasLines()) then
+            shownSpell = false
+            GameTooltip:ClearLines()
+        end
+    end
+
+    if not shownSpell then
+        GameTooltip:SetText(fallbackTitle or frb_GetDisplayLabel(value, labels), 1, 1, 1)
+        if spellName then
+            GameTooltip:AddLine(spellName, 0.8, 0.8, 0.8, true)
+        end
+    end
+
+    if actionText and actionText ~= "" then
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine(actionText, 0.8, 0.8, 0.8, true)
+    end
+    GameTooltip:Show()
+end
+
+function frb_EnsurePickerFrame()
+    if frb_PickerFrame then return end
+    frb_EnsureClickCatcher()
+    frb_PickerFrame = CreateFrame("Frame", "FRB_BotSettingPickerFrame", UIParent, "BackdropTemplate")
+    frb_PickerFrame:SetWidth(190)
+    frb_PickerFrame:SetHeight(120)
+    frb_RestoreFloatingFramePosition(frb_PickerFrame, "picker", "CENTER", 0, 0)
+    frb_PickerFrame:SetFrameStrata("DIALOG")
+    frb_PickerFrame:SetFrameLevel(70)
+    frb_MakeFloatingFrameMovable(frb_PickerFrame, "picker")
+    frb_PickerFrame:SetBackdrop({
+        bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+        tile = true, tileSize = 16, edgeSize = 16,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 }
+    })
+    frb_PickerFrame:SetBackdropColor(0, 0, 0, 1)
+    frb_PickerFrame.buttons = {}
+    frb_PickerFrame:SetScript("OnHide", function() frb_UpdateClickCatcherVisibility() end)
+    frb_RegisterEscCloseFrame("FRB_BotSettingPickerFrame")
+    frb_PickerFrame:Hide()
+end
+
+function frb_ShowPicker(title, options, labels, onSelect, spellNames, spellIDs, iconTable, spellIDFallbacks)
+    local i, btn, value, neededHeight
+    frb_EnsurePickerFrame()
+
+    for i = 1, table.getn(frb_PickerFrame.buttons) do
+        frb_PickerFrame.buttons[i]:Hide()
+    end
+
+    if not frb_PickerFrame.title then
+        frb_PickerFrame.title = frb_PickerFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        frb_PickerFrame.title:SetPoint("TOP", frb_PickerFrame, "TOP", 0, -10)
+    end
+    frb_PickerFrame.title:SetText(title or "Select")
+
+    for i = 1, table.getn(options) do
+        value = options[i]
+        btn = frb_PickerFrame.buttons[i]
+        if not btn then
+            btn = CreateFrame("Button", nil, frb_PickerFrame)
+            btn:SetWidth(205)
+            btn:SetHeight(22)
+            btn:SetPoint("TOPLEFT", frb_PickerFrame, "TOPLEFT", 14, -28 - ((i - 1) * 24))
+            btn.icon = btn:CreateTexture(nil, "ARTWORK")
+            btn.icon:SetWidth(18)
+            btn.icon:SetHeight(18)
+            btn.icon:SetPoint("LEFT", btn, "LEFT", 2, 0)
+            btn.text = btn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            btn.text:SetPoint("LEFT", btn.icon, "RIGHT", 6, 0)
+            btn.text:SetJustifyH("LEFT")
+            btn:SetHighlightTexture("Interface\\Buttons\\UI-Listbox-Highlight2")
+            frb_PickerFrame.buttons[i] = btn
+        end
+        btn.frb_value = value
+        btn.icon:SetTexture(frb_GetIcon(value, iconTable))
+        btn.text:SetText(frb_GetDisplayLabel(value, labels))
+        btn:SetScript("OnClick", function(self)
+            if onSelect then onSelect(self.frb_value) end
+            frb_PickerFrame:Hide()
+        end)
+        btn:SetScript("OnEnter", function(self)
+            frb_ShowSpellTooltip(self, self.frb_value, labels, spellNames, frb_GetDisplayLabel(self.frb_value, labels), nil, spellIDs, spellIDFallbacks)
+        end)
+        btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        btn:Show()
+    end
+
+    neededHeight = 42 + (table.getn(options) * 24)
+    if neededHeight < 100 then neededHeight = 100 end
+    frb_PickerFrame:SetWidth(235)
+    frb_PickerFrame:SetHeight(neededHeight)
+    frb_PickerFrame:Show()
+    frb_UpdateClickCatcherVisibility()
+end
+
+function frb_MakeIconButton(parent, size)
+    local btn = CreateFrame("Button", nil, parent)
+    btn:SetWidth(size or 28)
+    btn:SetHeight(size or 28)
+
+    btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+
+    btn.icon = btn:CreateTexture(nil, "ARTWORK")
+    btn.icon:SetPoint("TOPLEFT", btn, 2, -2)
+    btn.icon:SetPoint("BOTTOMRIGHT", btn, -2, 2)
+
+    btn:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square")
+
+    return btn
+end
+
+function frb_MakeLetterButton(parent, text, size)
+    local btn = CreateFrame("Button", nil, parent)
+    local normalTexture, pushedTexture
+
+    btn:SetWidth(size or 24)
+    btn:SetHeight(size or 24)
+    btn:RegisterForClicks("LeftButtonUp")
+
+    normalTexture = btn:CreateTexture(nil, "BACKGROUND")
+    normalTexture:SetTexture("Interface\\Buttons\\UI-Quickslot2")
+    normalTexture:SetAllPoints(btn)
+    btn:SetNormalTexture(normalTexture)
+
+    pushedTexture = btn:CreateTexture(nil, "BACKGROUND")
+    pushedTexture:SetTexture("Interface\\Buttons\\UI-Quickslot-Depress")
+    pushedTexture:SetAllPoints(btn)
+    btn:SetPushedTexture(pushedTexture)
+
+    btn:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square")
+
+    btn.text = btn:CreateFontString(nil, "OVERLAY")
+    btn.text:SetAllPoints(btn)
+    btn.text:SetFont("Fonts\\FRIZQT__.TTF", 12, "OUTLINE")
+    btn.text:SetText(text or "")
+    btn.text:SetTextColor(1, 0.82, 0, 1)
+
+    return btn
+end
+function frb_MakeTinyButton(parent, text, width, height)
+    local btn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    btn:SetWidth(width or 60)
+    btn:SetHeight(height or 18)
+    btn:SetText(text or "")
+    return btn
+end
+
+function frb_UpdatePaladinSettingsRows()
+    local count, i, row, selected, role, roleText
+    if not frb_PaladinSettingsFrame then return end
+    count = frb_CountClassInCurrentSetup("paladin")
+
+    for i = 1, table.getn(frb_PaladinSettingsFrame.rows or {}) do
+        row = frb_PaladinSettingsFrame.rows[i]
+        row.label:Hide()
+        row.button:Hide()
+        if row.roleButton then row.roleButton:Hide() end
+    end
+
+    if not frb_PaladinSettingsFrame.emptyText then
+        frb_PaladinSettingsFrame.emptyText = frb_PaladinSettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        frb_PaladinSettingsFrame.emptyText:SetWidth(220)
+        frb_PaladinSettingsFrame.emptyText:SetPoint("TOP", frb_PaladinSettingsFrame, "TOP", 0, -42)
+        frb_PaladinSettingsFrame.emptyText:SetJustifyH("CENTER")
+    end
+
+    if count < 1 then
+        frb_PaladinSettingsFrame.emptyText:SetText("Add paladins to edit blessings.")
+        frb_PaladinSettingsFrame.emptyText:Show()
+        frb_PaladinSettingsFrame:SetHeight(115)
+        return
+    end
+
+    frb_PaladinSettingsFrame.emptyText:Hide()
+    frb_PaladinSettingsFrame.rows = frb_PaladinSettingsFrame.rows or {}
+    for i = 1, count do
+        row = frb_PaladinSettingsFrame.rows[i]
+        if not row then
+            row = {}
+            row.roleButton = frb_MakeIconButton(frb_PaladinSettingsFrame, 16)
+            row.roleButton:SetPoint("TOPLEFT", frb_PaladinSettingsFrame, "TOPLEFT", 14, -33 - ((i - 1) * 26))
+            row.label = frb_PaladinSettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            row.label:SetPoint("LEFT", row.roleButton, "RIGHT", 4, 0)
+            row.label:SetWidth(58)
+            row.label:SetJustifyH("LEFT")
+            row.button = frb_MakeIconButton(frb_PaladinSettingsFrame, 24)
+            row.button:SetPoint("TOPLEFT", frb_PaladinSettingsFrame, "TOPLEFT", 96, -29 - ((i - 1) * 26))
+            frb_PaladinSettingsFrame.rows[i] = row
+        end
+        selected = frb_CurrentPaladinBlessings[i]
+        role = frb_GetPaladinRoleForIndex(i)
+        roleText = frb_FormatRoleText(role)
+        row.label:SetText("Paladin " .. i)
+        if row.roleButton then
+            row.roleButton.icon:SetTexture(frb_RoleIcons[role] or "Interface\\Icons\\INV_Misc_QuestionMark")
+            row.roleButton.frb_roleText = roleText
+            row.roleButton:SetScript("OnEnter", function(self)
+                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                GameTooltip:SetText(self.frb_roleText or "Unknown role", 1, 1, 1)
+                GameTooltip:AddLine("Role for this paladin in the current preset.", 0.8, 0.8, 0.8, true)
+                GameTooltip:Show()
+            end)
+            row.roleButton:SetScript("OnLeave", function() GameTooltip:Hide() end)
+            row.roleButton:Show()
+        end
+        row.button.icon:SetTexture(frb_GetIcon(selected or frb_GetDefaultPaladinBlessing(i), frb_PaladinBlessingIcons))
+        row.button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+        row.button:SetScript("OnEnter", function(self)
+            frb_ShowSpellTooltip(self, frb_CurrentPaladinBlessings[self.frb_index] or frb_GetDefaultPaladinBlessing(self.frb_index), frb_PaladinBlessingLabels, frb_PaladinBlessingSpellNames, frb_GetDisplayLabel(frb_CurrentPaladinBlessings[self.frb_index], frb_PaladinBlessingLabels), "Left click to show all Blessings\nRight click to fast switch", frb_PaladinBlessingSpellIDs)
+        end)
+        row.button:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        row.button:SetScript("OnClick", function(self, button)
+            local index = self.frb_index
+            if button == "RightButton" then
+                frb_CurrentPaladinBlessings[index] = frb_CycleValue(frb_CurrentPaladinBlessings[index], frb_PaladinBlessingOrder)
+                frb_UpdatePaladinSettingsRows()
+            else
+                frb_ShowPicker("Paladin " .. index .. " Blessing", frb_PaladinBlessingOrder, frb_PaladinBlessingLabels, function(value)
+                    frb_CurrentPaladinBlessings[index] = value
+                    frb_UpdatePaladinSettingsRows()
+                end, frb_PaladinBlessingSpellNames, frb_PaladinBlessingSpellIDs, frb_PaladinBlessingIcons)
+            end
+        end)
+        row.button.frb_index = i
+        row.label:Show()
+        row.button:Show()
+    end
+    frb_PaladinSettingsFrame:SetHeight(70 + (count * 26))
+end
+function frb_OpenPaladinSettingsFrame()
+    if frb_PickerFrame then frb_PickerFrame:Hide() end
+    if not frb_PaladinSettingsFrame then
+        frb_EnsureClickCatcher()
+        frb_PaladinSettingsFrame = CreateFrame("Frame", "FRB_PaladinBlessingSettingsFrame", UIParent, "BackdropTemplate")
+        frb_PaladinSettingsFrame:SetWidth(260)
+        frb_PaladinSettingsFrame:SetHeight(160)
+        frb_RestoreFloatingFramePosition(frb_PaladinSettingsFrame, "paladin", "CENTER", -150, 0)
+        frb_PaladinSettingsFrame:SetFrameStrata("DIALOG")
+        frb_PaladinSettingsFrame:SetFrameLevel(65)
+        frb_MakeFloatingFrameMovable(frb_PaladinSettingsFrame, "paladin")
+        frb_PaladinSettingsFrame:SetBackdrop({ bgFile = "Interface/Tooltips/UI-Tooltip-Background", edgeFile = "Interface/Tooltips/UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } })
+        frb_PaladinSettingsFrame:SetBackdropColor(0, 0, 0, 1)
+        frb_PaladinSettingsFrame.title = frb_PaladinSettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        frb_PaladinSettingsFrame.title:SetPoint("TOP", frb_PaladinSettingsFrame, "TOP", 0, -10)
+        frb_PaladinSettingsFrame.title:SetText("Paladin Blessings")
+        frb_PaladinSettingsFrame.close = frb_MakeTinyButton(frb_PaladinSettingsFrame, "Close", 70, 20)
+        frb_PaladinSettingsFrame.close:SetPoint("BOTTOM", frb_PaladinSettingsFrame, "BOTTOM", 0, 10)
+        frb_PaladinSettingsFrame.close:SetScript("OnClick", function() frb_PaladinSettingsFrame:Hide() end)
+        frb_PaladinSettingsFrame:SetScript("OnMouseDown", function(self, button)
+            if frb_PickerFrame and frb_PickerFrame:IsShown() then
+                frb_PickerFrame:Hide()
+                frb_UpdateClickCatcherVisibility()
+            end
+            if button == "LeftButton" then
+                self:StartMoving()
+            end
+        end)
+        frb_PaladinSettingsFrame:SetScript("OnMouseUp", function(self, button)
+            if button == "LeftButton" then
+                self:StopMovingOrSizing()
+                frb_SaveFloatingFramePosition(self, "paladin")
+            end
+        end)
+        frb_PaladinSettingsFrame:SetScript("OnHide", function() frb_UpdateClickCatcherVisibility() end)
+        frb_RegisterEscCloseFrame("FRB_PaladinBlessingSettingsFrame")
+        frb_PaladinSettingsFrame.rows = {}
+    end
+    frb_UpdatePaladinSettingsRows()
+    frb_PaladinSettingsFrame:Show()
+    frb_UpdateClickCatcherVisibility()
+end
+
+function frb_UpdateShamanSettingsRows()
+    local count, visibleRows, i, s, row, slot, btn, selected, dataIndex, titleIndex, copyBtn, pasteBtn, role, roleText
+    if not frb_ShamanSettingsFrame then return end
+    count = frb_CountClassInCurrentSetup("shaman")
+
+    for i = 1, table.getn(frb_ShamanSettingsFrame.rows or {}) do
+        row = frb_ShamanSettingsFrame.rows[i]
+        row.label:Hide()
+        if row.roleIcon then row.roleIcon:Hide() end
+        if row.roleButton then row.roleButton:Hide() end
+        if row.roleLabel then row.roleLabel:Hide() end
+        for s = 1, table.getn(frb_TotemSlots) do row.buttons[s]:Hide() end
+        if row.copyButton then row.copyButton:Hide() end
+        if row.pasteButton then row.pasteButton:Hide() end
+    end
+
+    if frb_ShamanSettingsFrame.allCheckbox then
+        frb_ShamanSettingsFrame.allCheckbox:Hide()
+        frb_ShamanSettingsFrame.allCheckbox.text:Hide()
+    end
+
+    if not frb_ShamanSettingsFrame.emptyText then
+        frb_ShamanSettingsFrame.emptyText = frb_ShamanSettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        frb_ShamanSettingsFrame.emptyText:SetWidth(210)
+        frb_ShamanSettingsFrame.emptyText:SetPoint("TOP", frb_ShamanSettingsFrame, "TOP", 0, -42)
+        frb_ShamanSettingsFrame.emptyText:SetJustifyH("CENTER")
+    end
+
+    if count < 1 then
+        frb_ShamanSettingsFrame.emptyText:SetText("Add shamans to edit totems.")
+        frb_ShamanSettingsFrame.emptyText:Show()
+        frb_ShamanSettingsFrame:SetHeight(115)
+        return
+    end
+
+    frb_ShamanSettingsFrame.emptyText:Hide()
+
+    if not frb_ShamanSettingsFrame.allCheckbox then
+        frb_ShamanSettingsFrame.allCheckbox = CreateFrame("CheckButton", nil, frb_ShamanSettingsFrame, "UICheckButtonTemplate")
+        frb_ShamanSettingsFrame.allCheckbox:SetWidth(20)
+        frb_ShamanSettingsFrame.allCheckbox:SetHeight(20)
+        frb_ShamanSettingsFrame.allCheckbox:SetPoint("TOPLEFT", frb_ShamanSettingsFrame, "TOPLEFT", 12, -30)
+        frb_ShamanSettingsFrame.allCheckbox.text = frb_ShamanSettingsFrame.allCheckbox:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        frb_ShamanSettingsFrame.allCheckbox.text:SetPoint("LEFT", frb_ShamanSettingsFrame.allCheckbox, "RIGHT", 3, 0)
+        frb_ShamanSettingsFrame.allCheckbox.text:SetText("Use same totems for all shamans")
+        frb_ShamanSettingsFrame.allCheckbox:SetScript("OnClick", function(self)
+            frb_UseAllShamanTotems = self:GetChecked() and true or false
+            frb_UpdateShamanSettingsRows()
+        end)
+    end
+    frb_ShamanSettingsFrame.allCheckbox:SetChecked(frb_UseAllShamanTotems and true or false)
+    frb_ShamanSettingsFrame.allCheckbox:Show()
+    frb_ShamanSettingsFrame.allCheckbox.text:Show()
+
+    visibleRows = count
+    if frb_UseAllShamanTotems then visibleRows = 1 end
+
+    frb_ShamanSettingsFrame.rows = frb_ShamanSettingsFrame.rows or {}
+    for i = 1, visibleRows do
+        dataIndex = i
+        titleIndex = i
+        if frb_UseAllShamanTotems then
+            dataIndex = 0
+            titleIndex = 1
+        end
+
+        row = frb_ShamanSettingsFrame.rows[i]
+        if not row then
+            row = { buttons = {} }
+            row.roleButton = frb_MakeIconButton(frb_ShamanSettingsFrame, 16)
+            row.roleButton:SetPoint("TOPLEFT", frb_ShamanSettingsFrame, "TOPLEFT", 14, -59 - ((i - 1) * 28))
+            row.label = frb_ShamanSettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            row.label:SetPoint("LEFT", row.roleButton, "RIGHT", 4, 0)
+            row.label:SetWidth(58)
+            row.label:SetJustifyH("LEFT")
+            for s = 1, table.getn(frb_TotemSlots) do
+                btn = frb_MakeIconButton(frb_ShamanSettingsFrame, 24)
+                btn:SetPoint("TOPLEFT", frb_ShamanSettingsFrame, "TOPLEFT", 92 + ((s - 1) * 30), -57 - ((i - 1) * 28))
+                row.buttons[s] = btn
+            end
+            row.copyButton = frb_MakeLetterButton(frb_ShamanSettingsFrame, "C", 24)
+            row.copyButton:SetPoint("TOPLEFT", frb_ShamanSettingsFrame, "TOPLEFT", 222, -57 - ((i - 1) * 28))
+            row.pasteButton = frb_MakeLetterButton(frb_ShamanSettingsFrame, "P", 24)
+            row.pasteButton:SetPoint("TOPLEFT", frb_ShamanSettingsFrame, "TOPLEFT", 250, -57 - ((i - 1) * 28))
+            frb_ShamanSettingsFrame.rows[i] = row
+        end
+        if frb_UseAllShamanTotems then
+            row.label:SetText("All Shamans")
+            if row.roleButton then row.roleButton:Hide() end
+            if row.roleIcon then row.roleIcon:Hide() end
+            if row.roleLabel then row.roleLabel:Hide() end
+        else
+            role = frb_GetShamanRoleForIndex(i)
+            roleText = frb_FormatRoleText(role)
+            row.label:SetText("Shaman " .. i)
+            if row.roleButton then
+                row.roleButton.icon:SetTexture(frb_RoleIcons[role] or "Interface\\Icons\\INV_Misc_QuestionMark")
+                row.roleButton.frb_roleText = roleText
+                row.roleButton:SetScript("OnEnter", function(self)
+                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                    GameTooltip:SetText(self.frb_roleText or "Unknown role", 1, 1, 1)
+                    GameTooltip:AddLine("Role for this shaman in the current preset.", 0.8, 0.8, 0.8, true)
+                    GameTooltip:Show()
+                end)
+                row.roleButton:SetScript("OnLeave", function() GameTooltip:Hide() end)
+                row.roleButton:Show()
+            end
+            if row.roleIcon then row.roleIcon:Hide() end
+            if row.roleLabel then row.roleLabel:Hide() end
+        end
+        row.label:Show()
+        for s = 1, table.getn(frb_TotemSlots) do
+            slot = frb_TotemSlots[s]
+            btn = row.buttons[s]
+            selected = frb_CurrentShamanTotems[dataIndex] and frb_CurrentShamanTotems[dataIndex][slot]
+            btn.icon:SetTexture(frb_GetIcon(selected or frb_GetDefaultShamanTotem(slot, titleIndex), frb_TotemIcons))
+            btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+            btn.frb_index = dataIndex
+            btn.frb_titleIndex = titleIndex
+            btn.frb_slot = slot
+            btn:SetScript("OnEnter", function(self)
+                local currentValue = nil
+                local labelPrefix = "Shaman " .. self.frb_titleIndex
+                if frb_UseAllShamanTotems then labelPrefix = "All Shamans" end
+                if frb_CurrentShamanTotems[self.frb_index] then
+                    currentValue = frb_CurrentShamanTotems[self.frb_index][self.frb_slot]
+                end
+                frb_ShowSpellTooltip(self, currentValue or frb_GetDefaultShamanTotem(self.frb_slot, self.frb_titleIndex), frb_TotemLabels, frb_TotemSpellNames, frb_GetDisplayLabel(currentValue, frb_TotemLabels), labelPrefix .. "\nLeft click to show all " .. (frb_TotemSlotLabels[self.frb_slot] or self.frb_slot) .. " Totems\nRight click to fast switch", frb_TotemSpellIDs, frb_TotemSpellIDFallbacks)
+            end)
+            btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+            btn:SetScript("OnClick", function(self, button)
+                local index = self.frb_index
+                local titleIndexLocal = self.frb_titleIndex
+                local slotName = self.frb_slot
+                local pickerTitle
+                if not frb_CurrentShamanTotems[index] then frb_CurrentShamanTotems[index] = {} end
+                if button == "RightButton" then
+                    frb_CurrentShamanTotems[index][slotName] = frb_CycleValue(frb_CurrentShamanTotems[index][slotName], frb_TotemOptions[slotName])
+                    frb_UpdateShamanSettingsRows()
+                else
+                    pickerTitle = "Shaman " .. titleIndexLocal .. " " .. frb_TotemSlotLabels[slotName]
+                    if frb_UseAllShamanTotems then pickerTitle = "All Shamans " .. frb_TotemSlotLabels[slotName] end
+                    frb_ShowPicker(pickerTitle, frb_TotemOptions[slotName], frb_TotemLabels, function(value)
+                        if not frb_CurrentShamanTotems[index] then frb_CurrentShamanTotems[index] = {} end
+                        frb_CurrentShamanTotems[index][slotName] = value
+                        frb_UpdateShamanSettingsRows()
+                    end, frb_TotemSpellNames, frb_TotemSpellIDs, frb_TotemIcons, frb_TotemSpellIDFallbacks)
+                end
+            end)
+            btn:Show()
+        end
+
+        if row.copyButton and row.pasteButton then
+            if frb_UseAllShamanTotems then
+                row.copyButton:Hide()
+                row.pasteButton:Hide()
+            else
+                copyBtn = row.copyButton
+                pasteBtn = row.pasteButton
+                copyBtn.frb_index = dataIndex
+                pasteBtn.frb_index = dataIndex
+
+                if frb_CopiedShamanTotems then
+                    pasteBtn.text:SetTextColor(1, 0.82, 0, 1)
+                else
+                    pasteBtn.text:SetTextColor(0.45, 0.45, 0.45, 1)
+                end
+
+                copyBtn:SetScript("OnEnter", function(self)
+                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                    GameTooltip:SetText("Copy Shaman " .. self.frb_index, 1, 1, 1)
+                    GameTooltip:AddLine("Copy this shaman's totem setup.", 0.8, 0.8, 0.8, true)
+                    GameTooltip:Show()
+                end)
+                copyBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+                copyBtn:SetScript("OnClick", function(self)
+                    local index = self.frb_index
+                    local slotName
+                    local copied = {}
+                    for s = 1, table.getn(frb_TotemSlots) do
+                        slotName = frb_TotemSlots[s]
+                        if frb_CurrentShamanTotems[index] and frb_CurrentShamanTotems[index][slotName] then
+                            copied[slotName] = frb_CurrentShamanTotems[index][slotName]
+                        else
+                            copied[slotName] = frb_GetDefaultShamanTotem(slotName, index)
+                        end
+                    end
+                    frb_CopiedShamanTotems = copied
+                    frb_UpdateShamanSettingsRows()
+                end)
+
+                pasteBtn:SetScript("OnEnter", function(self)
+                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                    if frb_CopiedShamanTotems then
+                        GameTooltip:SetText("Paste to Shaman " .. self.frb_index, 1, 1, 1)
+                        GameTooltip:AddLine("Paste copied totem setup to this shaman.", 0.8, 0.8, 0.8, true)
+                    else
+                        GameTooltip:SetText("No copied setup", 1, 0.2, 0.2)
+                        GameTooltip:AddLine("Copy a shaman setup first.", 0.8, 0.8, 0.8, true)
+                    end
+                    GameTooltip:Show()
+                end)
+                pasteBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+                pasteBtn:SetScript("OnClick", function(self)
+                    local index = self.frb_index
+                    if not frb_CopiedShamanTotems then return end
+                    frb_CurrentShamanTotems[index] = frb_CopyTable(frb_CopiedShamanTotems)
+                    frb_UpdateShamanSettingsRows()
+                end)
+
+                copyBtn:Show()
+                pasteBtn:Show()
+            end
+        end
+    end
+    frb_ShamanSettingsFrame:SetHeight(98 + (visibleRows * 28))
+end
+function frb_OpenShamanSettingsFrame()
+    if frb_PickerFrame then frb_PickerFrame:Hide() end
+    if not frb_ShamanSettingsFrame then
+        frb_EnsureClickCatcher()
+        frb_ShamanSettingsFrame = CreateFrame("Frame", "FRB_ShamanTotemSettingsFrame", UIParent, "BackdropTemplate")
+        frb_ShamanSettingsFrame:SetWidth(325)
+        frb_ShamanSettingsFrame:SetHeight(180)
+        frb_RestoreFloatingFramePosition(frb_ShamanSettingsFrame, "shaman", "CENTER", 170, 0)
+        frb_ShamanSettingsFrame:SetFrameStrata("DIALOG")
+        frb_ShamanSettingsFrame:SetFrameLevel(65)
+        frb_MakeFloatingFrameMovable(frb_ShamanSettingsFrame, "shaman")
+        frb_ShamanSettingsFrame:SetBackdrop({ bgFile = "Interface/Tooltips/UI-Tooltip-Background", edgeFile = "Interface/Tooltips/UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } })
+        frb_ShamanSettingsFrame:SetBackdropColor(0, 0, 0, 1)
+        frb_ShamanSettingsFrame.title = frb_ShamanSettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        frb_ShamanSettingsFrame.title:SetPoint("TOP", frb_ShamanSettingsFrame, "TOP", 0, -10)
+        frb_ShamanSettingsFrame.title:SetText("Shaman Totems")
+        frb_ShamanSettingsFrame.close = frb_MakeTinyButton(frb_ShamanSettingsFrame, "Close", 70, 20)
+        frb_ShamanSettingsFrame.close:SetPoint("BOTTOM", frb_ShamanSettingsFrame, "BOTTOM", 0, 10)
+        frb_ShamanSettingsFrame.close:SetScript("OnClick", function() frb_ShamanSettingsFrame:Hide() end)
+        frb_ShamanSettingsFrame:SetScript("OnMouseDown", function(self, button)
+            if frb_PickerFrame and frb_PickerFrame:IsShown() then
+                frb_PickerFrame:Hide()
+                frb_UpdateClickCatcherVisibility()
+            end
+            if button == "LeftButton" then
+                self:StartMoving()
+            end
+        end)
+        frb_ShamanSettingsFrame:SetScript("OnMouseUp", function(self, button)
+            if button == "LeftButton" then
+                self:StopMovingOrSizing()
+                frb_SaveFloatingFramePosition(self, "shaman")
+            end
+        end)
+        frb_ShamanSettingsFrame:SetScript("OnHide", function() frb_UpdateClickCatcherVisibility() end)
+        frb_RegisterEscCloseFrame("FRB_ShamanTotemSettingsFrame")
+        frb_ShamanSettingsFrame.rows = {}
+    end
+    frb_UpdateShamanSettingsRows()
+    frb_ShamanSettingsFrame:Show()
+    frb_UpdateClickCatcherVisibility()
+end
+
+function frb_UpdateMageSettingsRows()
+    local count, visibleRows, i, row, selected, dataIndex, role, roleText
+    if not frb_MageSettingsFrame then return end
+    count = frb_CountClassInCurrentSetup("mage")
+
+    for i = 1, table.getn(frb_MageSettingsFrame.rows or {}) do
+        row = frb_MageSettingsFrame.rows[i]
+        row.label:Hide()
+        row.button:Hide()
+        if row.roleButton then row.roleButton:Hide() end
+    end
+
+    if frb_MageSettingsFrame.allCheckbox then
+        frb_MageSettingsFrame.allCheckbox:Hide()
+        frb_MageSettingsFrame.allCheckbox.text:Hide()
+    end
+    if frb_MageSettingsFrame.halfCheckbox then
+        frb_MageSettingsFrame.halfCheckbox:Hide()
+        frb_MageSettingsFrame.halfCheckbox.text:Hide()
+    end
+
+    if not frb_MageSettingsFrame.emptyText then
+        frb_MageSettingsFrame.emptyText = frb_MageSettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        frb_MageSettingsFrame.emptyText:SetWidth(220)
+        frb_MageSettingsFrame.emptyText:SetPoint("TOP", frb_MageSettingsFrame, "TOP", 0, -42)
+        frb_MageSettingsFrame.emptyText:SetJustifyH("CENTER")
+    end
+
+    if count < 1 then
+        frb_MageSettingsFrame.emptyText:SetText("Add mages to edit specs.")
+        frb_MageSettingsFrame.emptyText:Show()
+        frb_MageSettingsFrame:SetHeight(115)
+        return
+    end
+
+    frb_MageSettingsFrame.emptyText:Hide()
+
+    if not frb_MageSettingsFrame.allCheckbox then
+        frb_MageSettingsFrame.allCheckbox = CreateFrame("CheckButton", nil, frb_MageSettingsFrame, "UICheckButtonTemplate")
+        frb_MageSettingsFrame.allCheckbox:SetWidth(20)
+        frb_MageSettingsFrame.allCheckbox:SetHeight(20)
+        frb_MageSettingsFrame.allCheckbox:SetPoint("TOPLEFT", frb_MageSettingsFrame, "TOPLEFT", 12, -30)
+        frb_MageSettingsFrame.allCheckbox.text = frb_MageSettingsFrame.allCheckbox:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        frb_MageSettingsFrame.allCheckbox.text:SetPoint("LEFT", frb_MageSettingsFrame.allCheckbox, "RIGHT", 3, 0)
+        frb_MageSettingsFrame.allCheckbox.text:SetText("Use same spec for all mages")
+        frb_MageSettingsFrame.allCheckbox:SetScript("OnClick", function(self)
+            local cb = self or this
+            frb_UseAllMageSpecs = cb:GetChecked() and true or false
+            if frb_UseAllMageSpecs then
+                frb_UseHalfMageSpecs = false
+            end
+            frb_UpdateMageSettingsRows()
+        end)
+    end
+    if not frb_MageSettingsFrame.halfCheckbox then
+        frb_MageSettingsFrame.halfCheckbox = CreateFrame("CheckButton", nil, frb_MageSettingsFrame, "UICheckButtonTemplate")
+        frb_MageSettingsFrame.halfCheckbox:SetWidth(20)
+        frb_MageSettingsFrame.halfCheckbox:SetHeight(20)
+        frb_MageSettingsFrame.halfCheckbox:SetPoint("TOPLEFT", frb_MageSettingsFrame, "TOPLEFT", 12, -52)
+        frb_MageSettingsFrame.halfCheckbox.text = frb_MageSettingsFrame.halfCheckbox:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        frb_MageSettingsFrame.halfCheckbox.text:SetPoint("LEFT", frb_MageSettingsFrame.halfCheckbox, "RIGHT", 3, 0)
+        frb_MageSettingsFrame.halfCheckbox.text:SetText("50/50 Frost / Fire")
+        frb_MageSettingsFrame.halfCheckbox:SetScript("OnClick", function(self)
+            local cb = self or this
+            frb_UseHalfMageSpecs = cb:GetChecked() and true or false
+            if frb_UseHalfMageSpecs then
+                frb_UseAllMageSpecs = false
+                frb_CurrentMageSpecs = {}
+            end
+            frb_UpdateMageSettingsRows()
+        end)
+    end
+
+    frb_MageSettingsFrame.allCheckbox:SetChecked(frb_UseAllMageSpecs and true or false)
+    frb_MageSettingsFrame.halfCheckbox:SetChecked(frb_UseHalfMageSpecs and true or false)
+    frb_MageSettingsFrame.allCheckbox:Show()
+    frb_MageSettingsFrame.allCheckbox.text:Show()
+    frb_MageSettingsFrame.halfCheckbox:Show()
+    frb_MageSettingsFrame.halfCheckbox.text:Show()
+
+    visibleRows = count
+    if frb_UseHalfMageSpecs then frb_UseAllMageSpecs = false end
+    if frb_UseAllMageSpecs then visibleRows = 1 end
+
+    frb_MageSettingsFrame.rows = frb_MageSettingsFrame.rows or {}
+    for i = 1, visibleRows do
+        dataIndex = i
+        if frb_UseAllMageSpecs then dataIndex = 0 end
+        row = frb_MageSettingsFrame.rows[i]
+        if not row then
+            row = {}
+            row.roleButton = frb_MakeIconButton(frb_MageSettingsFrame, 16)
+            row.roleButton:SetPoint("TOPLEFT", frb_MageSettingsFrame, "TOPLEFT", 14, -81 - ((i - 1) * 28))
+            row.label = frb_MageSettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            row.label:SetPoint("LEFT", row.roleButton, "RIGHT", 4, 0)
+            row.label:SetWidth(78)
+            row.label:SetJustifyH("LEFT")
+            row.button = frb_MakeIconButton(frb_MageSettingsFrame, 24)
+            row.button:SetPoint("TOPLEFT", frb_MageSettingsFrame, "TOPLEFT", 120, -79 - ((i - 1) * 28))
+            frb_MageSettingsFrame.rows[i] = row
+        end
+
+        if frb_UseAllMageSpecs then
+            row.label:SetText("All Mages")
+            if row.roleButton then row.roleButton:Hide() end
+        else
+            role = frb_GetMageRoleForIndex(i)
+            if frb_GetRoleText then roleText = frb_GetRoleText(role) elseif frb_FormatRoleText then roleText = frb_FormatRoleText(role) else roleText = role end
+            row.label:SetText("Mage " .. i)
+            if row.roleButton then
+                row.roleButton.icon:SetTexture(frb_RoleIcons[role] or "Interface\\Icons\\INV_Misc_QuestionMark")
+                row.roleButton.frb_roleText = roleText
+                row.roleButton:SetScript("OnEnter", function(self)
+                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                    GameTooltip:SetText(self.frb_roleText or "Unknown role", 1, 1, 1)
+                    GameTooltip:AddLine("Role for this mage in the current preset.", 0.8, 0.8, 0.8, true)
+                    GameTooltip:Show()
+                end)
+                row.roleButton:SetScript("OnLeave", function() GameTooltip:Hide() end)
+                row.roleButton:Show()
+            end
+        end
+
+        selected = frb_GetMageSpec(dataIndex)
+        row.button.icon:SetTexture(frb_GetIcon(selected, frb_MageSpecIcons))
+        row.button.frb_index = dataIndex
+        row.button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+        row.button:SetScript("OnEnter", function(self)
+            frb_ShowSpellTooltip(self, frb_GetMageSpec(self.frb_index), frb_MageSpecLabels, frb_MageSpecSpellNames, frb_GetDisplayLabel(frb_GetMageSpec(self.frb_index), frb_MageSpecLabels), "Left click to show all specs\nRight click to fast switch", frb_MageSpecSpellIDs)
+        end)
+        row.button:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        row.button:SetScript("OnClick", function(self, button)
+            local index = self.frb_index
+            frb_ConvertHalfMageSpecsToIndividual()
+            if button == "RightButton" then
+                frb_CurrentMageSpecs[index] = frb_CycleValue(frb_CurrentMageSpecs[index], frb_MageSpecOrder)
+                frb_UpdateMageSettingsRows()
+            else
+                frb_ShowPicker((index == 0 and "All Mages" or ("Mage " .. index)) .. " Spec", frb_MageSpecOrder, frb_MageSpecLabels, function(value)
+                    frb_ConvertHalfMageSpecsToIndividual()
+                    frb_CurrentMageSpecs[index] = value
+                    frb_UpdateMageSettingsRows()
+                end, frb_MageSpecSpellNames, frb_MageSpecSpellIDs, frb_MageSpecIcons)
+            end
+        end)
+        row.label:Show()
+        row.button:Show()
+    end
+    frb_MageSettingsFrame:SetHeight(120 + (visibleRows * 28))
+end
+
+function frb_OpenMageSettingsFrame()
+    if frb_PickerFrame then frb_PickerFrame:Hide() end
+    if not frb_MageSettingsFrame then
+        frb_EnsureClickCatcher()
+        frb_MageSettingsFrame = CreateFrame("Frame", "FRB_MageSpecSettingsFrame", UIParent, "BackdropTemplate")
+        frb_MageSettingsFrame:SetWidth(250)
+        frb_MageSettingsFrame:SetHeight(160)
+        frb_RestoreFloatingFramePosition(frb_MageSettingsFrame, "mage", "CENTER", 0, 0)
+        frb_MageSettingsFrame:SetFrameStrata("DIALOG")
+        frb_MageSettingsFrame:SetFrameLevel(65)
+        frb_MakeFloatingFrameMovable(frb_MageSettingsFrame, "mage")
+        frb_MageSettingsFrame:SetBackdrop({ bgFile = "Interface/Tooltips/UI-Tooltip-Background", edgeFile = "Interface/Tooltips/UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } })
+        frb_MageSettingsFrame:SetBackdropColor(0, 0, 0, 1)
+        frb_MageSettingsFrame.title = frb_MageSettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        frb_MageSettingsFrame.title:SetPoint("TOP", frb_MageSettingsFrame, "TOP", 0, -10)
+        frb_MageSettingsFrame.title:SetText("Mage Spec")
+        frb_MageSettingsFrame.close = frb_MakeTinyButton(frb_MageSettingsFrame, "Close", 70, 20)
+        frb_MageSettingsFrame.close:SetPoint("BOTTOM", frb_MageSettingsFrame, "BOTTOM", 0, 10)
+        frb_MageSettingsFrame.close:SetScript("OnClick", function() frb_MageSettingsFrame:Hide() end)
+        frb_MageSettingsFrame:SetScript("OnMouseDown", function(self, button)
+            if frb_PickerFrame and frb_PickerFrame:IsShown() then
+                frb_PickerFrame:Hide()
+                frb_UpdateClickCatcherVisibility()
+            end
+            if button == "LeftButton" then self:StartMoving() end
+        end)
+        frb_MageSettingsFrame:SetScript("OnMouseUp", function(self, button)
+            if button == "LeftButton" then
+                self:StopMovingOrSizing()
+                frb_SaveFloatingFramePosition(self, "mage")
+            end
+        end)
+        frb_MageSettingsFrame:SetScript("OnHide", function() frb_UpdateClickCatcherVisibility() end)
+        frb_RegisterEscCloseFrame("FRB_MageSpecSettingsFrame")
+        frb_MageSettingsFrame.rows = {}
+    end
+    frb_UpdateMageSettingsRows()
+    frb_MageSettingsFrame:Show()
+    frb_UpdateClickCatcherVisibility()
+end
+
+function frb_CreateClassConfigButton(parent, classHeader, className)
+    local btn = CreateFrame("Button", nil, parent)
+    btn:SetWidth(14)
+    btn:SetHeight(14)
+    btn:SetPoint("LEFT", classHeader, "RIGHT", 6, 0)
+
+    btn.icon = btn:CreateTexture(nil, "ARTWORK")
+    btn.icon:SetPoint("CENTER", btn, "CENTER", 0, 0)
+    btn.icon:SetWidth(16)
+    btn.icon:SetHeight(16)
+    btn:SetNormalTexture("Interface\\Buttons\\UI-OptionsButton")
+
+
+
+    btn:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square")
+    btn:RegisterForClicks("LeftButtonUp")
+    btn:SetScript("OnClick", function()
+        if className == "paladin" then frb_OpenPaladinSettingsFrame() end
+        if className == "shaman" then frb_OpenShamanSettingsFrame() end
+        if className == "mage" then frb_OpenMageSettingsFrame() end
+    end)
+    btn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        if className == "paladin" then
+            GameTooltip:SetText("Paladin Blessings")
+            GameTooltip:AddLine("Left click to configure per-paladin blessings.", 0.8, 0.8, 0.8)
+        elseif className == "mage" then
+            GameTooltip:SetText("Mage Spec")
+            GameTooltip:AddLine("Left click to configure per-mage fire/frost spec.", 0.8, 0.8, 0.8)
+        else
+            GameTooltip:SetText("Shaman Totems")
+            GameTooltip:AddLine("Left click to configure per-shaman totems.", 0.8, 0.8, 0.8)
+        end
+        GameTooltip:Show()
+    end)
+    btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    return btn
+end
+
+
+
 for _, section in ipairs(SettingsConfig.sections) do
     for _, item in ipairs(section.items) do
         if item.type == "checkbox" and item.toggle then
@@ -74,7 +1591,7 @@ end
 
 
 
-----------------------VIP Detector--------------------------
+
 local vipFrame = CreateFrame("Frame", "VIPDetectorFrame")
 local isVIP = false
 local vipTimer = 0
@@ -164,9 +1681,9 @@ vipFrame:SetScript("OnEvent", function(self, event, arg1)
     end
 end)
 
--- ==============
--- auto repair --
--- ==============
+
+
+
 local durabilityFrame = CreateFrame("Frame", "DurabilityRepairFrame")
 durabilityFrame:RegisterEvent("PLAYER_UNGHOST")
 durabilityFrame:RegisterEvent("PLAYER_ALIVE")
@@ -264,7 +1781,7 @@ durabilityFrame:SetScript("OnEvent", function(self, event, ...)
 end)
 
 
-------------------------auto invite guild-----------------------------
+
 local guildCheckFrame = CreateFrame("Frame")
 guildCheckFrame:RegisterEvent("PLAYER_ENTERING_WORLD") 
 
@@ -286,7 +1803,7 @@ guildCheckFrame:SetScript("OnEvent", function(self, event)
     end)
 end)
 
-------------------------------------------------------------------------
+
 function CreateSeparatorLine(parent, x, y, width, anchor)
     local line = parent:CreateTexture(nil, "ARTWORK")
     line:SetHeight(1)
@@ -1659,12 +3176,14 @@ local function CheckAndRemoveDeadBots()
 		else
 			removeDeadBotsButton:Hide()
 		end
-	elseif autoRemoveEnabled then
+	else
 		removeDeadBotsButton:Hide()
 	end
 
 	isProcessing = false
 end
+
+UpdateRemoveDeadBotsButtonVisibility = CheckAndRemoveDeadBots
 
 
 
@@ -1845,9 +3364,9 @@ end
 
 
 
---========================
--- Helper: Determine which loot method to apply
---========================
+
+
+
 local function GetSelectedLootMethod()
     if FillRaidBotsSavedSettings.isFFAEnabled then
         return "freeforall"
@@ -1858,9 +3377,9 @@ local function GetSelectedLootMethod()
     end
 end
 
---========================
--- Loot Logic
---========================
+
+
+
 local hasAppliedLoot = false
 
 local function ApplySavedLootMethod()
@@ -1886,9 +3405,9 @@ local function ApplySavedLootMethod()
     hasAppliedLoot = true
 end
 
---==================================================
--- Event-frame
---==================================================
+
+
+
 resetBotFrame:SetScript("OnEvent", function(self, event, arg1)
 
     resetfirstbot_OnEvent(self, event)
@@ -1994,13 +3513,11 @@ local function QueueRemainingBots(healers, others, totalExpected)
     QueueDebugMessage("Adding: Totaly:" .. totalExpected, "debugfilling")
 
     for _, healer in ipairs(healers) do
-        QueueMessage(".partybot add " .. string.lower(healer), "SAY", true)
-        QueueDebugMessage("Added " .. healer, "debugfilling")
+        QueueMessage(frb_BuildAddBotCommand(healer), "SAY", true)
     end
 
     for _, other in ipairs(others) do
-        QueueMessage(".partybot add " .. string.lower(other), "SAY", true)
-        QueueDebugMessage("Added " .. other, "debugfilling")
+        QueueMessage(frb_BuildAddBotCommand(other), "SAY", true)
     end
 end
 
@@ -2128,8 +3645,7 @@ local function StartStarterBotSequence(healers, others)
 
                     if replacementBot then
                         stage3StartMembers = GetNumGroupMembers()
-                        QueueMessage(".partybot add " .. string.lower(replacementBot), "SAY", true)
-                        QueueDebugMessage("Added replacement bot: " .. replacementBot, "debugfilling")
+                        QueueMessage(frb_BuildAddBotCommand(replacementBot), "SAY", true)
                         secondBotAdded = true
                         stage = 4
                     else
@@ -2188,6 +3704,9 @@ end
 
 function FillRaid(skipStarterSequence, existingHealers, existingOthers, existingTotal)
 	shouldStopBotAdding = false
+    if not skipStarterSequence then
+        frb_ResetBotCommandCounters()
+    end
 
     if not skipStarterSequence then
         starterSwapDone = false
@@ -2362,8 +3881,7 @@ function FillRaid(skipStarterSequence, existingHealers, existingOthers, existing
             end
         end
 
-        QueueMessage(".partybot add " .. plainClass, "SAY", true)
-        QueueDebugMessage("Added " .. coloredClass, "debugfilling")
+        QueueMessage(frb_BuildAddBotCommand(plainClass), "SAY", true)
     end
 
     local function addOthers()
@@ -2416,10 +3934,10 @@ function FillRaid(skipStarterSequence, existingHealers, existingOthers, existing
 end
 
 
--------------------------fixgroups ------------------------------------------
 
 
-local b = "0"
+
+local b = "1"
 local function QueueMove(player, group)
     table.insert(moveQueue, {player = player, group = group})
 end
@@ -2650,7 +4168,7 @@ end
 
 SLASH_FIXGROUPS1 = "/fixgroups"
 
--------------------------------help buttons -----------------------------
+
 local function CreateHelpButton(parentFrame, relativeFrame, offsetX, offsetY, tooltipText, buttonText)
     local helpBtn = CreateFrame("Button", nil, parentFrame)
     helpBtn:SetWidth(16)
@@ -2689,7 +4207,7 @@ local function CreateHelpButton(parentFrame, relativeFrame, offsetX, offsetY, to
 
     return helpBtn
 end
-----------------------------------------------------------THE UI------------------------------------------------------------------------------------
+
 local function ShowStaticPopup(message, title, isConfirmation, onAccept)
     StaticPopupDialogs["FILLRAID_GENERIC_POPUP"] = {
         text = message,
@@ -3454,12 +4972,12 @@ function CreateFillRaidUI()
 
 	
 	local worldBossSubZones = {
-		["The Tainted Scar"] = true,        -- Blasted Lands (Lord Kazzak)
-		["Dream Bough"] = true,         -- Feralas (Emeriss)
-		["Bough Shadow"] = true,        -- Ashenvale (Ysondre)
-		["Seradane"] = true,            -- Hinterlands (Lethon)
-		["Twilight Grove"] = true,      -- Duskwood (Taerar)
-		["The Crystal Vale"] = true,    -- Silithus (Prince Thunderaan)
+		["The Tainted Scar"] = true,        
+		["Dream Bough"] = true,         
+		["Bough Shadow"] = true,        
+		["Seradane"] = true,            
+		["Twilight Grove"] = true,      
+		["The Crystal Vale"] = true,    
 	}
 
 	
@@ -3612,6 +5130,8 @@ function CreateFillRaidUI()
             return
         end
 
+        frb_LoadBotSettingsFromPreset(currentLoadedPreset)
+
         for classRole, inputBox in pairs(inputBoxes) do
             if inputBox then
                 inputBox:SetNumber(0)
@@ -3695,6 +5215,9 @@ function CreateFillRaidUI()
                     local classHeader = FillRaidFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
                     classHeader:SetPoint("TOPLEFT", FillRaidFrame, "TOPLEFT", classXOffset, classGroupYOffset)
                     classHeader:SetText(strupper(string.sub(class, 1, 1)) .. string.sub(class, 2))
+                    if class == "paladin" or class == "shaman" or class == "mage" then
+                        frb_CreateClassConfigButton(FillRaidFrame, classHeader, class)
+                    end
 
                    
                     classGroupYOffset = classGroupYOffset - 18
@@ -3795,7 +5318,8 @@ function CreateFillRaidUI()
 		  ReplaceDeadBot = {}
 		  resetData()
 		  UpdateReFillButtonVisibility()		  
-		  FillRaidFrame:Hide()  
+		  FillRaidFrame:Hide()
+          if frb_CloseBotSettingFrames then frb_CloseBotSettingFrames() end
 	  end)
 
 
@@ -3807,6 +5331,7 @@ function CreateFillRaidUI()
 	  closeButton:SetText("Close")
 	  closeButton:SetScript("OnClick", function()
 		  FillRaidFrame:Hide()
+          if frb_CloseBotSettingFrames then frb_CloseBotSettingFrames() end
 		  fillRaidFrameManualClose = true 
 	  end)
 
@@ -3908,7 +5433,8 @@ local KEY_ENTER = 13
 
 
 local PresetPopup = CreateFrame("Frame", "PresetPopupFrame", UIParent, "BackdropTemplate")
-PresetPopup:SetSize(300, 250)
+PresetPopup:SetWidth(360)
+PresetPopup:SetHeight(250)
 PresetPopup:SetPoint("CENTER", UIParent, "CENTER")
 PresetPopup:SetFrameStrata("DIALOG")
 PresetPopup:SetBackdrop({
@@ -3995,7 +5521,7 @@ local popupLabel = PresetPopup:CreateFontString(nil, "OVERLAY", "GameFontNormal"
 popupLabel:SetPoint("TOP", PresetPopup, "TOP", 0, -10)
 
 
-local helpButton = CreateHelpButton(PresetPopup, popupLabel, 10, 0, "Enter name:\n  - Preset name to save the current setup\n\nBoss names:\n  - Name of the boss or mob for the Ctrl+Alt+Click function\n\nZone button:\n  - Adds your current zone to the boss list\n\nTip:\n  - Hold Alt and click a mob to add it to the list.", "Preset Help")
+local helpButton = CreateHelpButton(PresetPopup, popupLabel, 10, 0, "Enter name:\n  - Preset name to save the current setup\n\nBoss names:\n  - Name of the boss or mob for the Ctrl+Alt+Click function\n\nZone button:\n  - Adds your current zone to the boss list\n\nAll button:\n  - Adds this preset for every zone\n\nTip:\n  - Hold Alt and click a mob to add it to the list.", "Preset Help")
 
 
 local presetInput = CreateInputBox(PresetPopup, "TOP", true)
@@ -4014,8 +5540,11 @@ bossInputLabel:SetText("Boss Names or Zone: (optional)")
 local addBossButton = CreateButton(PresetPopup, 60, 20, "LEFT", "Add")
 addBossButton:SetPoint("LEFT", bossInput, "RIGHT", 5, 0)
 
-local addZoneButton = CreateButton(PresetPopup, 60, 20, "LEFT", "Zone") 
+local addZoneButton = CreateButton(PresetPopup, 50, 20, "LEFT", "Zone") 
 addZoneButton:SetPoint("LEFT", addBossButton, "RIGHT", 5, 0)
+
+local addAllZonesButton = CreateButton(PresetPopup, 45, 20, "LEFT", "All")
+addAllZonesButton:SetPoint("LEFT", addZoneButton, "RIGHT", 5, 0)
 
 
 local bossListScrollFrame = CreateFrame("ScrollFrame", "BossListScrollFrame", PresetPopup, "UIPanelScrollFrameTemplate")
@@ -4023,7 +5552,7 @@ bossListScrollFrame:SetPoint("TOPLEFT", 10, -80)
 bossListScrollFrame:SetPoint("BOTTOMRIGHT", -30, 40)
 
 local bossListScrollChild = CreateFrame("Frame", "BossListScrollChild", bossListScrollFrame)
-bossListScrollChild:SetWidth(200)
+bossListScrollChild:SetWidth(300)
 bossListScrollChild:SetHeight(1)
 bossListScrollFrame:SetScrollChild(bossListScrollChild)
 
@@ -4042,6 +5571,7 @@ end
 
 local AddBossDirectly
 local AddCurrentZoneToBosses
+local AddAllZonesToBosses
 
 function RefreshBossList()
     for i = 1, tableSize(bossListItems) do
@@ -4067,7 +5597,11 @@ function RefreshBossList()
 
         local label = itemFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         label:SetPoint("LEFT", itemFrame, "LEFT", 5, 0)
-        label:SetText("- " .. bossName)
+        if strlower(bossName or "") == "all" then
+            label:SetText("- All zones")
+        else
+            label:SetText("- " .. bossName)
+        end
         label:SetJustifyH("LEFT")
 
         local removeButton = CreateFrame("Button", nil, itemFrame, "UIPanelButtonTemplate")
@@ -4089,7 +5623,12 @@ function RefreshBossList()
 
         itemFrame:SetScript("OnEnter", function()
             GameTooltip:SetOwner(itemFrame, "ANCHOR_RIGHT")
-            GameTooltip:SetText("ALT-click to add again")
+            if strlower(bossName or "") == "all" then
+                GameTooltip:SetText("All zones", 1, 1, 1)
+                GameTooltip:AddLine("This preset will be shown for every zone.", 0.8, 0.8, 0.8, true)
+            else
+                GameTooltip:SetText("ALT-click to add again")
+            end
             GameTooltip:Show()
         end)
         itemFrame:SetScript("OnLeave", function()
@@ -4150,6 +5689,21 @@ AddCurrentZoneToBosses = function()
     DEFAULT_CHAT_FRAME:AddMessage(zone .. " added to list!")
 end
 
+AddAllZonesToBosses = function()
+    if not PresetPopup:IsVisible() then return end
+
+    for _, existing in pairs(currentBosses) do
+        if strlower(existing or "") == "all" then
+            ShowStaticPopup("All zones already in list!", "ERROR")
+            return
+        end
+    end
+
+    tinsert(currentBosses, "all")
+    RefreshBossList()
+    DEFAULT_CHAT_FRAME:AddMessage("All zones added to list!")
+end
+
 addBossButton:SetScript("OnClick", function()
     local name = strtrim(bossInput:GetText())
     if name ~= "" then
@@ -4161,6 +5715,7 @@ end)
 addZoneButton:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
     GameTooltip:SetText("Add current zone")
+    GameTooltip:AddLine("This preset will be shown for your current zone.", 0.8, 0.8, 0.8, true)
     GameTooltip:Show()
 end)
 
@@ -4169,6 +5724,19 @@ addZoneButton:SetScript("OnLeave", function()
 end)
 addZoneButton:SetScript("OnClick", function()
     AddCurrentZoneToBosses()
+end)
+
+addAllZonesButton:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText("All zones", 1, 1, 1)
+    GameTooltip:AddLine("This preset will be shown for every zone.", 0.8, 0.8, 0.8, true)
+    GameTooltip:Show()
+end)
+addAllZonesButton:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+end)
+addAllZonesButton:SetScript("OnClick", function()
+    AddAllZonesToBosses()
 end)
 
 local targetScanFrame = CreateFrame("Frame")
@@ -4233,14 +5801,20 @@ saveButtonPresetPopup:SetScript("OnClick", function()
                 presetList[i].bosses = bosses
                 
                
+                if type(presetList[i].values) ~= "table" then
+                    presetList[i].values = {}
+                end
                 for classRole, inputBox in pairs(inputBoxes) do
                     if inputBox then
                         local value = tonumber(inputBox:GetText())
                         if value and value > 0 then
                             presetList[i].values[classRole] = value
+                        else
+                            presetList[i].values[classRole] = nil
                         end
                     end
                 end
+                frb_SaveBotSettingsToPreset(presetList[i])
                 
                 PresetPopup:Hide()
                 DEFAULT_CHAT_FRAME:AddMessage("Updated preset: \"" .. name .. "\"")
@@ -4278,6 +5852,7 @@ saveButtonPresetPopup:SetScript("OnClick", function()
             end
         end
 
+        frb_SaveBotSettingsToPreset(newPreset)
         table.insert(presetList, newPreset)
         PresetPopup:Hide()
         DEFAULT_CHAT_FRAME:AddMessage("Saved new preset: \"" .. name .. "\"")
@@ -4541,7 +6116,7 @@ PresetPopup:SetScript("OnHide", function()
         removeButton:Show()
     end
 end)
--------------------------------------------export suppress -----------------------------------------------------------------------
+
 local SuppressExportFrame = CreateFrame("Frame", "FillRaidSuppressExportFrame", UIParent, "BackdropTemplate")
 SuppressExportFrame:SetBackdrop({
     bgFile = "Interface/Tooltips/UI-Tooltip-Background",
@@ -4715,7 +6290,7 @@ closeSuppressButton:SetScript("OnClick", function()
 end)
 
 
---------------------------------------------SuppressBotMsgList-------------------------------------------------------------------
+
 
 
 SuppressEditor = CreateFrame("Frame", "SuppressEditorFrame", UIParent, "BackdropTemplate")
@@ -4897,7 +6472,7 @@ end)
 
 
 
---------------------------------------------Restore default-----------------------------------------------------------------------
+
 local restoreDefaultsButton = CreateFrame("Button", nil, FillRaidFrame, "GameMenuButtonTemplate")
 restoreDefaultsButton:SetText("Defaults")
 restoreDefaultsButton:SetWidth(80)
@@ -4939,7 +6514,7 @@ end)
 
 
 
--------------------------export/import................................
+
 
 local ExportFrame = CreateFrame("Frame", "FillRaidExportFrame", UIParent, "BackdropTemplate")
 ExportFrame:SetBackdrop({
@@ -5157,7 +6732,7 @@ end)
 
 
 
--------------------------------------------------------------------------------------------------------------------------------------
+
 	local editmodeshown = false
 	local editButton = CreateFrame("Button", nil, FillRaidFrame, "GameMenuButtonTemplate")
 	editButton:SetPoint("TOPRIGHT", FillRaidFrame, "TOPRIGHT", -10, -50)
@@ -5396,11 +6971,15 @@ CreditsFrame:Hide()
             InstanceButtonsFrame:Hide()
             ClickBlockerFrame:Show()
 			
-			if currentInstanceLabel then
-				currentInstanceLabel:SetText("Instance: " .. label)
-				currentInstanceLabel:SetFont("Fonts\\ARIALN.TTF", 10, "OUTLINE")
+			if FRB_SetCurrentInstanceContext then
+				FRB_SetCurrentInstanceContext(frameName, label)
+			else
 				currentInstanceName = presetName
-				
+				if currentInstanceLabel then
+					currentInstanceLabel:SetText("Instance: " .. label)
+					currentInstanceLabel:SetFont("Fonts\\ARIALN.TTF", 10, "OUTLINE")
+					currentInstanceLabel:Show()
+				end
 			end			
 			
             local frame = instanceFrames[frameName]
@@ -5658,6 +7237,10 @@ function CreateInstanceFrame(name, presets, label)
                 end
             end
 
+            if FRB_SetCurrentInstanceContext then
+                FRB_SetCurrentInstanceContext(name)
+            end
+
             currentLoadedPreset = preset
             ReapplyCurrentPreset()
 
@@ -5870,9 +7453,9 @@ function ToggleTutorialLinks(value)
     end
 end
 
--- ==================
--- open zone presets
--- ==================
+
+
+
 local ZoneToPreset = {
     ["Naxxramas"] = "PresetDungeounNaxxramas",
     ["Blackwing Lair"] = "PresetDungeounBWL",
@@ -5882,24 +7465,93 @@ local ZoneToPreset = {
     ["Ruins of Ahn'Qiraj"] = "PresetDungeounAQ20",
     ["Zul'Gurub"] = "PresetDungeounZG",
 }
+
+local PresetFrameToInstanceKey = {
+    ["PresetDungeounNaxxramas"] = "naxxramasPresets",
+    ["PresetDungeounBWL"] = "bwlPresets",
+    ["PresetDungeounMC"] = "mcPresets",
+    ["PresetDungeounOnyxia"] = "onyxiaPresets",
+    ["PresetDungeounAQ40"] = "aq40Presets",
+    ["PresetDungeounAQ20"] = "aq20Presets",
+    ["PresetDungeounZG"] = "ZGPresets",
+    ["PresetDungeounOther"] = "otherPresets",
+}
+
+local PresetFrameToDisplayLabel = {
+    ["PresetDungeounNaxxramas"] = "Naxxramas",
+    ["PresetDungeounBWL"] = "BWL",
+    ["PresetDungeounMC"] = "MC",
+    ["PresetDungeounOnyxia"] = "Onyxia",
+    ["PresetDungeounAQ40"] = "AQ40",
+    ["PresetDungeounAQ20"] = "AQ20",
+    ["PresetDungeounZG"] = "ZG",
+    ["PresetDungeounOther"] = "Other",
+}
+
+function FRB_SetCurrentInstanceContext(frameName, overrideLabel)
+    local presetKey = PresetFrameToInstanceKey and PresetFrameToInstanceKey[frameName]
+    local displayLabel = overrideLabel or (PresetFrameToDisplayLabel and PresetFrameToDisplayLabel[frameName])
+
+    if presetKey then
+        currentInstanceName = presetKey
+    end
+
+    if currentInstanceLabel and displayLabel then
+        currentInstanceLabel:SetText("Instance: " .. displayLabel)
+        currentInstanceLabel:SetFont("Fonts\\ARIALN.TTF", 10, "OUTLINE")
+        currentInstanceLabel:Show()
+    end
+end
+local function FRB_HasPresetForZoneOrAll(presetTable, zone)
+    local i, preset, b, bossName, lowerBoss, lowerZone
+    if type(presetTable) ~= "table" then return false end
+    lowerZone = strlower(strtrim(zone or ""))
+
+    for i = 1, table.getn(presetTable) do
+        preset = presetTable[i]
+        if preset and type(preset.bosses) == "table" then
+            for b = 1, table.getn(preset.bosses) do
+                bossName = preset.bosses[b]
+                lowerBoss = strlower(strtrim(bossName or ""))
+                if lowerBoss == "all" or (lowerZone ~= "" and lowerBoss == lowerZone) then
+                    return true
+                end
+            end
+        end
+    end
+
+    return false
+end
+
 function OpenPresetForCurrentZone()
     local zone = GetRealZoneText()
     local frameName = ZoneToPreset[zone]
+    local frame
 
     if frameName then
-        local frame = getglobal(frameName)
-        if frame then
-		    frame.headerText:SetText(zone)
-            frame:Show()
-			ClickBlockerFrame:Show() 
+        frame = getglobal(frameName)
+    end
+
+    if frame then
+        if frame.headerText then
+            frame.headerText:SetText(zone)
         end
+        if FRB_SetCurrentInstanceContext then
+            FRB_SetCurrentInstanceContext(frameName)
+        end
+        frame:Show()
+        ClickBlockerFrame:Show()
     else
-        DEFAULT_CHAT_FRAME:AddMessage("No preset mapped for this zone.")
+        
+        
+        if not FRB_HasPresetForZoneOrAll(otherPresets, zone) then
+            DEFAULT_CHAT_FRAME:AddMessage("No preset mapped for this zone.")
+        end
     end
 end	
--- ================================
--- add bots with a slash command --
--- ================================
+
+
+
 local allPresets = {
     naxxramasPresets,
     bwlPresets,
@@ -5938,7 +7590,8 @@ local function CollectMatchingPresets(msg, exactMatchOnly)
 
                     if not matchFound and preset.bosses then
                         for _, bossName in ipairs(preset.bosses) do
-                            if string.lower(strtrim(bossName)) == lowerMsg then
+                            local lowerBossName = string.lower(strtrim(bossName))
+                            if lowerBossName == lowerMsg or lowerBossName == "all" then
                                 matchFound = true
                                 break
                             end
@@ -6468,6 +8121,8 @@ function SavePresetValues()
             end
         end
     end
+
+    frb_SaveBotSettingsToPreset(presetList[presetIndex])
 
     ShowStaticPopup("Preset \"" .. currentPresetName .. "\" saved for |cff00ccff" .. faction .. "|r - |cff88ff88" .. currentInstanceName .. "|r", "Preset Saved")
 end
@@ -7230,7 +8885,7 @@ RunRefillPass = function()
             else
                 count = count + 1
                 QueueDebugMessage(playerName .. " - Class: " .. data.classColored .. ", Role: " .. data.role, "debugfilling")
-                QueueMessage(".partybot add " .. data.ClassNoColor .. " " .. data.role, "SAY", true)
+                QueueMessage(frb_BuildAddBotCommand(data.ClassNoColor .. " " .. data.role), "SAY", true)
 
                 PendingRefill[playerName] = {
                     data = data,
@@ -7280,9 +8935,9 @@ end
 reFillButton:SetScript("OnClick", RefillBots)
 
 UpdateReFillButtonVisibility()
---=====================================================
--- GetButtonLayout - vertical or horizontal
---=====================================================
+
+
+
 function GetButtonLayout()
 
     if FillRaidBotsSavedSettings
@@ -7297,9 +8952,9 @@ function GetButtonLayout()
 
     return "vertical"
 end
--- =====================================================
--- Refractored to allow spacing from the UIsettings file
--- =====================================================
+
+
+
 
 
 function GetButtonSpacing()
@@ -7746,7 +9401,7 @@ SlashCmdList["FRB"] = function(cmd)
         end
     end
 end
---------------------------------------------------------------------------------------------------------------------
+
 local function ShowVersionPopupOnce()
     if not FillRaidBotsSavedSettings then
         FillRaidBotsSavedSettings = {}
@@ -7756,23 +9411,14 @@ local function ShowVersionPopupOnce()
     if FillRaidBotsSavedSettings.lastPopupVersionSeen ~= versionNumber then
 	local versionDetails = {
 		{"Fast Fill", "Hold Ctrl + Alt and click a boss to automatically fill using presets."},
+		{"Advanced Bot Configuration", "Configure Paladin blessings, Shaman totems, and Mage specs directly in-game."},
+		{"Mage Spec System", "Supports Frost, Fire, Random, same-spec mode, and 50/50 Frost/Fire setups."},
+		{"Shaman Totem System", "Configure individual totem setups with copy/paste support and role icons."},
+		{"Paladin Blessings", "Assign blessings individually for each Paladin with fast switching support."},
 		{"Refill System", "Automatically replaces dead bots until your group is full again."},
-		{"Auto Remove", "Automatically removes the starter bot and dead bots."},
-		{"Auto Repair", "Automatically repairs after resurrection (VIP only)."},
-		{"Auto Join Guild", "Joins SoloCraft automatically if you are not in a guild."},
-
-		{"Party Bots", "Adding fewer than 5 bots keeps the group as a party."},
-		{"Edit Presets In-Game", "Edit and save presets directly in-game."},
-		{"VIP Presets", "Use enhanced preset values when VIP mode is enabled."},
-
 		{"Tutorial Links", "Optional in-game boss guides with multiple sources and fallback support."},
-		{"Export / Import", "Share presets between accounts using export/import."},
-
 		{"Customizable Buttons", "Move, resize, and change button layouts in settings."},
-
-		{"Reload UI", "Reload UI using /rl or /reload without /console."},
-		{"Release Notes", "Shown once after updating to a new version."},
-		{"Other Fixes", "Improved \"raid filling complete\" accuracy."}
+		{"Other Fixes", "Improved preset handling, raid filling accuracy, and Classic compatibility."}
 	}
 
        
@@ -7962,9 +9608,9 @@ frbUpdatePopupInitFrame:SetScript("OnEvent", function()
     HookVersionTextUpdatePopup()
     MaybeShowUpdateVersionPopup()
 end)
--- ================== ==
--- Daily tips in chat --
--- =====================
+
+
+
 local function ShowDailyTipInChat()
 	if not DailyTipEnabled then return end
 
@@ -8049,7 +9695,7 @@ local function ShowDailyTipInChat()
     end)
 end
 
---------------------------------------------------------------------------------------------------------------------
+
 
 
 local Guard = string.format("%d.%d.%d", a, b, c)
@@ -8313,4 +9959,738 @@ end
 
 
 
-----------------------------------------------------------------------------------------------------------------------
+frb_MageSpecIcons = {
+    frost = "Interface\\Icons\\Spell_Frost_FrostBolt02",
+    fire = "Interface\\Icons\\Spell_Fire_FlameBolt",
+    random = "Interface\\Icons\\INV_Misc_QuestionMark",
+}
+
+
+
+
+frb_UseHalfMageSpecs = frb_UseHalfMageSpecs or false
+frb_CurrentMageAllSpec = frb_CurrentMageAllSpec or nil
+frb_BotSettingMaxVisibleRows = 10
+
+function frb_Min(a, b)
+    if a < b then return a end
+    return b
+end
+
+function frb_Max(a, b)
+    if a > b then return a end
+    return b
+end
+
+function frb_CreateCompatFrame(name, parent)
+    if BackdropTemplateMixin then
+        return CreateFrame("Frame", name, parent, "BackdropTemplate")
+    end
+    return CreateFrame("Frame", name, parent)
+end
+
+function frb_EnsureSettingScrollFrame(frame, name, width, topOffset, rowHeight, maxRows)
+    if not frame then return nil end
+    if not frame.scrollFrame then
+        frame.scrollFrame = CreateFrame("ScrollFrame", name .. "ScrollFrame", frame)
+        frame.scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, topOffset)
+        frame.scrollFrame:SetWidth(width)
+        frame.scrollFrame:EnableMouseWheel(true)
+
+        frame.scrollChild = CreateFrame("Frame", name .. "ScrollChild", frame.scrollFrame)
+        frame.scrollChild:SetWidth(width - 20)
+        frame.scrollFrame:SetScrollChild(frame.scrollChild)
+
+        frame.scrollBar = CreateFrame("Slider", name .. "ScrollBar", frame.scrollFrame, "UIPanelScrollBarTemplate")
+        frame.scrollBar:SetPoint("TOPRIGHT", frame.scrollFrame, "TOPRIGHT", -4, -14)
+        frame.scrollBar:SetWidth(16)
+        frame.scrollBar:SetValueStep(rowHeight or 26)
+        frame.scrollBar:SetValue(0)
+        frame.scrollBar:SetScript("OnValueChanged", function(self)
+            local bar = self or this
+            if frame.scrollFrame and bar then
+                frame.scrollFrame:SetVerticalScroll(bar:GetValue() or 0)
+            end
+        end)
+        frame.scrollFrame:SetScript("OnMouseWheel", function(self, delta)
+            local d = delta or arg1 or 0
+            local current = frame.scrollBar:GetValue() or 0
+            local minVal, maxVal = frame.scrollBar:GetMinMaxValues()
+            local step = (rowHeight or 26) * 3
+            local newVal = current - (d * step)
+            if newVal < minVal then newVal = minVal end
+            if newVal > maxVal then newVal = maxVal end
+            frame.scrollBar:SetValue(newVal)
+        end)
+    end
+    return frame.scrollChild
+end
+
+function frb_UpdateSettingScrollFrame(frame, totalRows, width, topOffset, rowHeight, maxRows)
+    local visibleRows, viewportHeight, contentHeight, maxScroll
+    if not frame then return nil end
+    totalRows = tonumber(totalRows) or 0
+    rowHeight = rowHeight or 26
+    maxRows = maxRows or frb_BotSettingMaxVisibleRows
+    visibleRows = totalRows
+    if visibleRows < 1 then visibleRows = 1 end
+    if visibleRows > maxRows then visibleRows = maxRows end
+
+    frb_EnsureSettingScrollFrame(frame, frame:GetName() or "FRB_Setting", width, topOffset, rowHeight, maxRows)
+
+    viewportHeight = (visibleRows * rowHeight) + 4
+    contentHeight = (totalRows * rowHeight) + 4
+    if contentHeight < viewportHeight then contentHeight = viewportHeight end
+
+    frame.scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, topOffset)
+    frame.scrollFrame:SetWidth(width)
+    frame.scrollFrame:SetHeight(viewportHeight)
+    frame.scrollChild:SetWidth(width - 20)
+    frame.scrollChild:SetHeight(contentHeight)
+    frame.scrollBar:SetHeight(frb_Max(20, viewportHeight - 28))
+
+    maxScroll = frb_Max(0, contentHeight - viewportHeight)
+    frame.scrollBar:SetMinMaxValues(0, maxScroll)
+    if (frame.scrollBar:GetValue() or 0) > maxScroll then
+        frame.scrollBar:SetValue(maxScroll)
+    end
+
+    if totalRows > maxRows then
+        frame.scrollBar:Show()
+    else
+        frame.scrollBar:SetValue(0)
+        frame.scrollBar:Hide()
+    end
+
+    frame.scrollFrame:Show()
+    return frame.scrollChild, viewportHeight
+end
+
+function frb_EnsureBotSettings(preset)
+    if type(preset) ~= "table" then return end
+    if type(preset.botSettings) ~= "table" then preset.botSettings = {} end
+    if type(preset.botSettings.paladinBlessings) ~= "table" then preset.botSettings.paladinBlessings = {} end
+    if type(preset.botSettings.shamanTotems) ~= "table" then preset.botSettings.shamanTotems = {} end
+    if type(preset.botSettings.mageSpecs) ~= "table" then preset.botSettings.mageSpecs = {} end
+end
+
+function frb_LoadBotSettingsFromPreset(preset)
+    frb_CurrentPaladinBlessings = {}
+    frb_CurrentShamanTotems = {}
+    frb_CurrentMageSpecs = {}
+    frb_CurrentMageAllSpec = nil
+    frb_UseAllShamanTotems = false
+    frb_UseAllMageSpecs = false
+    frb_UseHalfMageSpecs = false
+    if type(preset) ~= "table" then return end
+    frb_EnsureBotSettings(preset)
+    frb_CurrentPaladinBlessings = frb_CopyTable(preset.botSettings.paladinBlessings)
+    frb_CurrentShamanTotems = frb_CopyTable(preset.botSettings.shamanTotems)
+    frb_CurrentMageSpecs = frb_CopyTable(preset.botSettings.mageSpecs)
+    frb_CurrentMageAllSpec = preset.botSettings.mageAllSpec
+    if (not frb_CurrentMageAllSpec or frb_CurrentMageAllSpec == "") and preset.botSettings.mageSpecs then
+        frb_CurrentMageAllSpec = preset.botSettings.mageSpecs[0]
+    end
+    frb_UseAllShamanTotems = preset.botSettings.shamanUseAllTotems and true or false
+    frb_UseAllMageSpecs = preset.botSettings.mageUseAllSpecs and true or false
+    frb_UseHalfMageSpecs = preset.botSettings.mageUseHalfSpecs and true or false
+    if frb_UseHalfMageSpecs then frb_UseAllMageSpecs = false end
+    if frb_UseHalfMageSpecs or frb_UseAllMageSpecs then frb_CurrentMageSpecs = {} end
+end
+
+function frb_SaveBotSettingsToPreset(preset)
+    local allSpec
+
+    if type(preset) ~= "table" then return end
+    frb_EnsureBotSettings(preset)
+    preset.botSettings.paladinBlessings = frb_CopyTable(frb_CurrentPaladinBlessings)
+    preset.botSettings.shamanTotems = frb_CopyTable(frb_CurrentShamanTotems)
+    preset.botSettings.shamanUseAllTotems = frb_UseAllShamanTotems and true or false
+    preset.botSettings.mageUseAllSpecs = frb_UseAllMageSpecs and true or false
+    preset.botSettings.mageUseHalfSpecs = frb_UseHalfMageSpecs and true or false
+
+    if frb_UseHalfMageSpecs then
+        preset.botSettings.mageSpecs = nil
+        preset.botSettings.mageAllSpec = nil
+        preset.botSettings.mageUseAllSpecs = false
+    elseif frb_UseAllMageSpecs then
+        allSpec = frb_CurrentMageAllSpec
+        if (not allSpec or allSpec == "") and frb_CurrentMageSpecs then
+            allSpec = frb_CurrentMageSpecs[0] or frb_CurrentMageSpecs[1]
+        end
+        if not allSpec or allSpec == "" then
+            allSpec = frb_GetDefaultMageSpec and frb_GetDefaultMageSpec(1) or "frost"
+        end
+        preset.botSettings.mageSpecs = nil
+        preset.botSettings.mageAllSpec = allSpec
+        preset.botSettings.mageUseHalfSpecs = false
+    else
+        preset.botSettings.mageSpecs = frb_CopyTable(frb_CurrentMageSpecs)
+        preset.botSettings.mageAllSpec = nil
+    end
+end
+
+function frb_GetDefaultMageSpec(index)
+    if frb_UseHalfMageSpecs then
+        local mageCount = frb_CountClassInCurrentSetup("mage")
+        local halfPoint = math.ceil((tonumber(mageCount) or 0) / 2)
+        if (tonumber(index) or 1) <= halfPoint then
+            return "frost"
+        end
+        return "fire"
+    end
+    return "frost"
+end
+
+function frb_GetMageSpec(index)
+    local selected
+    if frb_UseHalfMageSpecs then
+        return frb_GetDefaultMageSpec(index)
+    end
+    if frb_UseAllMageSpecs then
+        selected = frb_CurrentMageAllSpec
+        if selected and selected ~= "" then return selected end
+        selected = frb_CurrentMageSpecs and frb_CurrentMageSpecs[0]
+        if selected and selected ~= "" then return selected end
+    end
+    selected = frb_CurrentMageSpecs and frb_CurrentMageSpecs[index]
+    if selected and selected ~= "" then return selected end
+    return frb_GetDefaultMageSpec(index)
+end
+
+function frb_BuildMageHalfSpecsTable()
+    local specs = {}
+    local count = frb_CountClassInCurrentSetup("mage")
+    local i, halfPoint
+    count = tonumber(count) or 0
+    halfPoint = math.ceil(count / 2)
+    for i = 1, count do
+        if i <= halfPoint then
+            specs[i] = "frost"
+        else
+            specs[i] = "fire"
+        end
+    end
+    return specs
+end
+
+function frb_ApplyMageHalfSpecs()
+    frb_CurrentMageSpecs = {}
+end
+
+function frb_ConvertMageHalfSpecsToIndividual()
+    if frb_UseHalfMageSpecs then
+        frb_CurrentMageSpecs = frb_BuildMageHalfSpecsTable()
+        frb_CurrentMageAllSpec = nil
+        frb_UseHalfMageSpecs = false
+    end
+end
+
+function frb_UpdatePaladinSettingsRows()
+    local count, i, row, selected, role, roleText, parent, viewportHeight
+    if not frb_PaladinSettingsFrame then return end
+    count = frb_CountClassInCurrentSetup("paladin")
+
+    parent, viewportHeight = frb_UpdateSettingScrollFrame(frb_PaladinSettingsFrame, count, 240, -30, 26, 10)
+
+    for i = 1, table.getn(frb_PaladinSettingsFrame.rows or {}) do
+        row = frb_PaladinSettingsFrame.rows[i]
+        row.label:Hide()
+        row.button:Hide()
+        if row.roleButton then row.roleButton:Hide() end
+    end
+
+    if not frb_PaladinSettingsFrame.emptyText then
+        frb_PaladinSettingsFrame.emptyText = frb_PaladinSettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        frb_PaladinSettingsFrame.emptyText:SetWidth(220)
+        frb_PaladinSettingsFrame.emptyText:SetPoint("TOP", frb_PaladinSettingsFrame, "TOP", 0, -42)
+        frb_PaladinSettingsFrame.emptyText:SetJustifyH("CENTER")
+    end
+
+    if count < 1 then
+        if frb_PaladinSettingsFrame.scrollFrame then frb_PaladinSettingsFrame.scrollFrame:Hide() end
+        frb_PaladinSettingsFrame.emptyText:SetText("Add paladins to edit blessings.")
+        frb_PaladinSettingsFrame.emptyText:Show()
+        frb_PaladinSettingsFrame:SetHeight(115)
+        return
+    end
+
+    frb_PaladinSettingsFrame.emptyText:Hide()
+    frb_PaladinSettingsFrame.rows = frb_PaladinSettingsFrame.rows or {}
+    for i = 1, count do
+        row = frb_PaladinSettingsFrame.rows[i]
+        if not row then
+            row = {}
+            row.roleButton = frb_MakeIconButton(parent, 16)
+            row.roleButton:SetPoint("TOPLEFT", parent, "TOPLEFT", 6, -2 - ((i - 1) * 26))
+            row.label = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            row.label:SetPoint("LEFT", row.roleButton, "RIGHT", 4, 0)
+            row.label:SetWidth(58)
+            row.label:SetJustifyH("LEFT")
+            row.button = frb_MakeIconButton(parent, 24)
+            row.button:SetPoint("TOPLEFT", parent, "TOPLEFT", 88, 0 - ((i - 1) * 26))
+            frb_PaladinSettingsFrame.rows[i] = row
+        end
+        selected = frb_CurrentPaladinBlessings[i]
+        role = frb_GetPaladinRoleForIndex and frb_GetPaladinRoleForIndex(i) or ""
+        if frb_GetRoleText then roleText = frb_GetRoleText(role) elseif frb_FormatRoleText then roleText = frb_FormatRoleText(role) else roleText = role end
+        row.label:SetText("Paladin " .. i)
+        row.roleButton.icon:SetTexture(frb_RoleIcons[role] or "Interface\\Icons\\INV_Misc_QuestionMark")
+        row.roleButton.frb_roleText = roleText
+        row.roleButton:SetScript("OnEnter", function(self)
+            local hoveredButton = self or this
+            GameTooltip:SetOwner(hoveredButton, "ANCHOR_RIGHT")
+            GameTooltip:SetText(hoveredButton.frb_roleText or "Unknown role", 1, 1, 1)
+            GameTooltip:AddLine("Role for this paladin in the current preset.", 0.8, 0.8, 0.8, true)
+            GameTooltip:Show()
+        end)
+        row.roleButton:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        row.button.icon:SetTexture(frb_GetIcon(selected or frb_GetDefaultPaladinBlessing(i), frb_PaladinBlessingIcons))
+        row.button.frb_index = i
+        row.button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+        row.button:SetScript("OnEnter", function(self)
+            local hoveredButton = self or this
+            local index = hoveredButton.frb_index
+            frb_ShowSpellTooltip(hoveredButton, frb_CurrentPaladinBlessings[index] or frb_GetDefaultPaladinBlessing(index), frb_PaladinBlessingLabels, frb_PaladinBlessingSpellNames, frb_GetDisplayLabel(frb_CurrentPaladinBlessings[index], frb_PaladinBlessingLabels), "Left click to show all Blessings\nRight click to fast switch", frb_PaladinBlessingSpellIDs)
+        end)
+        row.button:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        row.button:SetScript("OnClick", function(self, button)
+            local clickedButton = self or this
+            local mouseButton = button or arg1
+            local index = clickedButton.frb_index
+            if mouseButton == "RightButton" then
+                frb_CurrentPaladinBlessings[index] = frb_CycleValue(frb_CurrentPaladinBlessings[index], frb_PaladinBlessingOrder)
+                frb_UpdatePaladinSettingsRows()
+            else
+                frb_ShowPicker("Paladin " .. index .. " Blessing", frb_PaladinBlessingOrder, frb_PaladinBlessingLabels, function(value)
+                    frb_CurrentPaladinBlessings[index] = value
+                    frb_UpdatePaladinSettingsRows()
+                end, frb_PaladinBlessingSpellNames, frb_PaladinBlessingSpellIDs, frb_PaladinBlessingIcons)
+            end
+        end)
+        row.roleButton:Show()
+        row.label:Show()
+        row.button:Show()
+    end
+    frb_PaladinSettingsFrame:SetHeight(70 + (viewportHeight or 26))
+end
+
+function frb_OpenPaladinSettingsFrame()
+    if frb_PickerFrame then frb_PickerFrame:Hide() end
+    if not frb_PaladinSettingsFrame then
+        frb_EnsureClickCatcher()
+        frb_PaladinSettingsFrame = frb_CreateCompatFrame("FRB_PaladinBlessingSettingsFrame", UIParent)
+        frb_PaladinSettingsFrame:SetWidth(260)
+        frb_PaladinSettingsFrame:SetHeight(160)
+        frb_RestoreFloatingFramePosition(frb_PaladinSettingsFrame, "paladin", "CENTER", -150, 0)
+        frb_PaladinSettingsFrame:SetFrameStrata("DIALOG")
+        frb_PaladinSettingsFrame:SetFrameLevel(65)
+        frb_MakeFloatingFrameMovable(frb_PaladinSettingsFrame, "paladin")
+        frb_PaladinSettingsFrame:SetBackdrop({ bgFile = "Interface/Tooltips/UI-Tooltip-Background", edgeFile = "Interface/Tooltips/UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } })
+        frb_PaladinSettingsFrame:SetBackdropColor(0, 0, 0, 1)
+        frb_PaladinSettingsFrame.title = frb_PaladinSettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        frb_PaladinSettingsFrame.title:SetPoint("TOP", frb_PaladinSettingsFrame, "TOP", 0, -10)
+        frb_PaladinSettingsFrame.title:SetText("Paladin Blessings")
+        frb_PaladinSettingsFrame.close = frb_MakeTinyButton(frb_PaladinSettingsFrame, "Close", 70, 20)
+        frb_PaladinSettingsFrame.close:SetPoint("BOTTOM", frb_PaladinSettingsFrame, "BOTTOM", 0, 10)
+        frb_PaladinSettingsFrame.close:SetScript("OnClick", function() frb_PaladinSettingsFrame:Hide() end)
+        frb_PaladinSettingsFrame:SetScript("OnHide", function() frb_UpdateClickCatcherVisibility() end)
+        frb_RegisterEscCloseFrame("FRB_PaladinBlessingSettingsFrame")
+        frb_PaladinSettingsFrame.rows = {}
+    end
+    frb_UpdatePaladinSettingsRows()
+    frb_PaladinSettingsFrame:Show()
+    frb_UpdateClickCatcherVisibility()
+end
+
+function frb_UpdateShamanSettingsRows()
+    local count, visibleRows, i, s, row, slot, btn, selected, dataIndex, titleIndex, copyBtn, pasteBtn, role, roleText, parent, viewportHeight
+    if not frb_ShamanSettingsFrame then return end
+    count = frb_CountClassInCurrentSetup("shaman")
+    visibleRows = count
+    if frb_UseAllShamanTotems then visibleRows = 1 end
+
+    parent, viewportHeight = frb_UpdateSettingScrollFrame(frb_ShamanSettingsFrame, visibleRows, 305, -56, 28, 10)
+
+    for i = 1, table.getn(frb_ShamanSettingsFrame.rows or {}) do
+        row = frb_ShamanSettingsFrame.rows[i]
+        row.label:Hide()
+        if row.roleButton then row.roleButton:Hide() end
+        for s = 1, table.getn(frb_TotemSlots) do row.buttons[s]:Hide() end
+        if row.copyButton then row.copyButton:Hide() end
+        if row.pasteButton then row.pasteButton:Hide() end
+    end
+
+    if frb_ShamanSettingsFrame.allCheckbox then
+        frb_ShamanSettingsFrame.allCheckbox:Hide()
+        frb_ShamanSettingsFrame.allCheckbox.text:Hide()
+    end
+
+    if not frb_ShamanSettingsFrame.emptyText then
+        frb_ShamanSettingsFrame.emptyText = frb_ShamanSettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        frb_ShamanSettingsFrame.emptyText:SetWidth(210)
+        frb_ShamanSettingsFrame.emptyText:SetPoint("TOP", frb_ShamanSettingsFrame, "TOP", 0, -42)
+        frb_ShamanSettingsFrame.emptyText:SetJustifyH("CENTER")
+    end
+
+    if count < 1 then
+        if frb_ShamanSettingsFrame.scrollFrame then frb_ShamanSettingsFrame.scrollFrame:Hide() end
+        frb_ShamanSettingsFrame.emptyText:SetText("Add shamans to edit totems.")
+        frb_ShamanSettingsFrame.emptyText:Show()
+        frb_ShamanSettingsFrame:SetHeight(115)
+        return
+    end
+
+    frb_ShamanSettingsFrame.emptyText:Hide()
+
+    if not frb_ShamanSettingsFrame.allCheckbox then
+        frb_ShamanSettingsFrame.allCheckbox = CreateFrame("CheckButton", nil, frb_ShamanSettingsFrame, "UICheckButtonTemplate")
+        frb_ShamanSettingsFrame.allCheckbox:SetWidth(20)
+        frb_ShamanSettingsFrame.allCheckbox:SetHeight(20)
+        frb_ShamanSettingsFrame.allCheckbox:SetPoint("TOPLEFT", frb_ShamanSettingsFrame, "TOPLEFT", 12, -30)
+        frb_ShamanSettingsFrame.allCheckbox.text = frb_ShamanSettingsFrame.allCheckbox:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        frb_ShamanSettingsFrame.allCheckbox.text:SetPoint("LEFT", frb_ShamanSettingsFrame.allCheckbox, "RIGHT", 3, 0)
+        frb_ShamanSettingsFrame.allCheckbox.text:SetText("Use same totems for all shamans")
+        frb_ShamanSettingsFrame.allCheckbox:SetScript("OnClick", function(self)
+            local cb = self or this
+            frb_UseAllShamanTotems = cb:GetChecked() and true or false
+            frb_UpdateShamanSettingsRows()
+        end)
+    end
+    frb_ShamanSettingsFrame.allCheckbox:SetChecked(frb_UseAllShamanTotems and true or false)
+    frb_ShamanSettingsFrame.allCheckbox:Show()
+    frb_ShamanSettingsFrame.allCheckbox.text:Show()
+
+    frb_ShamanSettingsFrame.rows = frb_ShamanSettingsFrame.rows or {}
+    for i = 1, visibleRows do
+        dataIndex = i
+        titleIndex = i
+        if frb_UseAllShamanTotems then dataIndex = 0 titleIndex = 1 end
+        row = frb_ShamanSettingsFrame.rows[i]
+        if not row then
+            row = { buttons = {} }
+            row.roleButton = frb_MakeIconButton(parent, 16)
+            row.roleButton:SetPoint("TOPLEFT", parent, "TOPLEFT", 6, -2 - ((i - 1) * 28))
+            row.label = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            row.label:SetPoint("LEFT", row.roleButton, "RIGHT", 4, 0)
+            row.label:SetWidth(58)
+            row.label:SetJustifyH("LEFT")
+            for s = 1, table.getn(frb_TotemSlots) do
+                btn = frb_MakeIconButton(parent, 24)
+                btn:SetPoint("TOPLEFT", parent, "TOPLEFT", 84 + ((s - 1) * 30), 0 - ((i - 1) * 28))
+                row.buttons[s] = btn
+            end
+            row.copyButton = frb_MakeLetterButton(parent, "C", 24)
+            row.copyButton:SetPoint("TOPLEFT", parent, "TOPLEFT", 214, 0 - ((i - 1) * 28))
+            row.pasteButton = frb_MakeLetterButton(parent, "P", 24)
+            row.pasteButton:SetPoint("TOPLEFT", parent, "TOPLEFT", 242, 0 - ((i - 1) * 28))
+            frb_ShamanSettingsFrame.rows[i] = row
+        end
+        if frb_UseAllShamanTotems then
+            row.label:SetText("All Shamans")
+            row.roleButton:Hide()
+        else
+            role = frb_GetShamanRoleForIndex(titleIndex)
+            if frb_GetRoleText then roleText = frb_GetRoleText(role) elseif frb_FormatRoleText then roleText = frb_FormatRoleText(role) else roleText = role end
+            row.label:SetText("Shaman " .. titleIndex)
+            row.roleButton.icon:SetTexture(frb_RoleIcons[role] or "Interface\\Icons\\INV_Misc_QuestionMark")
+            row.roleButton.frb_roleText = roleText
+            row.roleButton:SetScript("OnEnter", function(self)
+                local hoveredButton = self or this
+                GameTooltip:SetOwner(hoveredButton, "ANCHOR_RIGHT")
+                GameTooltip:SetText(hoveredButton.frb_roleText or "Unknown role", 1, 1, 1)
+                GameTooltip:AddLine("Role for this shaman in the current preset.", 0.8, 0.8, 0.8, true)
+                GameTooltip:Show()
+            end)
+            row.roleButton:SetScript("OnLeave", function() GameTooltip:Hide() end)
+            row.roleButton:Show()
+        end
+        if not frb_CurrentShamanTotems[dataIndex] then frb_CurrentShamanTotems[dataIndex] = {} end
+        for s = 1, table.getn(frb_TotemSlots) do
+            slot = frb_TotemSlots[s]
+            btn = row.buttons[s]
+            selected = frb_GetShamanTotem(dataIndex, slot)
+            btn.icon:SetTexture(frb_GetIcon(selected, frb_TotemIcons))
+            btn.frb_index = dataIndex
+            btn.frb_slot = slot
+            btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+            btn:SetScript("OnEnter", function(self)
+                local hoveredButton = self or this
+                frb_ShowSpellTooltip(hoveredButton, frb_GetShamanTotem(hoveredButton.frb_index, hoveredButton.frb_slot), frb_TotemLabels, frb_TotemSpellNames, frb_GetDisplayLabel(frb_GetShamanTotem(hoveredButton.frb_index, hoveredButton.frb_slot), frb_TotemLabels), "Left click to show all " .. (frb_TotemSlotLabels[hoveredButton.frb_slot] or hoveredButton.frb_slot) .. " totems\nRight click to fast switch", frb_TotemSpellIDs, frb_TotemSpellIDFallbacks)
+            end)
+            btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+            btn:SetScript("OnClick", function(self, button)
+                local clickedButton = self or this
+                local mouseButton = button or arg1
+                local index = clickedButton.frb_index
+                local clickedSlot = clickedButton.frb_slot
+                if not frb_CurrentShamanTotems[index] then frb_CurrentShamanTotems[index] = {} end
+                if mouseButton == "RightButton" then
+                    frb_CurrentShamanTotems[index][clickedSlot] = frb_CycleValue(frb_CurrentShamanTotems[index][clickedSlot], frb_TotemOptions[clickedSlot])
+                    frb_UpdateShamanSettingsRows()
+                else
+                    frb_ShowPicker((index == 0 and "All Shamans" or ("Shaman " .. index)) .. " " .. (frb_TotemSlotLabels[clickedSlot] or clickedSlot), frb_TotemOptions[clickedSlot], frb_TotemLabels, function(value)
+                        frb_CurrentShamanTotems[index][clickedSlot] = value
+                        frb_UpdateShamanSettingsRows()
+                    end, frb_TotemSpellNames, frb_TotemSpellIDs, frb_TotemIcons, frb_TotemSpellIDFallbacks)
+                end
+            end)
+            btn:Show()
+        end
+        copyBtn = row.copyButton
+        pasteBtn = row.pasteButton
+        if copyBtn then
+            copyBtn.frb_index = dataIndex
+            copyBtn:SetScript("OnClick", function(self)
+                local clickedButton = self or this
+                frb_CopiedShamanTotems = frb_CopyTable(frb_CurrentShamanTotems[clickedButton.frb_index] or {})
+            end)
+            copyBtn:Show()
+        end
+        if pasteBtn then
+            pasteBtn.frb_index = dataIndex
+            pasteBtn:SetScript("OnClick", function(self)
+                local clickedButton = self or this
+                if frb_CopiedShamanTotems then
+                    frb_CurrentShamanTotems[clickedButton.frb_index] = frb_CopyTable(frb_CopiedShamanTotems)
+                    frb_UpdateShamanSettingsRows()
+                end
+            end)
+            pasteBtn:Show()
+        end
+        row.label:Show()
+    end
+    frb_ShamanSettingsFrame:SetHeight(98 + (viewportHeight or 28))
+end
+
+function frb_OpenShamanSettingsFrame()
+    if frb_PickerFrame then frb_PickerFrame:Hide() end
+    if not frb_ShamanSettingsFrame then
+        frb_EnsureClickCatcher()
+        frb_ShamanSettingsFrame = frb_CreateCompatFrame("FRB_ShamanTotemSettingsFrame", UIParent)
+        frb_ShamanSettingsFrame:SetWidth(325)
+        frb_ShamanSettingsFrame:SetHeight(180)
+        frb_RestoreFloatingFramePosition(frb_ShamanSettingsFrame, "shaman", "CENTER", 170, 0)
+        frb_ShamanSettingsFrame:SetFrameStrata("DIALOG")
+        frb_ShamanSettingsFrame:SetFrameLevel(65)
+        frb_MakeFloatingFrameMovable(frb_ShamanSettingsFrame, "shaman")
+        frb_ShamanSettingsFrame:SetBackdrop({ bgFile = "Interface/Tooltips/UI-Tooltip-Background", edgeFile = "Interface/Tooltips/UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } })
+        frb_ShamanSettingsFrame:SetBackdropColor(0, 0, 0, 1)
+        frb_ShamanSettingsFrame.title = frb_ShamanSettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        frb_ShamanSettingsFrame.title:SetPoint("TOP", frb_ShamanSettingsFrame, "TOP", 0, -10)
+        frb_ShamanSettingsFrame.title:SetText("Shaman Totems")
+        frb_ShamanSettingsFrame.close = frb_MakeTinyButton(frb_ShamanSettingsFrame, "Close", 70, 20)
+        frb_ShamanSettingsFrame.close:SetPoint("BOTTOM", frb_ShamanSettingsFrame, "BOTTOM", 0, 10)
+        frb_ShamanSettingsFrame.close:SetScript("OnClick", function() frb_ShamanSettingsFrame:Hide() end)
+        frb_ShamanSettingsFrame:SetScript("OnHide", function() frb_UpdateClickCatcherVisibility() end)
+        frb_RegisterEscCloseFrame("FRB_ShamanTotemSettingsFrame")
+        frb_ShamanSettingsFrame.rows = {}
+    end
+    frb_UpdateShamanSettingsRows()
+    frb_ShamanSettingsFrame:Show()
+    frb_UpdateClickCatcherVisibility()
+end
+
+function frb_UpdateMageSettingsRows()
+    local count, visibleRows, i, row, selected, dataIndex, role, roleText, parent, viewportHeight
+    if not frb_MageSettingsFrame then return end
+    count = frb_CountClassInCurrentSetup("mage")
+    if frb_UseHalfMageSpecs then
+        frb_UseAllMageSpecs = false
+        frb_ApplyMageHalfSpecs()
+    end
+    visibleRows = count
+    if frb_UseAllMageSpecs then visibleRows = 1 end
+
+    parent, viewportHeight = frb_UpdateSettingScrollFrame(frb_MageSettingsFrame, visibleRows, 230, -80, 28, 10)
+
+    for i = 1, table.getn(frb_MageSettingsFrame.rows or {}) do
+        row = frb_MageSettingsFrame.rows[i]
+        row.label:Hide()
+        row.button:Hide()
+        if row.roleButton then row.roleButton:Hide() end
+    end
+
+    if frb_MageSettingsFrame.allCheckbox then
+        frb_MageSettingsFrame.allCheckbox:Hide()
+        frb_MageSettingsFrame.allCheckbox.text:Hide()
+    end
+    if frb_MageSettingsFrame.halfCheckbox then
+        frb_MageSettingsFrame.halfCheckbox:Hide()
+        frb_MageSettingsFrame.halfCheckbox.text:Hide()
+    end
+
+    if not frb_MageSettingsFrame.emptyText then
+        frb_MageSettingsFrame.emptyText = frb_MageSettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        frb_MageSettingsFrame.emptyText:SetWidth(220)
+        frb_MageSettingsFrame.emptyText:SetPoint("TOP", frb_MageSettingsFrame, "TOP", 0, -42)
+        frb_MageSettingsFrame.emptyText:SetJustifyH("CENTER")
+    end
+
+    if count < 1 then
+        if frb_MageSettingsFrame.scrollFrame then frb_MageSettingsFrame.scrollFrame:Hide() end
+        frb_MageSettingsFrame.emptyText:SetText("Add mages to edit specs.")
+        frb_MageSettingsFrame.emptyText:Show()
+        frb_MageSettingsFrame:SetHeight(115)
+        return
+    end
+
+    frb_MageSettingsFrame.emptyText:Hide()
+
+    if not frb_MageSettingsFrame.allCheckbox then
+        frb_MageSettingsFrame.allCheckbox = CreateFrame("CheckButton", nil, frb_MageSettingsFrame, "UICheckButtonTemplate")
+        frb_MageSettingsFrame.allCheckbox:SetWidth(20)
+        frb_MageSettingsFrame.allCheckbox:SetHeight(20)
+        frb_MageSettingsFrame.allCheckbox:SetPoint("TOPLEFT", frb_MageSettingsFrame, "TOPLEFT", 12, -30)
+        frb_MageSettingsFrame.allCheckbox.text = frb_MageSettingsFrame.allCheckbox:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        frb_MageSettingsFrame.allCheckbox.text:SetPoint("LEFT", frb_MageSettingsFrame.allCheckbox, "RIGHT", 3, 0)
+        frb_MageSettingsFrame.allCheckbox.text:SetText("Use same spec for all mages")
+        frb_MageSettingsFrame.allCheckbox:SetScript("OnClick", function(self)
+            local cb = self or this
+            local allSpec
+
+            frb_UseAllMageSpecs = cb:GetChecked() and true or false
+            if frb_UseAllMageSpecs then
+                frb_UseHalfMageSpecs = false
+                allSpec = frb_CurrentMageAllSpec or (frb_CurrentMageSpecs and (frb_CurrentMageSpecs[0] or frb_CurrentMageSpecs[1]))
+                if not allSpec or allSpec == "" then
+                    allSpec = frb_GetDefaultMageSpec and frb_GetDefaultMageSpec(1) or "frost"
+                end
+                frb_CurrentMageAllSpec = allSpec
+                frb_CurrentMageSpecs = {}
+            end
+            frb_UpdateMageSettingsRows()
+        end)
+    end
+    if not frb_MageSettingsFrame.halfCheckbox then
+        frb_MageSettingsFrame.halfCheckbox = CreateFrame("CheckButton", nil, frb_MageSettingsFrame, "UICheckButtonTemplate")
+        frb_MageSettingsFrame.halfCheckbox:SetWidth(20)
+        frb_MageSettingsFrame.halfCheckbox:SetHeight(20)
+        frb_MageSettingsFrame.halfCheckbox:SetPoint("TOPLEFT", frb_MageSettingsFrame, "TOPLEFT", 12, -52)
+        frb_MageSettingsFrame.halfCheckbox.text = frb_MageSettingsFrame.halfCheckbox:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        frb_MageSettingsFrame.halfCheckbox.text:SetPoint("LEFT", frb_MageSettingsFrame.halfCheckbox, "RIGHT", 3, 0)
+        frb_MageSettingsFrame.halfCheckbox.text:SetText("50/50 Frost / Fire")
+        frb_MageSettingsFrame.halfCheckbox:SetScript("OnClick", function(self)
+            local cb = self or this
+            frb_UseHalfMageSpecs = cb:GetChecked() and true or false
+            if frb_UseHalfMageSpecs then
+                frb_UseAllMageSpecs = false
+                frb_CurrentMageAllSpec = nil
+                frb_CurrentMageSpecs = {}
+            end
+            frb_UpdateMageSettingsRows()
+        end)
+    end
+    frb_MageSettingsFrame.allCheckbox:SetChecked(frb_UseAllMageSpecs and true or false)
+    frb_MageSettingsFrame.halfCheckbox:SetChecked(frb_UseHalfMageSpecs and true or false)
+    frb_MageSettingsFrame.allCheckbox:Show()
+    frb_MageSettingsFrame.allCheckbox.text:Show()
+    frb_MageSettingsFrame.halfCheckbox:Show()
+    frb_MageSettingsFrame.halfCheckbox.text:Show()
+
+    frb_MageSettingsFrame.rows = frb_MageSettingsFrame.rows or {}
+    for i = 1, visibleRows do
+        dataIndex = i
+        if frb_UseAllMageSpecs then dataIndex = 0 end
+        row = frb_MageSettingsFrame.rows[i]
+        if not row then
+            row = {}
+            row.roleButton = frb_MakeIconButton(parent, 16)
+            row.roleButton:SetPoint("TOPLEFT", parent, "TOPLEFT", 6, -2 - ((i - 1) * 28))
+            row.label = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            row.label:SetPoint("LEFT", row.roleButton, "RIGHT", 4, 0)
+            row.label:SetWidth(78)
+            row.label:SetJustifyH("LEFT")
+            row.button = frb_MakeIconButton(parent, 24)
+            row.button:SetPoint("TOPLEFT", parent, "TOPLEFT", 112, 0 - ((i - 1) * 28))
+            frb_MageSettingsFrame.rows[i] = row
+        end
+        if frb_UseAllMageSpecs then
+            row.label:SetText("All Mages")
+            row.roleButton:Hide()
+        else
+            role = frb_GetMageRoleForIndex and frb_GetMageRoleForIndex(i) or "rangedps"
+            if frb_GetRoleText then roleText = frb_GetRoleText(role) elseif frb_FormatRoleText then roleText = frb_FormatRoleText(role) else roleText = role end
+            row.label:SetText("Mage " .. i)
+            row.roleButton.icon:SetTexture(frb_RoleIcons[role] or "Interface\\Icons\\INV_Misc_QuestionMark")
+            row.roleButton.frb_roleText = roleText
+            row.roleButton:SetScript("OnEnter", function(self)
+                local hoveredButton = self or this
+                GameTooltip:SetOwner(hoveredButton, "ANCHOR_RIGHT")
+                GameTooltip:SetText(hoveredButton.frb_roleText or "Unknown role", 1, 1, 1)
+                GameTooltip:AddLine("Role for this mage in the current preset.", 0.8, 0.8, 0.8, true)
+                GameTooltip:Show()
+            end)
+            row.roleButton:SetScript("OnLeave", function() GameTooltip:Hide() end)
+            row.roleButton:Show()
+        end
+        selected = frb_GetMageSpec(dataIndex)
+        row.button.icon:SetTexture(frb_GetIcon(selected, frb_MageSpecIcons))
+        row.button.frb_index = dataIndex
+        row.button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+        row.button:SetScript("OnEnter", function(self)
+            local hoveredButton = self or this
+            frb_ShowSpellTooltip(hoveredButton, frb_GetMageSpec(hoveredButton.frb_index), frb_MageSpecLabels, frb_MageSpecSpellNames, frb_GetDisplayLabel(frb_GetMageSpec(hoveredButton.frb_index), frb_MageSpecLabels), "Left click to show all specs\nRight click to fast switch", frb_MageSpecSpellIDs)
+        end)
+        row.button:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        row.button:SetScript("OnClick", function(self, button)
+            local clickedButton = self or this
+            local mouseButton = button or arg1
+            local index = clickedButton.frb_index
+            if mouseButton == "RightButton" then
+                frb_ConvertMageHalfSpecsToIndividual()
+                if index == 0 then
+                    frb_CurrentMageAllSpec = frb_CycleValue(frb_CurrentMageAllSpec or (frb_CurrentMageSpecs and frb_CurrentMageSpecs[0]), frb_MageSpecOrder)
+                    frb_CurrentMageSpecs = {}
+                else
+                    frb_CurrentMageSpecs[index] = frb_CycleValue(frb_CurrentMageSpecs[index], frb_MageSpecOrder)
+                end
+                frb_UpdateMageSettingsRows()
+            else
+                frb_ShowPicker((index == 0 and "All Mages" or ("Mage " .. index)) .. " Spec", frb_MageSpecOrder, frb_MageSpecLabels, function(value)
+                    frb_ConvertMageHalfSpecsToIndividual()
+                    if index == 0 then
+                        frb_CurrentMageAllSpec = value
+                        frb_CurrentMageSpecs = {}
+                    else
+                        frb_CurrentMageSpecs[index] = value
+                    end
+                    frb_UpdateMageSettingsRows()
+                end, frb_MageSpecSpellNames, frb_MageSpecSpellIDs, frb_MageSpecIcons)
+            end
+        end)
+        row.label:Show()
+        row.button:Show()
+    end
+    frb_MageSettingsFrame:SetHeight(122 + (viewportHeight or 28))
+end
+
+function frb_OpenMageSettingsFrame()
+    if frb_PickerFrame then frb_PickerFrame:Hide() end
+    if not frb_MageSettingsFrame then
+        frb_EnsureClickCatcher()
+        frb_MageSettingsFrame = frb_CreateCompatFrame("FRB_MageSpecSettingsFrame", UIParent)
+        frb_MageSettingsFrame:SetWidth(250)
+        frb_MageSettingsFrame:SetHeight(190)
+        frb_RestoreFloatingFramePosition(frb_MageSettingsFrame, "mage", "CENTER", 0, 0)
+        frb_MageSettingsFrame:SetFrameStrata("DIALOG")
+        frb_MageSettingsFrame:SetFrameLevel(65)
+        frb_MakeFloatingFrameMovable(frb_MageSettingsFrame, "mage")
+        frb_MageSettingsFrame:SetBackdrop({ bgFile = "Interface/Tooltips/UI-Tooltip-Background", edgeFile = "Interface/Tooltips/UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } })
+        frb_MageSettingsFrame:SetBackdropColor(0, 0, 0, 1)
+        frb_MageSettingsFrame.title = frb_MageSettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        frb_MageSettingsFrame.title:SetPoint("TOP", frb_MageSettingsFrame, "TOP", 0, -10)
+        frb_MageSettingsFrame.title:SetText("Mage Spec")
+        frb_MageSettingsFrame.close = frb_MakeTinyButton(frb_MageSettingsFrame, "Close", 70, 20)
+        frb_MageSettingsFrame.close:SetPoint("BOTTOM", frb_MageSettingsFrame, "BOTTOM", 0, 10)
+        frb_MageSettingsFrame.close:SetScript("OnClick", function() frb_MageSettingsFrame:Hide() end)
+        frb_MageSettingsFrame:SetScript("OnHide", function() frb_UpdateClickCatcherVisibility() end)
+        frb_RegisterEscCloseFrame("FRB_MageSpecSettingsFrame")
+        frb_MageSettingsFrame.rows = {}
+    end
+    frb_UpdateMageSettingsRows()
+    frb_MageSettingsFrame:Show()
+    frb_UpdateClickCatcherVisibility()
+end
+
+
