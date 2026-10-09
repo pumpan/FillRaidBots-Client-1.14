@@ -14,9 +14,13 @@ frame:SetScript("OnEvent", function(self, event, ...)
         if addonName == "FillRaidBots" then
             FillRaidBots_LoadSettings()
         end
-    elseif event == "PLAYER_LOGOUT" then
-        FillRaidBots_SaveSettings()
-    end
+	elseif event == "PLAYER_LOGOUT" then
+		-- SavedVariables are saved automatically by WoW on logout/reload.
+		-- Keep this guarded so older/newer FillRaidBots builds without this helper do not error.
+		if FillRaidBots_SaveSettings then
+			FillRaidBots_SaveSettings()
+		end
+	end	
 end)
 
 
@@ -1107,14 +1111,7 @@ function CreateSettingsUI()
 
 					option.frame = cb
 
-					--------------------------------------------------
-					-- LOCK BUTTON (Free mode only)
-					-- Nymz: a red/green lock icon to the right of the
-					-- "Moving Buttons (Free)" radio.  Red = locked in
-					-- place, Green = free to drag.
-					-- Hidden until Free mode is active.
-					-- State: FillRaidBotsSavedSettings.buttonMoveLocked
-					--------------------------------------------------
+
 					if option.showLockButton then
 
 						local SIZE = 18

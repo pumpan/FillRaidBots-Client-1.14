@@ -21,7 +21,7 @@ local classes = {
 
 local addonName = "FillRaidBots"
 local addonPrefix = "FillRaid1142"
-local versionNumber = "5.1.0"
+local versionNumber = "5.2.0"
 local a = "5"
 local botCount = 0
 local initialBotRemoved = false
@@ -3937,7 +3937,7 @@ end
 
 
 
-local b = "1"
+local b = "2"
 local function QueueMove(player, group)
     table.insert(moveQueue, {player = player, group = group})
 end
@@ -9767,7 +9767,7 @@ local function OnEvent(self, event, ...)
         registerAddonPrefix()  
         local userID = generateUserID()
 			if versionNumber == Guard then
-				sendVersionMessage(versionNumber, userID)
+				--sendVersionMessage(versionNumber, userID)
 			else
 				QueueDebugMessage("ERROR: A, a, a, you didnt say the magic word.", "debugversion")
 			end
@@ -9853,101 +9853,136 @@ frame:RegisterEvent("CHAT_MSG_ADDON")
 
 frame:SetScript("OnEvent", function(self, event, ...)
     if event == "PLAYER_LOGIN" then
-		ShowDailyTipInChat()
+        ShowDailyTipInChat()
+
         if not FillRaidBotsSavedSettings.userID then
             FillRaidBotsSavedSettings.userID = generateUserID()
         end
-        SessionUserID = FillRaidBotsSavedSettings.userID  
+
+        SessionUserID = FillRaidBotsSavedSettings.userID
 
         if not FillRaidBotsSavedSettings.lastNotifiedVersion then
-            FillRaidBotsSavedSettings.lastNotifiedVersion = versionNumber  
+            FillRaidBotsSavedSettings.lastNotifiedVersion = versionNumber
         end
-        if not FillRaidBotsSavedSettings.userCount or FillRaidBotsSavedSettings.userCount == "" then
+
+        if not FillRaidBotsSavedSettings.userCount
+            or FillRaidBotsSavedSettings.userCount == "" then
             FillRaidBotsSavedSettings.userCount = 0
         end
+
         if not FillRaidBotsSavedSettings.uniqueUsers then
             FillRaidBotsSavedSettings.uniqueUsers = {}
         end
 
-        
-        QueueDebugMessage(addonName .. " loaded. Current version: " .. versionNumber, "debuginfo")
-        QueueDebugMessage("INFO: Total unique users detected: " .. FillRaidBotsSavedSettings.userCount, "debuginfo")
-        QueueDebugMessage("Userid: " .. SessionUserID, "debuginfo")
-        
-        
-        if isNewerVersion(versionNumber, FillRaidBotsSavedSettings.lastNotifiedVersion) then
-            QueueDebugMessage("INFO: New update available: " .. FillRaidBotsSavedSettings.lastNotifiedVersion, "debuginfo")
-            sendVersionMessage(FillRaidBotsSavedSettings.lastNotifiedVersion, SessionUserID)  
-            newversion(FillRaidBotsSavedSettings.lastNotifiedVersion) 
-            MaybeShowUpdateVersionPopup()
-        else
-			if versionNumber == Guard then
-				sendVersionMessage(versionNumber, SessionUserID)
-			else
-				QueueDebugMessage("ERROR: A, a, a, you didnt say the magic word.", "debugversion")
-			end
-        end
+        QueueDebugMessage(
+            addonName .. " loaded. Current version: " .. versionNumber,
+            "debuginfo"
+        )
+
+        QueueDebugMessage(
+            "INFO: Total unique users detected: "
+            .. FillRaidBotsSavedSettings.userCount,
+            "debuginfo"
+        )
+
+        QueueDebugMessage(
+            "Userid: " .. SessionUserID,
+            "debuginfo"
+        )
+
+        --if isNewerVersion(versionNumber, FillRaidBotsSavedSettings.lastNotifiedVersion) then
+        --    QueueDebugMessage("INFO: New update available: " .. FillRaidBotsSavedSettings.lastNotifiedVersion, "debuginfo")
+        --    sendVersionMessage(FillRaidBotsSavedSettings.lastNotifiedVersion, SessionUserID)
+        --    newversion(FillRaidBotsSavedSettings.lastNotifiedVersion)
+		newversion()
+        --    MaybeShowUpdateVersionPopup()
+        --else
+        --    if versionNumber == Guard then
+        --        sendVersionMessage(versionNumber, SessionUserID)
+        --    else
+        --        QueueDebugMessage("ERROR: A, a, a, you didnt say the magic word.", "debugversion")
+        --    end
+        --end
 
     elseif event == "CHAT_MSG_ADDON" then
         local prefix, message, _, sender = ...
 
         if prefix == addonPrefix then
             if sender ~= UnitName("player") then
-                
+
                 if not message or message == "" then
-                    QueueDebugMessage("ERROR: Received an empty or nil message", "debugversion")
-                    return
-                end
-                
-                
-                local receivedVersion, userID = strsplit(";", message)
-
-                
-                QueueDebugMessage("ReceivedVersion: [" .. receivedVersion .. "], from userID: [" .. tostring(userID) .. "]", "debugversion")
-
-                
-                if not tonumber(userID) then
-                    QueueDebugMessage("ERROR: UserID is not a valid number: " .. tostring(userID), "debugversion")
+                    QueueDebugMessage(
+                        "ERROR: Received an empty or nil message",
+                        "debugversion"
+                    )
                     return
                 end
 
-                
-                local versionPattern = "^%d+%.%d+%.%d+$"
-                if not strfind(receivedVersion, versionPattern) then
-                    QueueDebugMessage("ERROR: Version format is invalid: " .. tostring(receivedVersion), "debugversion")
-                    return
-                end
+                --local receivedVersion, userID = strsplit(";", message)
 
-                
-                if not SessionUniqueUsers[userID] and not FillRaidBotsSavedSettings.uniqueUsers[userID] then
-                    SessionUniqueUsers[userID] = true
-                    FillRaidBotsSavedSettings.uniqueUsers[userID] = true
-                    FillRaidBotsSavedSettings.userCount = FillRaidBotsSavedSettings.userCount + 1
-                    QueueDebugMessage("INFO: New user detected. Total unique users: " .. FillRaidBotsSavedSettings.userCount, "debugversion")
-                end
+                --QueueDebugMessage(
+                --    "ReceivedVersion: [" .. receivedVersion
+                --    .. "], from userID: [" .. tostring(userID) .. "]",
+                --    "debugversion"
+                --)
 
-                
-                if isNewerVersion(versionNumber, receivedVersion) then
-                    local lastNotifiedVersion = FillRaidBotsSavedSettings.lastNotifiedVersion or ""
-                    if isNewerVersion(lastNotifiedVersion, receivedVersion) then
-                        QueueDebugMessage("INFO: New version detected: " .. receivedVersion, "debuginfo")
-                        FillRaidBotsSavedSettings.lastNotifiedVersion = receivedVersion
-                        sendVersionMessage(receivedVersion, SessionUserID)  
-                        newversion(receivedVersion) 
-                        MaybeShowUpdateVersionPopup()
-                    else
-                        QueueDebugMessage("INFO: Version " .. receivedVersion .. " already notified.", "debugversion")
-                        MaybeShowUpdateVersionPopup()						
-                    end
-                else
-                    QueueDebugMessage("INFO: Your version is up to date.", "debugversion")
-					FillRaidBotsSavedSettings.lastNotifiedVersion = receivedVersion
-                end
+                --if not tonumber(userID) then
+                --    QueueDebugMessage(
+                --        "ERROR: UserID is not a valid number: "
+                --        .. tostring(userID),
+                --        "debugversion"
+                --    )
+                --    return
+                --end
+
+                --local versionPattern = "^%d+%.%d+%.%d+$"
+
+                --if not strfind(receivedVersion, versionPattern) then
+                --    QueueDebugMessage(
+                --        "ERROR: Version format is invalid: "
+                --        .. tostring(receivedVersion),
+                --        "debugversion"
+                --    )
+                --    return
+                --end
+
+                --if not SessionUniqueUsers[userID]
+                --    and not FillRaidBotsSavedSettings.uniqueUsers[userID] then
+
+                --    SessionUniqueUsers[userID] = true
+                --    FillRaidBotsSavedSettings.uniqueUsers[userID] = true
+
+                --    FillRaidBotsSavedSettings.userCount =
+                --        FillRaidBotsSavedSettings.userCount + 1
+
+                --    QueueDebugMessage(
+                --        "INFO: New user detected. Total unique users: "
+                --        .. FillRaidBotsSavedSettings.userCount,
+                --        "debugversion"
+                --    )
+                --end
+
+                --if isNewerVersion(versionNumber, receivedVersion) then
+                --    local lastNotifiedVersion = FillRaidBotsSavedSettings.lastNotifiedVersion or ""
+                --    if isNewerVersion(lastNotifiedVersion, receivedVersion) then
+                --        QueueDebugMessage("INFO: New version detected: " .. receivedVersion, "debuginfo")
+                --        FillRaidBotsSavedSettings.lastNotifiedVersion = receivedVersion
+                --        sendVersionMessage(receivedVersion, SessionUserID)
+                --        newversion(receivedVersion)
+                --        MaybeShowUpdateVersionPopup()
+                --    else
+                --        QueueDebugMessage("INFO: Version " .. receivedVersion .. " already notified.", "debugversion")
+                --        MaybeShowUpdateVersionPopup()
+                --    end
+                --else
+                --    QueueDebugMessage("INFO: Your version is up to date.", "debugversion")
+                --    FillRaidBotsSavedSettings.lastNotifiedVersion = receivedVersion
+                --end
+
             end
         end
     end
 end)
-
 
 
 SLASH_RL1 = "/rl"
