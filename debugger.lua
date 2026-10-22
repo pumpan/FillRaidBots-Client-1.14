@@ -1,25 +1,71 @@
 local theme = {
-    backdropColor1 = {0.15, 0.15, 0.15, 1},
-    backdropColor2 = {0.2, 0.2, 0.2, 0.95},
-    textColor = {0.20, 1, 0.8, 1},
     font = "Interface\\AddOns\\fillraidbots\\fonts\\PT-Sans-Narrow-Bold.ttf",
     fontSize = 10,
     fontMono = "Interface\\AddOns\\fillraidbots\\fonts\\Envy-Code-R.ttf",
     fontSizeMono = 9,
     spacing = 5,
+
+    
+    bg        = {0.06, 0.07, 0.09, 0.95},
+    border    = {0.2, 0.55, 0.9, 1},
+    titleBg   = {0.12, 0.2, 0.32, 1},
+    panel     = {0.03, 0.04, 0.06, 1},
+    panelEdge = {0.2, 0.55, 0.9, 0.35},
+    label     = {0.7, 0.8, 0.9},
+    gold      = {1, 0.82, 0},
+    gear      = {0.4, 0.75, 1},
+}
+
+
+local levelColors = {
+    debugfilling   = {0.40, 0.70, 1.00},
+    debugdetection = {0.75, 0.60, 1.00},
+    debugremove    = {1.00, 0.60, 0.25},
+    debugerror     = {1.00, 0.30, 0.30},
+    debuginfo      = {0.85, 0.90, 0.95},
+    debugversion   = {0.35, 1.00, 0.45},
+    debugzones     = {1.00, 0.82, 0.00},
 }
 
 local texturePath = "Interface\\AddOns\\fillraidbots\\img\\"
+local WHITE = "Interface\\Buttons\\WHITE8X8"
+
+local function ColorToHex(c)
+    return string.format("|cff%02x%02x%02x",
+        math.floor(c[1] * 255 + 0.5),
+        math.floor(c[2] * 255 + 0.5),
+        math.floor(c[3] * 255 + 0.5))
+end
+
+local levelHex = {}
+for level, c in pairs(levelColors) do
+    levelHex[level] = ColorToHex(c)
+end
+local dimHex = ColorToHex({0.50, 0.58, 0.70})
+local defaultLevelHex = ColorToHex({0.85, 0.90, 0.95})
+
+local backdrop = {
+    bgFile   = WHITE,
+    edgeFile = WHITE,
+    edgeSize = 1,
+}
 
 
-
-
+local function CreateTitleBar(parent)
+    local bar = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+    bar:SetPoint("TOPLEFT", 1, -1)
+    bar:SetPoint("TOPRIGHT", -1, -1)
+    bar:SetHeight(26)
+    bar:SetBackdrop({ bgFile = WHITE })
+    bar:SetBackdropColor(unpack(theme.titleBg))
+    return bar
+end
 
 
 local savedVarsReady = false
 
 local function EnsureDebuggerSettings()
-    
+
     if not savedVarsReady then
         return
     end
@@ -55,12 +101,10 @@ local function EnsureDebuggerSettings()
         FillRaidBotsSavedSettings.debuggerLevels.debugversion = true
     end
 
-    
     if FillRaidBotsSavedSettings.debuggerVisible == nil then
         FillRaidBotsSavedSettings.debuggerVisible = false
     end
 
-    
     if FillRaidBotsSavedSettings.debuggerHeight == nil then
         FillRaidBotsSavedSettings.debuggerHeight = 300
     end
@@ -90,7 +134,7 @@ end
 local function GetDebuggerLevelSetting(level)
     if not savedVarsReady or not FillRaidBotsSavedSettings
             or not FillRaidBotsSavedSettings.debuggerLevels then
-        return true  
+        return true
     end
     EnsureDebuggerSettings()
     return FillRaidBotsSavedSettings.debuggerLevels[level]
@@ -125,8 +169,6 @@ end
 local function RestoreDebuggerFramePosition()
     local savedPosition
 
-    
-    
     if savedVarsReady and FillRaidBotsSavedSettings then
         savedPosition = FillRaidBotsSavedSettings.debuggerFramePosition
     end
@@ -151,12 +193,9 @@ local UpdateDebugMessages
 debuggerFrame = CreateFrame("Frame", "FillraidbotsDebuggerFrame", UIParent, "BackdropTemplate")
 debuggerFrame:SetWidth(480)
 debuggerFrame:SetHeight(300)
-debuggerFrame:SetBackdrop({
-    bgFile = texturePath .. "bg.tga",
-    tile = true, tileSize = 32, edgeSize = 16,
-    insets = { left = 8, right = 8, top = 8, bottom = 8 }
-})
-debuggerFrame:SetBackdropColor(unpack(theme.backdropColor1))
+debuggerFrame:SetBackdrop(backdrop)
+debuggerFrame:SetBackdropColor(unpack(theme.bg))
+debuggerFrame:SetBackdropBorderColor(unpack(theme.border))
 debuggerFrame:EnableMouse(true)
 debuggerFrame:SetMovable(true)
 debuggerFrame:SetClampedToScreen(true)
@@ -183,32 +222,27 @@ RestoreDebuggerFramePosition()
 
 debuggerFrame:Hide()
 
-local header = debuggerFrame:CreateFontString(nil, "OVERLAY")
-header:SetFont(theme.font, theme.fontSize)
-header:SetPoint("TOP", debuggerFrame, "TOP", 0, -10)
-header:SetText("Fillraidbots Debugger")
-header:SetTextColor(unpack(theme.textColor))
+local titleBar = CreateTitleBar(debuggerFrame)
 
-local counterText = debuggerFrame:CreateFontString(nil, "OVERLAY")
-counterText:SetFont(theme.font, theme.fontSize)
-counterText:SetPoint("TOPLEFT", debuggerFrame, "TOPLEFT", 40, -12)
+local header = titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+header:SetPoint("LEFT", 30, 0)
+header:SetText("FillRaidBots  |  Debugger")
+
+local counterText = debuggerFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+counterText:SetPoint("BOTTOMLEFT", 10, 11)
+counterText:SetTextColor(unpack(theme.label))
 counterText:SetText("")
-counterText:SetTextColor(unpack(theme.textColor))
 
 local scrollFrame = CreateFrame("ScrollFrame", "FillraidbotsScrollFrame", debuggerFrame, "BackdropTemplate")
 scrollFrame:SetWidth(460)
-scrollFrame:SetHeight(200)
-scrollFrame:SetPoint("TOPLEFT", debuggerFrame, "TOPLEFT", 10, -40)
-scrollFrame:SetBackdrop({
-    bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-    insets = { left = 4, right = 4, top = 4, bottom = 4 }
-})
-scrollFrame:SetBackdropColor(unpack(theme.backdropColor2))
-
-
+scrollFrame:SetHeight(235)
+scrollFrame:SetPoint("TOPLEFT", debuggerFrame, "TOPLEFT", 10, -33)
+scrollFrame:SetBackdrop(backdrop)
+scrollFrame:SetBackdropColor(unpack(theme.panel))
+scrollFrame:SetBackdropBorderColor(unpack(theme.panelEdge))
 
 local scrollChild = CreateFrame("EditBox", "FillraidbotsScrollChild", scrollFrame)
-scrollChild:SetPoint("TOPLEFT", scrollFrame, "TOPLEFT", 4, -4)
+scrollChild:SetPoint("TOPLEFT", scrollFrame, "TOPLEFT", 6, -5)
 scrollChild:SetWidth(440)
 scrollChild:SetHeight(1)
 scrollChild:SetMultiLine(true)
@@ -233,13 +267,28 @@ end)
 
 local scrollBar = CreateFrame("Slider", "FillraidbotsScrollBar", scrollFrame, "UIPanelScrollBarTemplate")
 scrollBar:SetPoint("TOPRIGHT", scrollFrame, "TOPRIGHT", -5, -20)
+scrollBar:SetPoint("BOTTOMRIGHT", scrollFrame, "BOTTOMRIGHT", -5, 20)
 scrollBar:SetWidth(16)
-scrollBar:SetHeight(160)
 scrollBar:SetMinMaxValues(0, 0)
 scrollBar:SetValueStep(1)
 scrollBar:SetValue(0)
 scrollBar:SetScript("OnValueChanged", function()
     scrollFrame:SetVerticalScroll(scrollBar:GetValue())
+end)
+
+
+
+
+
+
+scrollFrame:SetScript("OnScrollRangeChanged", function(self, xrange, yrange)
+    yrange = yrange or self:GetVerticalScrollRange()
+    local _, sliderMax = scrollBar:GetMinMaxValues()
+    if scrollBar:GetValue() >= sliderMax - 1 then
+        scrollBar:SetMinMaxValues(0, yrange)
+        scrollBar:SetValue(yrange)
+        self:SetVerticalScroll(yrange)
+    end
 end)
 
 
@@ -261,23 +310,44 @@ end)
 
 local debugMessages = {}
 local visibleDebugMessages = {}
-local lineHeight = 9
+local lineHeight = 11 
 local maxMessages = 140
+
+
+
+local measureText = debuggerFrame:CreateFontString(nil, "ARTWORK")
+measureText:SetFont(theme.fontMono, theme.fontSizeMono)
+measureText:SetJustifyH("LEFT")
+measureText:SetJustifyV("TOP")
+measureText:SetWordWrap(true)
+measureText:SetPoint("TOPLEFT", debuggerFrame, "TOPLEFT", 0, 0)
+measureText:SetWidth(440)
+measureText:SetAlpha(0)
 local totalMessagesSeen = 0
 
 local function GetTimestamp()
     return date("%H:%M:%S")
 end
 
-local function GetDisplayMessage(messageData)
-    local text = tostring(messageData.text or "")
-    local indexPrefix = tostring(messageData.index or 0) .. ": "
 
-    if GetDebuggerSetting("debuggerShowTimestamps", true) and messageData.timestamp then
-        return indexPrefix .. "[" .. messageData.timestamp .. "] " .. text
+local function GetDisplayMessage(messageData, plain)
+    local text = tostring(messageData.text or "")
+    local indexText = tostring(messageData.index or 0) .. ":"
+    local showTime = GetDebuggerSetting("debuggerShowTimestamps", true) and messageData.timestamp
+
+    if plain then
+        if showTime then
+            return indexText .. " [" .. messageData.timestamp .. "] " .. text
+        end
+        return indexText .. " " .. text
     end
 
-    return indexPrefix .. text
+    local levelColor = levelHex[messageData.level] or defaultLevelHex
+    local line = dimHex .. indexText .. "|r "
+    if showTime then
+        line = line .. dimHex .. "[" .. messageData.timestamp .. "]|r "
+    end
+    return line .. levelColor .. text .. "|r"
 end
 
 local function UpdateDebugTextWidth()
@@ -288,6 +358,7 @@ local function UpdateDebugTextWidth()
 
     scrollChild:SetWidth(contentWidth)
     debugEditBox:SetWidth(contentWidth)
+    measureText:SetWidth(contentWidth)
 end
 
 
@@ -307,9 +378,6 @@ local expandStep   = 100
 ApplyDebuggerHeight = function(h)
     h = math.max(defaultHeight, h)
 
-    
-    
-    
     local left = debuggerFrame:GetLeft()
     local top  = debuggerFrame:GetTop()
     if left and top then
@@ -319,14 +387,11 @@ ApplyDebuggerHeight = function(h)
 
     debuggerFrame:SetHeight(h)
 
-    
     SaveDebuggerFramePosition()
 
-    
-    local newScrollHeight = h - 40 - 50
+    local newScrollHeight = h - 33 - 32
     if newScrollHeight < 60 then newScrollHeight = 60 end
     scrollFrame:SetHeight(newScrollHeight)
-    scrollBar:SetHeight(newScrollHeight - 40)
     SetDebuggerSetting("debuggerHeight", h)
     UpdateDebugMessages()
 end
@@ -360,33 +425,36 @@ UpdateDebugMessages = function()
     local atBottom = false
     local contentHeight
     local maxScroll
-    
+    local plain = debugEditBox:HasFocus()
+
     local visibleCount = 0
 
     if currentScroll >= (oldMaxScroll - 5) then
         atBottom = true
     end
 
-
-
-
-
-
     visibleDebugMessages = {}
 
     for i = 1, table.getn(debugMessages) do
-        
         if IsLogLevelEnabled(debugMessages[i].level) then
             table.insert(visibleDebugMessages, debugMessages[i])
-            text = text .. GetDisplayMessage(debugMessages[i]) .. "\n"
+            text = text .. GetDisplayMessage(debugMessages[i], plain) .. "\n"
             visibleCount = visibleCount + 1
         end
     end
     debugEditBox:SetText(text)
 
-    counterText:SetText("Shown: " .. visibleCount .. " / Total: " .. totalMessagesSeen)
+    counterText:SetText("Shown: " .. visibleCount .. "  |  Total: " .. totalMessagesSeen)
 
-    contentHeight = GetTextLineCount(text) * lineHeight
+    measureText:SetText(text)
+    contentHeight = measureText:GetStringHeight()
+    if not contentHeight or contentHeight <= 0 then
+        contentHeight = GetTextLineCount(text) * lineHeight
+    end
+    
+    
+    contentHeight = math.ceil(contentHeight + 20)
+
     if contentHeight < scrollFrame:GetHeight() then
         contentHeight = scrollFrame:GetHeight()
     end
@@ -409,12 +477,28 @@ UpdateDebugMessages = function()
     end
 end
 
+debugEditBox:SetScript("OnEditFocusGained", function()
+    UpdateDebugMessages()
+end)
+debugEditBox:SetScript("OnEditFocusLost", function()
+    UpdateDebugMessages()
+end)
+
 UpdateDebuggerWidth()
 
+
+local copyButton = CreateFrame("Button", "FillraidbotsCopyButton", debuggerFrame, "UIPanelButtonTemplate")
+copyButton:SetSize(70, 20)
+copyButton:SetPoint("BOTTOMRIGHT", debuggerFrame, "BOTTOMRIGHT", -8, 6)
+copyButton:SetText("Copy All")
+copyButton:SetScript("OnClick", function()
+    debugEditBox:SetFocus()
+    debugEditBox:HighlightText()
+end)
+
 local clearButton = CreateFrame("Button", "FillraidbotsClearButton", debuggerFrame, "UIPanelButtonTemplate")
-clearButton:SetPoint("BOTTOM", debuggerFrame, "BOTTOM", -60, 20)
-clearButton:SetWidth(100)
-clearButton:SetHeight(30)
+clearButton:SetSize(96, 20)
+clearButton:SetPoint("RIGHT", copyButton, "LEFT", -6, 0)
 clearButton:SetText("Clear Messages")
 clearButton:SetScript("OnClick", function()
     ClearDebugEditBoxFocus()
@@ -422,69 +506,38 @@ clearButton:SetScript("OnClick", function()
     UpdateDebugMessages()
 end)
 
-local copyButton = CreateFrame("Button", "FillraidbotsCopyButton", debuggerFrame, "UIPanelButtonTemplate")
-copyButton:SetPoint("LEFT", clearButton, "RIGHT", 8, 0)
-copyButton:SetWidth(80)
-copyButton:SetHeight(30)
-copyButton:SetText("Copy All")
-copyButton:SetScript("OnClick", function()
-    debugEditBox:SetFocus()
-    debugEditBox:HighlightText()
-end)
 
-local closeButton = CreateFrame("Button", "FillraidbotsCloseButton", debuggerFrame)
-closeButton:SetPoint("TOPRIGHT", debuggerFrame, "TOPRIGHT", -10, -10)
-closeButton:SetWidth(15)
-closeButton:SetHeight(15)
-
-local normalTexture = closeButton:CreateTexture(nil, "BACKGROUND")
-normalTexture:SetTexture(texturePath .. "close.tga")
-normalTexture:SetAllPoints(closeButton)
-normalTexture:SetVertexColor(1, 0, 0)
-closeButton:SetNormalTexture(normalTexture)
-
-local highlightTexture = closeButton:CreateTexture(nil, "HIGHLIGHT")
-highlightTexture:SetTexture(texturePath .. "close.tga")
-highlightTexture:SetAllPoints(closeButton)
-highlightTexture:SetVertexColor(1, 0.5, 0.5)
-closeButton:SetHighlightTexture(highlightTexture)
-
-local pushedTexture = closeButton:CreateTexture(nil, "PUSHED")
-pushedTexture:SetTexture(texturePath .. "close.tga")
-pushedTexture:SetAllPoints(closeButton)
-pushedTexture:SetVertexColor(0.8, 0, 0)
-closeButton:SetPushedTexture(pushedTexture)
-
+local closeButton = CreateFrame("Button", "FillraidbotsCloseButton", titleBar, "UIPanelCloseButton")
+closeButton:SetPoint("RIGHT", 2, 0)
+closeButton:SetSize(24, 24)
 closeButton:SetScript("OnClick", function()
     ClearDebugEditBoxFocus()
-    
+
     SetDebuggerSetting("debuggerVisible", false)
     debuggerFrame:Hide()
 end)
 
 
-local function CreateSizeButton(name, label, offsetX, tooltipTitle, tooltipBody, onClick)
-    local btn = CreateFrame("Button", name, debuggerFrame)
-    btn:SetWidth(15)
-    btn:SetHeight(15)
-    btn:SetPoint("TOPRIGHT", debuggerFrame, "TOPRIGHT", offsetX, -10)
 
-    local fs = btn:CreateFontString(nil, "OVERLAY")
-    fs:SetFont(theme.font, theme.fontSize + 2, "OUTLINE")
+local function CreateSizeButton(name, label, offsetX, tooltipTitle, tooltipBody, onClick)
+    local btn = CreateFrame("Button", name, titleBar)
+    btn:SetSize(16, 20)
+    btn:SetPoint("RIGHT", titleBar, "RIGHT", offsetX, 0)
+
+    local fs = btn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     fs:SetAllPoints(btn)
     fs:SetText(label)
-    fs:SetTextColor(unpack(theme.textColor))
     btn:SetFontString(fs)
 
     btn:SetScript("OnEnter", function(self)
-        fs:SetTextColor(1, 1, 1, 1)
+        fs:SetTextColor(1, 1, 1)
         GameTooltip:SetOwner(self, "ANCHOR_TOP")
         GameTooltip:SetText(tooltipTitle, 1, 1, 1)
         GameTooltip:AddLine(tooltipBody, 0.8, 0.8, 0.8, true)
         GameTooltip:Show()
     end)
     btn:SetScript("OnLeave", function()
-        fs:SetTextColor(unpack(theme.textColor))
+        fs:SetTextColor(unpack(theme.gold))
         GameTooltip:Hide()
     end)
     btn:SetScript("OnClick", onClick)
@@ -493,12 +546,12 @@ end
 
 
 local expandButton = CreateSizeButton(
-    "FillraidbotsExpandButton", "v", -66,
+    "FillraidbotsExpandButton", "v", -62,
     "Expand", "Increase the window height by " .. expandStep .. " px.",
     function()
         ClearDebugEditBoxFocus()
         local current = GetDebuggerSetting("debuggerHeight", defaultHeight)
-        
+
         local bottom = debuggerFrame:GetBottom()
         if bottom and bottom - expandStep < 0 then
             return
@@ -509,7 +562,7 @@ local expandButton = CreateSizeButton(
 
 
 local contractButton = CreateSizeButton(
-    "FillraidbotsContractButton", "^", -48,
+    "FillraidbotsContractButton", "^", -44,
     "Contract", "Reduce the window height by " .. expandStep .. " px.",
     function()
         ClearDebugEditBoxFocus()
@@ -520,7 +573,7 @@ local contractButton = CreateSizeButton(
 
 
 local resetSizeButton = CreateSizeButton(
-    "FillraidbotsResetSizeButton", "r", -30,
+    "FillraidbotsResetSizeButton", "r", -26,
     "Reset Size", "Reset the window height to the default (" .. defaultHeight .. " px).",
     function()
         ClearDebugEditBoxFocus()
@@ -528,29 +581,18 @@ local resetSizeButton = CreateSizeButton(
     end
 )
 
-local logLevelButton = CreateFrame("Button", "FillraidbotsLogLevelButton", debuggerFrame)
-logLevelButton:SetPoint("BOTTOM", debuggerFrame, "TOPLEFT", 25, -30)
-logLevelButton:SetWidth(15)
-logLevelButton:SetHeight(15)
 
-local logLevelNormalTexture = logLevelButton:CreateTexture(nil, "BACKGROUND")
-logLevelNormalTexture:SetTexture(texturePath .. "editor.tga")
-logLevelNormalTexture:SetAllPoints(logLevelButton)
-logLevelButton:SetNormalTexture(logLevelNormalTexture)
+local logLevelButton = CreateFrame("Button", "FillraidbotsLogLevelButton", titleBar)
+logLevelButton:SetPoint("LEFT", 9, 0)
+logLevelButton:SetSize(15, 15)
 
-local logLevelHighlightTexture = logLevelButton:CreateTexture(nil, "HIGHLIGHT")
-logLevelHighlightTexture:SetTexture(texturePath .. "editor.tga")
-logLevelHighlightTexture:SetAllPoints(logLevelButton)
-logLevelHighlightTexture:SetVertexColor(1, 1, 0)
-logLevelButton:SetHighlightTexture(logLevelHighlightTexture)
-
-local logLevelPushedTexture = logLevelButton:CreateTexture(nil, "PUSHED")
-logLevelPushedTexture:SetTexture(texturePath .. "editor.tga")
-logLevelPushedTexture:SetAllPoints(logLevelButton)
-logLevelPushedTexture:SetVertexColor(0.8, 0.2, 0.2)
-logLevelButton:SetPushedTexture(logLevelPushedTexture)
+local logLevelTexture = logLevelButton:CreateTexture(nil, "ARTWORK")
+logLevelTexture:SetTexture(texturePath .. "editor.tga")
+logLevelTexture:SetAllPoints(logLevelButton)
+logLevelTexture:SetVertexColor(unpack(theme.gear))
 
 logLevelButton:SetScript("OnEnter", function(self)
+    logLevelTexture:SetVertexColor(1, 1, 1)
     GameTooltip:SetOwner(self, "ANCHOR_TOP")
     GameTooltip:SetText("Log Level", 1, 1, 1)
     GameTooltip:AddLine("Adjust log level settings.", 0.8, 0.8, 0.8)
@@ -558,28 +600,36 @@ logLevelButton:SetScript("OnEnter", function(self)
 end)
 
 logLevelButton:SetScript("OnLeave", function()
+    logLevelTexture:SetVertexColor(unpack(theme.gear))
     GameTooltip:Hide()
 end)
 
+logLevelButton:SetScript("OnMouseDown", function()
+    logLevelTexture:SetVertexColor(0.8, 0.2, 0.2)
+end)
+
+logLevelButton:SetScript("OnMouseUp", function()
+    logLevelTexture:SetVertexColor(1, 1, 1)
+end)
+
+
+
 local logLevelFrame = CreateFrame("Frame", "FillraidbotsLogLevelFrame", debuggerFrame, "BackdropTemplate")
-logLevelFrame:SetWidth(200)
-logLevelFrame:SetHeight(285)
-logLevelFrame:SetPoint("TOPLEFT", debuggerFrame, "TOPRIGHT", 8, -20)
-logLevelFrame:SetBackdrop({
-    bgFile = texturePath .. "bg.tga",
-    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-    tile = true, tileSize = 32, edgeSize = 12,
-    insets = { left = 8, right = 8, top = 8, bottom = 8 }
-})
-logLevelFrame:SetBackdropColor(unpack(theme.backdropColor2))
-logLevelFrame:SetBackdropBorderColor(0.6, 0.6, 0.6, 1)
+logLevelFrame:SetPoint("TOPLEFT", logLevelButton, "BOTTOMLEFT", -6, -8)
+logLevelFrame:SetWidth(300)
+logLevelFrame:SetHeight(140)
+logLevelFrame:SetFrameStrata("DIALOG")
+logLevelFrame:EnableMouse(true) 
+logLevelFrame:SetBackdrop(backdrop)
+logLevelFrame:SetBackdropColor(theme.bg[1], theme.bg[2], theme.bg[3], 1)
+logLevelFrame:SetBackdropBorderColor(unpack(theme.border))
 logLevelFrame:Hide()
 
-local logLevelHeader = logLevelFrame:CreateFontString(nil, "OVERLAY")
-logLevelHeader:SetFont(theme.font, theme.fontSize)
-logLevelHeader:SetPoint("TOP", logLevelFrame, "TOP", 0, -10)
-logLevelHeader:SetText("Log Levels")
-logLevelHeader:SetTextColor(unpack(theme.textColor))
+local logLevelBar = CreateTitleBar(logLevelFrame)
+
+local logLevelHeader = logLevelBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+logLevelHeader:SetPoint("LEFT", 10, 0)
+logLevelHeader:SetText("FillRaidBots  |  Log Levels")
 
 
 local logLevelTooltips = {
@@ -592,21 +642,29 @@ local logLevelTooltips = {
     debugzones      = "Zone detection.\nLogs current zone, subzone and the max bot cap applied.",
 }
 
-local function CreateLogLevelCheckbox(name, label, parent, offsetY, level)
+local function CreateCheckbox(name, label, parent, x, y, color)
     local checkbox = CreateFrame("CheckButton", name, parent, "UICheckButtonTemplate")
-    checkbox:SetPoint("TOPLEFT", parent, "TOPLEFT", 20, offsetY)
-    checkbox.text = checkbox:CreateFontString(nil, "OVERLAY")
-    checkbox.text:SetFont(theme.font, theme.fontSize)
-    checkbox.text:SetPoint("LEFT", checkbox, "RIGHT", 5, 0)
+    checkbox:SetSize(22, 22)
+    checkbox:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+    checkbox:SetHitRectInsets(0, -110, 0, 0)
+
+    checkbox.text = checkbox:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    checkbox.text:SetPoint("LEFT", checkbox, "RIGHT", 2, 0)
     checkbox.text:SetText(label)
-    checkbox.text:SetTextColor(unpack(theme.textColor))
+    checkbox.text:SetTextColor(color[1], color[2], color[3])
+
+    return checkbox
+end
+
+local function CreateLogLevelCheckbox(name, label, parent, x, y, level)
+    local checkbox = CreateCheckbox(name, label, parent, x, y, levelColors[level] or theme.label)
     checkbox:SetChecked(GetDebuggerLevelSetting(level))
     checkbox:SetScript("OnClick", function(self)
         SetDebuggerLevelSetting(level, self:GetChecked() and true or false)
-        
+
         UpdateDebugMessages()
     end)
-    
+
     if logLevelTooltips[level] then
         checkbox:SetScript("OnEnter", function(self)
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
@@ -621,23 +679,17 @@ local function CreateLogLevelCheckbox(name, label, parent, offsetY, level)
     return checkbox
 end
 
-local debugFillingCheckbox = CreateLogLevelCheckbox("DebugFillingCheckbox", "Debug Filling", logLevelFrame, -40, "debugfilling")
-local debugDetectionCheckbox = CreateLogLevelCheckbox("DebugDetectionCheckbox", "Debug Detection", logLevelFrame, -70, "debugdetection")
-local debugRemoveCheckbox = CreateLogLevelCheckbox("DebugRemoveCheckbox", "Debug Remove", logLevelFrame, -100, "debugremove")
-local debugErrorCheckbox = CreateLogLevelCheckbox("DebugErrorCheckbox", "Debug Error", logLevelFrame, -130, "debugerror")
-local debugInfoCheckbox = CreateLogLevelCheckbox("DebugInfoCheckbox", "Debug Info", logLevelFrame, -160, "debuginfo")
-local debugVersionCheckbox = CreateLogLevelCheckbox("DebugVersionCheckbox", "Debug Version", logLevelFrame, -190, "debugversion")
-local debugZonesCheckbox = CreateLogLevelCheckbox("DebugZonesCheckbox", "Zones", logLevelFrame, -220, "debugzones")
 
+local col1, col2 = 12, 160
+local debugFillingCheckbox = CreateLogLevelCheckbox("DebugFillingCheckbox", "Debug Filling", logLevelFrame, col1, -34, "debugfilling")
+local debugDetectionCheckbox = CreateLogLevelCheckbox("DebugDetectionCheckbox", "Debug Detection", logLevelFrame, col1, -58, "debugdetection")
+local debugRemoveCheckbox = CreateLogLevelCheckbox("DebugRemoveCheckbox", "Debug Remove", logLevelFrame, col1, -82, "debugremove")
+local debugErrorCheckbox = CreateLogLevelCheckbox("DebugErrorCheckbox", "Debug Error", logLevelFrame, col1, -106, "debugerror")
+local debugInfoCheckbox = CreateLogLevelCheckbox("DebugInfoCheckbox", "Debug Info", logLevelFrame, col2, -34, "debuginfo")
+local debugVersionCheckbox = CreateLogLevelCheckbox("DebugVersionCheckbox", "Debug Version", logLevelFrame, col2, -58, "debugversion")
+local debugZonesCheckbox = CreateLogLevelCheckbox("DebugZonesCheckbox", "Zones", logLevelFrame, col2, -82, "debugzones")
 
-
-local timestampCheckbox = CreateFrame("CheckButton", "DebugTimestampCheckbox", logLevelFrame, "UICheckButtonTemplate")
-timestampCheckbox:SetPoint("TOPLEFT", logLevelFrame, "TOPLEFT", 20, -250)
-timestampCheckbox.text = timestampCheckbox:CreateFontString(nil, "OVERLAY")
-timestampCheckbox.text:SetFont(theme.font, theme.fontSize)
-timestampCheckbox.text:SetPoint("LEFT", timestampCheckbox, "RIGHT", 5, 0)
-timestampCheckbox.text:SetText("Show Timestamps")
-timestampCheckbox.text:SetTextColor(unpack(theme.textColor))
+local timestampCheckbox = CreateCheckbox("DebugTimestampCheckbox", "Show Timestamps", logLevelFrame, col2, -106, theme.label)
 timestampCheckbox:SetChecked(GetDebuggerSetting("debuggerShowTimestamps", true))
 timestampCheckbox:SetScript("OnClick", function(self)
     SetDebuggerSetting("debuggerShowTimestamps", self:GetChecked() and true or false)
@@ -712,11 +764,11 @@ SlashCmdList["FILLRAIDBOTSDEBUG"] = function()
     ClearDebugEditBoxFocus()
 
     if debuggerFrame:IsShown() then
-        
+
         SetDebuggerSetting("debuggerVisible", false)
         debuggerFrame:Hide()
     else
-        
+
         SetDebuggerSetting("debuggerVisible", true)
         RefreshDebuggerCheckboxStates()
         debuggerFrame:Show()
@@ -735,8 +787,7 @@ eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 
 eventFrame:SetScript("OnEvent", function(self, event, ...)
     if event == "PLAYER_LOGIN" then
-        
-        
+
         savedVarsReady = true
         EnsureDebuggerSettings()
         RestoreDebuggerFramePosition()
@@ -745,8 +796,6 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
         UpdateDebugMessages()
         DebugMessage("Player logged in.", "debuginfo")
 
-        
-        
         ApplyDebuggerHeight(GetDebuggerSetting("debuggerHeight", 300))
         if GetDebuggerSetting("debuggerVisible", false) then
             debuggerFrame:Show()
@@ -759,48 +808,3 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
         DebugMessage("Player entering the world.", "debuginfo")
     end
 end)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

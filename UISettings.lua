@@ -15,8 +15,8 @@ frame:SetScript("OnEvent", function(self, event, ...)
             FillRaidBots_LoadSettings()
         end
 	elseif event == "PLAYER_LOGOUT" then
-		-- SavedVariables are saved automatically by WoW on logout/reload.
-		-- Keep this guarded so older/newer FillRaidBots builds without this helper do not error.
+		
+		
 		if FillRaidBots_SaveSettings then
 			FillRaidBots_SaveSettings()
 		end
@@ -277,7 +277,7 @@ SettingsConfig = {
                     type = "checkbox",
                     key = "OthersButtonsEnabled",
                     toggle = "OthersButtonEnabled",
-                    label = "Enable Others button",
+                    label = "Others Button",
                     tooltip = "Enables Others button on all instance frames.",
                     default = false,
                     onApply = function(value) ToggleOthersButton(value) end
@@ -289,7 +289,7 @@ SettingsConfig = {
                     type = "checkbox",
                     key = "isRefillEnabled",
                     toggle = "RefillEnabled",
-                    label = "Enable Refill Button",
+                    label = "Refill Button",
                     tooltip = "The Refill Button will be available.",
                     default = true,
                     onApply = function()
@@ -301,7 +301,7 @@ SettingsConfig = {
                     type = "checkbox",
                     key = "isremoveDeadBotsButtonEnabled",
                     toggle = "removeDeadBotsButtonEnabled",
-                    label = "Enable Remove Dead Bots Button",
+                    label = "Remove Dead Bots Button",
                     tooltip = "Shows a manual button when dead bots are found.\nOnly appears when Auto Remove Dead Bots is disabled.",
                     default = true,
                     onApply = function()
@@ -313,6 +313,19 @@ SettingsConfig = {
                 
                 
                 
+                {
+                    type = "checkbox",
+                    key = "isKickLastBotButtonEnabled",
+                    label = "Kick Last Bot Button",
+                    tooltip = "Shows a 'Kick last bot' button on the loot window.\nClick it to kick the last bot.",
+                    default = true,
+                    onApply = function(value)
+                        if not value and frb_HideKickLastBotButton then
+                            frb_HideKickLastBotButton()
+                        end
+                    end
+                },
+
                 {
                     type = "radio",
                     group = "buttonMoveMode",
@@ -460,6 +473,7 @@ SettingsConfig = {
                 {
                     type = "radio",
                     group = "lootType",
+                    enabledBy = "isLootTypeEnabled",
                     textposition = "over",
 
                     options = {
@@ -649,6 +663,94 @@ local function InitializeDefaults()
 end
 
 --==================================================
+-- RADIO LOOK + DEPENDENCIES
+--==================================================
+local RADIO_TEXTURE = "Interface\\Buttons\\UI-RadioButton"
+
+local function ApplyRadioTextures(cb)
+    cb:SetNormalTexture(RADIO_TEXTURE)
+    cb:GetNormalTexture():SetTexCoord(0, 0.25, 0, 1)
+
+    cb:SetPushedTexture(RADIO_TEXTURE)
+    cb:GetPushedTexture():SetTexCoord(0, 0.25, 0, 1)
+
+    cb:SetHighlightTexture(RADIO_TEXTURE, "ADD")
+    cb:GetHighlightTexture():SetTexCoord(0.5, 0.75, 0, 1)
+
+    cb:SetCheckedTexture(RADIO_TEXTURE)
+    cb:GetCheckedTexture():SetTexCoord(0.25, 0.5, 0, 1)
+
+    cb:SetDisabledTexture(RADIO_TEXTURE)
+    cb:GetDisabledTexture():SetTexCoord(0, 0.25, 0, 1)
+
+    cb:SetDisabledCheckedTexture(RADIO_TEXTURE)
+    cb:GetDisabledCheckedTexture():SetTexCoord(0.25, 0.5, 0, 1)
+end
+
+local function SetControlEnabled(cb, enabled)
+    if not cb then return end
+
+    local shade = enabled and 1 or 0.5
+
+    if enabled then
+        cb:Enable()
+    else
+        cb:Disable()
+    end
+
+    local textures = {
+        cb:GetNormalTexture(),
+        cb:GetCheckedTexture(),
+        cb:GetDisabledCheckedTexture(),
+    }
+    for i = 1, 3 do
+        local tex = textures[i]
+        if tex then
+            tex:SetVertexColor(shade, shade, shade)
+            tex:SetDesaturated(not enabled)
+        end
+    end
+
+    local text = cb.labelText or cb.text
+    if text then
+        if enabled then
+            text:SetTextColor(1, 0.82, 0)
+        else
+            text:SetTextColor(0.5, 0.5, 0.5)
+        end
+    end
+end
+
+-- Items can declare:  enabledBy = "someKey"   (enabled while that setting is on)
+--                     disabledBy = "someKey"  (disabled while that setting is on)
+function RefreshSettingsDependencies()
+    if not FillRaidBotsSavedSettings then return end
+
+    for _, section in ipairs(SettingsConfig.sections) do
+        for _, item in ipairs(section.items) do
+            if item.enabledBy or item.disabledBy then
+
+                local enabled = true
+                if item.enabledBy and not FillRaidBotsSavedSettings[item.enabledBy] then
+                    enabled = false
+                end
+                if item.disabledBy and FillRaidBotsSavedSettings[item.disabledBy] then
+                    enabled = false
+                end
+
+                if item.type == "radio" then
+                    for _, option in ipairs(item.options) do
+                        SetControlEnabled(option.frame, enabled)
+                    end
+                else
+                    SetControlEnabled(item.frame, enabled)
+                end
+            end
+        end
+    end
+end
+
+--==================================================
 -- CHECKBUTTON CREATOR 
 --==================================================
 local function ShowSettingsTooltip(owner, tooltip)
@@ -711,8 +813,8 @@ local function CreateCheckButton(parent, name, anchor, x, y, label, tooltip, val
     
     cb.text = cb:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 	cb.text:SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
-	cb.text:SetPoint("TOPLEFT", cb, "TOPRIGHT", 5, -2)
-	cb.text:SetWidth(120) -- adjust to your column width
+	cb.text:SetPoint("LEFT", cb, "RIGHT", 5, 0)
+	cb.text:SetWidth(math.max(40, (parentForItem:GetWidth() or 170) - x - 20 - 5 - 8))
 	cb.text:SetJustifyH("LEFT")
     cb.text:SetText(label)
 
@@ -730,6 +832,8 @@ local function CreateCheckButton(parent, name, anchor, x, y, label, tooltip, val
         if onClick then
             onClick(checked)
         end
+
+        RefreshSettingsDependencies()
 
         local status = checked and "|cFF00FF00enabled|r" or "|cFFFF0000disabled|r"
         DEFAULT_CHAT_FRAME:AddMessage((label or name) .. ": " .. status)
@@ -773,7 +877,7 @@ function CreateSettingsUI()
     --------------------------------------------------
     -- LAYOUT BASE SETTINGS
     --------------------------------------------------
-    local columnWidth = 170
+    local columnWidth = 210
     local columnSpacing = 8 
     local startX = 20
     local startY = -20
@@ -794,9 +898,9 @@ function CreateSettingsUI()
             elseif item.type == "radio" then
                 estimatedHeight = estimatedHeight + 50
             elseif item.type == "button" then
-                estimatedHeight = estimatedHeight + 30
+                estimatedHeight = estimatedHeight + 25
 			elseif item.type == "slider" then
-				estimatedHeight = estimatedHeight + 40				
+				estimatedHeight = estimatedHeight + 52				
             end
         end
 
@@ -951,8 +1055,8 @@ function CreateSettingsUI()
 					extraLabelHeight = 14
 				end
 
-				local spacingX = 50
-				local spacingY = 28 + extraLabelHeight
+				local spacingX = 60
+				local spacingY = 25 + extraLabelHeight
 				local optionCount = table.getn(currentItem.options)
 
 				--------------------------------------------------
@@ -1000,6 +1104,8 @@ function CreateSettingsUI()
 					local label = parentFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 					label:SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
 					label:SetText(option.label)
+					cb.labelText = label
+					ApplyRadioTextures(cb)
 
 					if textPosition == "over" then
 						label:SetPoint("BOTTOM", cb, "TOP", 0, 2)
@@ -1122,7 +1228,7 @@ function CreateSettingsUI()
 						
 						
 						
-						lockBtn:SetPoint("LEFT", cb, "RIGHT", 118, 0)
+						lockBtn:SetPoint("LEFT", cb, "RIGHT", 130, 0)
 
 						
 						local lockTex = lockBtn:CreateTexture(nil, "ARTWORK")
@@ -1278,12 +1384,10 @@ function CreateSettingsUI()
 				local currentItem = item
 
 				local btn = CreateFrame("Button", nil, sectionFrame, "GameMenuButtonTemplate")
-				btn:SetWidth(currentItem.width or 120)
+				btn:SetWidth(columnWidth - 16)
 				btn:SetHeight(20)
 				btn:SetPoint("TOPLEFT", sectionFrame, "TOPLEFT", 8, sectionY)
 				btn:SetText(currentItem.label)
-				local textWidth = btn:GetFontString():GetStringWidth()
-				btn:SetWidth(textWidth + 20)
 				--------------------------------------------------
 				-- AUTO CREATE FRAME (WITH GLOBAL NAME)
 				--------------------------------------------------
@@ -1360,7 +1464,7 @@ function CreateSettingsUI()
 					GameTooltip:Hide()
 				end)
 
-				sectionY = sectionY - 30
+				sectionY = sectionY - 25
 			--------------------------------------------------
 			-- SLIDER
 			--------------------------------------------------
@@ -1371,9 +1475,9 @@ function CreateSettingsUI()
 
 				local slider = CreateFrame("Slider", sliderName, sectionFrame, "OptionsSliderTemplate")
 
-				slider:SetWidth(currentItem.width or 140)
+				slider:SetWidth(currentItem.width or (columnWidth - 28))
 				slider:SetHeight(16)
-				slider:SetPoint("TOPLEFT", sectionFrame, "TOPLEFT", 8, sectionY -10) 
+				slider:SetPoint("TOPLEFT", sectionFrame, "TOPLEFT", 12, sectionY -18) 
 
 				local min = currentItem.min or 0
 				local max = currentItem.max or 100
@@ -1458,7 +1562,7 @@ function CreateSettingsUI()
 
 				end)
 
-				sectionY = sectionY - 40				
+				sectionY = sectionY - 52				
 			end
         end
 
@@ -1548,6 +1652,8 @@ function ApplySavedSettings()
             end
         end
     end
+
+    RefreshSettingsDependencies()
 end
 --==================================================
 -- LOAD SETTINGS

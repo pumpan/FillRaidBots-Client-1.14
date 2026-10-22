@@ -21,7 +21,7 @@ local classes = {
 
 local addonName = "FillRaidBots"
 local addonPrefix = "FillRaid1142"
-local versionNumber = "5.2.0"
+local versionNumber = "5.3.0"
 local a = "5"
 local botCount = 0
 local initialBotRemoved = false
@@ -551,44 +551,98 @@ function frb_GetMageSpec(index)
     return frb_GetDefaultMageSpec(index)
 end
 
-function frb_ResetBotCommandCounters()
-    frb_AddCounters = { paladin = 0, shaman = 0, mage = 0 }
+frb_PendingBotConfigs = frb_PendingBotConfigs or { paladin = {}, shaman = {}, mage = {} }
+frb_BotConfig = frb_BotConfig or {}
+frb_BotConfigChecked = frb_BotConfigChecked or {}
+
+function frb_ClearPendingBotConfigs()
+    frb_PendingBotConfigs = { paladin = {}, shaman = {}, mage = {} }
 end
 
-function frb_BuildAddBotCommand(classRole)
+function frb_ResetBotConfigData()
+    frb_ClearPendingBotConfigs()
+    frb_BotConfig = {}
+    frb_BotConfigChecked = {}
+end
+
+function frb_ResetBotCommandCounters()
+    frb_AddCounters = { paladin = 0, shaman = 0, mage = 0 }
+    frb_ClearPendingBotConfigs()
+end
+
+local function frb_PushPendingBotConfig(classKey, cfg)
+    local queue = frb_PendingBotConfigs[classKey]
+    if not queue then return end
+    table.insert(queue, { cfg = cfg, t = GetTime() })
+end
+
+
+function frb_AssignPendingBotConfig(normalizedName, classKey)
+    local queue = frb_PendingBotConfigs[classKey]
+    local entry
+    if not queue then return end
+    while table.getn(queue) > 0 do
+        entry = table.remove(queue, 1)
+        if GetTime() - entry.t <= 300 then
+            frb_BotConfig[normalizedName] = entry.cfg
+            if QueueDebugMessage then
+                QueueDebugMessage("CONFIG ASSIGNED: " .. normalizedName .. " (" .. classKey .. ") -> "
+                    .. (entry.cfg.spec or entry.cfg.blessing or (entry.cfg.air and (entry.cfg.air .. "/" .. entry.cfg.earth .. "/" .. entry.cfg.fire .. "/" .. entry.cfg.water)) or "no config"), "debugfilling")
+            end
+            return
+        end
+    end
+end
+
+
+function frb_BuildAddBotCommand(classRole, knownCfg)
     local plain = string.lower(classRole or "")
-    local blessing, earth, fire, water, air, mageSpec
+    local cfg
     local cmd
 
     if string.find(plain, "paladin") then
-        frb_AddCounters.paladin = (frb_AddCounters.paladin or 0) + 1
-        blessing = frb_GetPaladinBlessing(frb_AddCounters.paladin)
-        if blessing and blessing ~= "random" then
-            cmd = ".partybot add " .. plain .. " " .. blessing
+        cfg = knownCfg
+        if not cfg then
+            frb_AddCounters.paladin = (frb_AddCounters.paladin or 0) + 1
+            cfg = { blessing = frb_GetPaladinBlessing(frb_AddCounters.paladin) }
+        end
+        frb_PushPendingBotConfig("paladin", cfg)
+        if cfg.blessing and cfg.blessing ~= "random" then
+            cmd = ".partybot add " .. plain .. " " .. cfg.blessing
             if QueueDebugMessage then QueueDebugMessage("CMD: " .. cmd, "debugfilling") end
             return cmd
         end
     elseif string.find(plain, "shaman") then
-        frb_AddCounters.shaman = (frb_AddCounters.shaman or 0) + 1
-        air = frb_GetShamanTotem(frb_AddCounters.shaman, "air")
-        earth = frb_GetShamanTotem(frb_AddCounters.shaman, "earth")
-        fire = frb_GetShamanTotem(frb_AddCounters.shaman, "fire")
-        water = frb_GetShamanTotem(frb_AddCounters.shaman, "water")
-        if air ~= "random" and earth ~= "random" and fire ~= "random" and water ~= "random" then
-            air = frb_TotemCommandNames[air] or air
-            earth = frb_TotemCommandNames[earth] or earth
-            fire = frb_TotemCommandNames[fire] or fire
-            water = frb_TotemCommandNames[water] or water
-            cmd = ".partybot add " .. plain .. " " .. air .. " " .. earth .. " " .. fire .. " " .. water
+        cfg = knownCfg
+        if not cfg then
+            frb_AddCounters.shaman = (frb_AddCounters.shaman or 0) + 1
+            cfg = {
+                air = frb_GetShamanTotem(frb_AddCounters.shaman, "air"),
+                earth = frb_GetShamanTotem(frb_AddCounters.shaman, "earth"),
+                fire = frb_GetShamanTotem(frb_AddCounters.shaman, "fire"),
+                water = frb_GetShamanTotem(frb_AddCounters.shaman, "water"),
+            }
+        end
+        frb_PushPendingBotConfig("shaman", cfg)
+        if cfg.air and cfg.earth and cfg.fire and cfg.water
+            and cfg.air ~= "random" and cfg.earth ~= "random" and cfg.fire ~= "random" and cfg.water ~= "random" then
+            cmd = ".partybot add " .. plain
+                .. " " .. (frb_TotemCommandNames[cfg.air] or cfg.air)
+                .. " " .. (frb_TotemCommandNames[cfg.earth] or cfg.earth)
+                .. " " .. (frb_TotemCommandNames[cfg.fire] or cfg.fire)
+                .. " " .. (frb_TotemCommandNames[cfg.water] or cfg.water)
             if QueueDebugMessage then QueueDebugMessage("CMD: " .. cmd, "debugfilling") end
             return cmd
         end
     elseif string.find(plain, "mage") then
-        frb_AddCounters.mage = (frb_AddCounters.mage or 0) + 1
-        mageSpec = frb_GetMageSpec(frb_AddCounters.mage)
-        if mageSpec and mageSpec ~= "random" then
-            mageSpec = frb_MageSpecCommandNames[mageSpec] or mageSpec
-            cmd = ".partybot add " .. plain .. " " .. mageSpec
+        cfg = knownCfg
+        if not cfg then
+            frb_AddCounters.mage = (frb_AddCounters.mage or 0) + 1
+            cfg = { spec = frb_GetMageSpec(frb_AddCounters.mage) }
+        end
+        frb_PushPendingBotConfig("mage", cfg)
+        if cfg.spec and cfg.spec ~= "random" then
+            cmd = ".partybot add " .. plain .. " " .. (frb_MageSpecCommandNames[cfg.spec] or cfg.spec)
             if QueueDebugMessage then QueueDebugMessage("CMD: " .. cmd, "debugfilling") end
             return cmd
         end
@@ -597,6 +651,73 @@ function frb_BuildAddBotCommand(classRole)
     cmd = ".partybot add " .. plain
     if QueueDebugMessage then QueueDebugMessage("CMD: " .. cmd, "debugfilling") end
     return cmd
+end
+
+
+
+frb_InternalSend = false
+
+local function frb_ParseManualAddCommand(msg)
+    local rest, tokens, classKey, idx, roleToken, cfg
+    if frb_InternalSend or type(msg) ~= "string" then return end
+
+    rest = string.match(string.lower(msg), "^%.partybot%s+add%s+(.+)$")
+    if not rest then return end
+
+    
+    if frb_LastParsedMsg == msg and frb_LastParsedTime and (GetTime() - frb_LastParsedTime) < 0.1 then return end
+    frb_LastParsedMsg = msg
+    frb_LastParsedTime = GetTime()
+
+    if QueueDebugMessage then QueueDebugMessage("MANUAL CMD SEEN: " .. msg, "debugfilling") end
+
+    tokens = {}
+    for word in string.gmatch(rest, "%S+") do
+        table.insert(tokens, word)
+    end
+
+    classKey = tokens[1]
+    if classKey ~= "paladin" and classKey ~= "shaman" and classKey ~= "mage" then return end
+
+    idx = 2
+    roleToken = tokens[idx]
+    if roleToken == "tank" or roleToken == "healer" or roleToken == "meleedps" or roleToken == "rangedps" then
+        idx = idx + 1
+    end
+
+    cfg = {}
+    if classKey == "paladin" then
+        cfg.blessing = tokens[idx]
+    elseif classKey == "mage" then
+        cfg.spec = tokens[idx]
+    elseif tokens[idx + 3] then
+        cfg.air = tokens[idx]
+        cfg.earth = tokens[idx + 1]
+        cfg.fire = tokens[idx + 2]
+        cfg.water = tokens[idx + 3]
+    end
+
+    frb_PushPendingBotConfig(classKey, cfg)
+    if QueueDebugMessage then
+        QueueDebugMessage("MANUAL ADD: " .. classKey .. " -> "
+            .. (cfg.spec or cfg.blessing or (cfg.air and (cfg.air .. "/" .. cfg.earth .. "/" .. cfg.fire .. "/" .. cfg.water)) or "no config")
+            .. " (queued for next joining " .. classKey .. ")", "debugfilling")
+    end
+end
+
+if not frb_ManualAddHooked then
+    frb_ManualAddHooked = true
+    if SendChatMessage then
+        hooksecurefunc("SendChatMessage", function(msg)
+            frb_ParseManualAddCommand(msg)
+        end)
+    end
+    
+    if C_ChatInfo and C_ChatInfo.SendChatMessage then
+        hooksecurefunc(C_ChatInfo, "SendChatMessage", function(msg)
+            frb_ParseManualAddCommand(msg)
+        end)
+    end
 end
 
 function frb_CycleValue(currentValue, options)
@@ -2409,6 +2530,26 @@ RoleRemoverFrame:SetScript("OnEvent", function()
     UpdateGroupMembers()
     UpdateReFillButtonVisibility() 
 
+    do
+        local rosterPrefix = IsInRaid() and "raid" or "party"
+        local rosterPlayer = UnitName("player")
+        for i = 1, GetNumGroupMembers() do
+            local unit = rosterPrefix .. i
+            local uname = UnitName(unit)
+            local nname = uname and normalizePlayerName(uname)
+            if nname and uname ~= rosterPlayer and string.find(uname, "%*") and not frb_BotConfigChecked[nname] then
+                local _, classToken = UnitClass(unit)
+                if classToken then
+                    frb_BotConfigChecked[nname] = true
+                    classToken = string.lower(classToken)
+                    if classToken == "paladin" or classToken == "shaman" or classToken == "mage" then
+                        frb_AssignPendingBotConfig(nname, classToken)
+                    end
+                end
+            end
+        end
+    end
+
     if refillLoopRunning and not refillRecheckPending then
         ScheduleRefillRecheck(0.2)
     end
@@ -2420,6 +2561,7 @@ RoleRemoverFrame:SetScript("OnEvent", function()
         ResetRefillLoopState()
         UpdateReFillButtonVisibility()
         resetData() 
+        frb_ResetBotConfigData()
         QueueDebugMessage("Cleared both lists", "debugdetection")
     end
 
@@ -2432,6 +2574,11 @@ RoleRemoverFrame:SetScript("OnEvent", function()
 
         
         if not groupMembers[normalizedName] then
+            
+            frb_BotConfigChecked[normalizedName] = nil
+            if not ReplaceDeadBot[normalizedName] then
+                frb_BotConfig[normalizedName] = nil
+            end
             
             if detectedPlayers[normalizedName] then
                
@@ -2744,7 +2891,9 @@ function ProcessMessageQueue()
                     DEFAULT_CHAT_FRAME:AddMessage(message)
                 else
                    
+                    frb_InternalSend = true
                     SendChatMessage(message, "GUILD")
+                    frb_InternalSend = false
                 end					
             end
         end
@@ -3937,7 +4086,7 @@ end
 
 
 
-local b = "2"
+local b = "3"
 local function QueueMove(player, group)
     table.insert(moveQueue, {player = player, group = group})
 end
@@ -8885,7 +9034,18 @@ RunRefillPass = function()
             else
                 count = count + 1
                 QueueDebugMessage(playerName .. " - Class: " .. data.classColored .. ", Role: " .. data.role, "debugfilling")
-                QueueMessage(frb_BuildAddBotCommand(data.ClassNoColor .. " " .. data.role), "SAY", true)
+                if not data._cfg then
+                    data._cfg = frb_BotConfig[playerName]
+                end
+                if not data._cfg then
+                    
+                    data._cfg = {}
+                    QueueDebugMessage("REFILL: no stored config for " .. playerName .. ", adding without spec", "debugfilling")
+                end
+                
+                
+                frb_BotConfig[playerName] = nil
+                QueueMessage(frb_BuildAddBotCommand(data.ClassNoColor .. " " .. data.role, data._cfg), "SAY", true)
 
                 PendingRefill[playerName] = {
                     data = data,
@@ -9380,6 +9540,8 @@ SlashCmdList["FRB"] = function(cmd)
     
     elseif cmd == "resetbuttons" then
         FillRaidBots_ResetButtonPositions()
+    elseif cmd == "kicklast" then
+        frb_ToggleKickLastBot()
     else
        
         if cmd == "" or cmd == "help" then
@@ -9391,6 +9553,7 @@ SlashCmdList["FRB"] = function(cmd)
             DEFAULT_CHAT_FRAME:AddMessage("/frb refill - Replace recently removed bots", 1.0, 1.0, 0.0)
             DEFAULT_CHAT_FRAME:AddMessage("/frb fixgroups - Reorganize raid groups", 1.0, 1.0, 0.0)
             DEFAULT_CHAT_FRAME:AddMessage("/frb resetbuttons - Reset button position to default", 1.0, 1.0, 0.0) 
+            DEFAULT_CHAT_FRAME:AddMessage("/frb kicklast - Toggle the 'Kick last bot' button at the loot window", 1.0, 1.0, 0.0)
 
         else
            
@@ -9412,13 +9575,10 @@ local function ShowVersionPopupOnce()
 	local versionDetails = {
 		{"Fast Fill", "Hold Ctrl + Alt and click a boss to automatically fill using presets."},
 		{"Advanced Bot Configuration", "Configure Paladin blessings, Shaman totems, and Mage specs directly in-game."},
-		{"Mage Spec System", "Supports Frost, Fire, Random, same-spec mode, and 50/50 Frost/Fire setups."},
-		{"Shaman Totem System", "Configure individual totem setups with copy/paste support and role icons."},
-		{"Paladin Blessings", "Assign blessings individually for each Paladin with fast switching support."},
-		{"Refill System", "Automatically replaces dead bots until your group is full again."},
-		{"Tutorial Links", "Optional in-game boss guides with multiple sources and fallback support."},
-		{"Customizable Buttons", "Move, resize, and change button layouts in settings."},
-		{"Other Fixes", "Improved preset handling, raid filling accuracy, and Classic compatibility."}
+		{"Kick Last Bot Button", "Added an optional \"Kick last bot\" button on the loot frame. It can be enabled or disabled in settings."},
+		{"Refill Fixes", "Fixed the refilling of Mages, Shamans and Paladins with spec, totem and buff setups. The refill now tries to replace the correct one when it is specified."},
+		{"Settings Layout", "Improved the settings layout. Some checkboxes are now radio buttons, and a Kick Last Bot option has been added."},
+		{"Debugger", "Improved the debugger frame."}
 	}
 
        
@@ -9710,11 +9870,15 @@ FillRaidBotsSavedSettings.userCount = FillRaidBotsSavedSettings.userCount or 0
 FillRaidBotsSavedSettings.uniqueUsers = FillRaidBotsSavedSettings.uniqueUsers or {}
 
 
-local SessionUniqueUsers = {}
+frb_SessionUniqueUsers = {}
+
+
+
+
 
 
 local function generateUserID()
-    return math.random(1000000, 9999999)  
+    return math.random(1000000, 9999999)
 end
 
 
@@ -9725,25 +9889,20 @@ local function registerAddonPrefix()
 end
 
 local function sendVersionMessage(version, userID)
-    
     if not C_ChatInfo.IsAddonMessagePrefixRegistered(addonPrefix) then
         QueueDebugMessage("ERROR: Addon prefix not registered: " .. addonPrefix, "debugversion")
         return
     end
-    
+
     if not IsInGuild() then
         QueueDebugMessage("ERROR: Cannot send version message. You are not in a guild.", "debugversion")
         return
     end
 
-    
-    local message = version .. ";" .. userID
-    
+    local observedVersion = FillRaidBotsSavedSettings and FillRaidBotsSavedSettings.observedVersion or ""
+    local message = tostring(version) .. ";" .. tostring(userID or "") .. ";" .. tostring(observedVersion or "")
     C_ChatInfo.SendAddonMessage(addonPrefix, message, "GUILD")
-
-    
-    QueueDebugMessage("INFO: Version message sent successfully to GUILD. Message: " .. message, "debugversion")
-	newversion()
+    QueueDebugMessage("DEBUG: Legacy version sender sent: " .. message, "debugversion")
 end
 
 
@@ -9767,7 +9926,7 @@ local function OnEvent(self, event, ...)
         registerAddonPrefix()  
         local userID = generateUserID()
 			if versionNumber == Guard then
-				--sendVersionMessage(versionNumber, userID)
+				sendVersionMessage(versionNumber, userID)
 			else
 				QueueDebugMessage("ERROR: A, a, a, you didnt say the magic word.", "debugversion")
 			end
@@ -9843,147 +10002,553 @@ function isNewerVersion(current, received)
     return false
 end
 
-local SessionUserID
+frb_SessionUserID = nil
+frb_SessionRelayedCandidates = {}
+frb_REQUIRED_VERSION_REPORTS = 10
+frb_lastBroadcastObservedVersion = nil
+
+function frb_isValidVersion(value)
+    return type(value) == "string" and strfind(value, "^%d+%.%d+%.%d+$") ~= nil
+end
+
+
+function frb_col(color, text) return color .. tostring(text) .. "|r" end
+function frb_cVer(v)  return frb_col("|cff00ffff", v) end   
+function frb_cChar(n) return frb_col("|cffffd27f", n) end   
+function frb_cID(id)  return frb_col("|cff9ecbff", id) end  
+function frb_cDim(t)  return frb_col("|cff999999", t) end   
+function frb_cNum(t)  return frb_col("|cffffd700", t) end   
+function frb_cObs(v)                                         
+    if v == nil then return frb_cDim("nil") end
+    if v == "" then return frb_cDim("(empty)") end
+    return frb_cVer(v)
+end
 
 
 
-local frame = CreateFrame("Frame")
-frame:RegisterEvent("PLAYER_LOGIN")
-frame:RegisterEvent("CHAT_MSG_ADDON")
+function frb_normalizeCharacterName(name)
+    if type(name) ~= "string" then return "" end
+    name = (string.gsub(name, "^%s+", ""))
+    name = (string.gsub(name, "%s+$", ""))
+    name = (string.gsub(name, "%-+$", ""))
+    return name
+end
 
-frame:SetScript("OnEvent", function(self, event, ...)
-    if event == "PLAYER_LOGIN" then
+
+function frb_characterKey(name)
+    return string.lower(frb_normalizeCharacterName(name))
+end
+
+function frb_addCharacterToRecord(record, characterName)
+    characterName = frb_normalizeCharacterName(characterName)
+
+    
+    
+    local characters = {}
+    local seen = {}
+    if type(record) == "table" and type(record.characters) == "table" then
+        for i = 1, #record.characters do
+            local stored = frb_normalizeCharacterName(record.characters[i])
+            local key = string.lower(stored)
+            if stored ~= "" and not seen[key] then
+                seen[key] = true
+                characters[#characters + 1] = stored
+            end
+        end
+    end
+
+    if characterName ~= "" then
+        if not seen[string.lower(characterName)] then
+            characters[#characters + 1] = characterName
+
+        else
+            QueueDebugMessage("DEBUG: Already know this userID", "debugversion")
+        end
+    end
+    return characters
+end
+
+function frb_getHighestObservedVersion(currentVersion, incomingVersion)
+    if not frb_isValidVersion(incomingVersion) then
+        return currentVersion
+    end
+    if not frb_isValidVersion(currentVersion) or isNewerVersion(currentVersion, incomingVersion) then
+        return incomingVersion
+    end
+    return currentVersion
+end
+
+function frb_sendVersionMessage()
+    if not C_ChatInfo.IsAddonMessagePrefixRegistered(addonPrefix) then
+        QueueDebugMessage("ERROR: Addon prefix not registered: " .. addonPrefix, "debugversion")
+        return
+    end
+    if not IsInGuild() then
+        QueueDebugMessage("ERROR: Cannot send version message. You are not in a guild.", "debugversion")
+        return
+    end
+
+    local localVersion = tostring(versionNumber or "")
+    local localUserID = tostring(frb_SessionUserID or "")
+    local observedVersion = tostring(FillRaidBotsSavedSettings.observedVersion or "")
+    
+    
+    local message = localVersion .. ";" .. localUserID .. ";" .. observedVersion
+    C_ChatInfo.SendAddonMessage(addonPrefix, message, "GUILD")
+    frb_lastBroadcastObservedVersion = observedVersion
+    QueueDebugMessage("DEBUG: Sent version report: reporterVersion=" .. frb_cVer(localVersion)
+        .. ", userID=" .. frb_cID(localUserID) .. ", observedVersion=" .. frb_cObs(observedVersion)
+        .. ", message=" .. message, "debugversion")
+end
+
+
+
+
+function frb_countVersionClaims(candidateVersion)
+    local count = 0
+    local details = {}
+    for id, rec in pairs(FillRaidBotsSavedSettings.uniqueUsers or {}) do
+        if type(rec) == "table" and rec.reporterVersion == candidateVersion then
+            count = count + 1
+            details[#details + 1] = tostring(id)
+        end
+    end
+    table.sort(details)
+    return count, table.concat(details, ", ")
+end
+
+function frb_checkVersionQuorum(candidateVersion)
+    if not frb_isValidVersion(candidateVersion) then return false end
+
+    local count, reporters = frb_countVersionClaims(candidateVersion)
+    QueueDebugMessage("DEBUG: Version quorum " .. frb_cNum(tostring(count) .. "/"
+        .. tostring(frb_REQUIRED_VERSION_REPORTS)) .. " for " .. frb_cVer(candidateVersion)
+        .. "; reporting userIDs: " .. (reporters ~= "" and reporters or "none"), "debugversion")
+
+    
+    
+    if count < frb_REQUIRED_VERSION_REPORTS or not isNewerVersion(versionNumber, candidateVersion) then
+        return false
+    end
+
+    local priorObservedVersion = FillRaidBotsSavedSettings.observedVersion
+    local confirmedObservedVersion = frb_getHighestObservedVersion(priorObservedVersion, candidateVersion)
+    local newlyConfirmed = confirmedObservedVersion ~= priorObservedVersion
+    if newlyConfirmed then
+        FillRaidBotsSavedSettings.observedVersion = confirmedObservedVersion
+        QueueDebugMessage("WARNING: VERSION QUORUM REACHED: " .. frb_cVer(candidateVersion)
+            .. " reported by " .. frb_cNum(tostring(count)) .. " unique userIDs. This is likely a new version, not cryptographic proof. Reporters: "
+            .. (reporters ~= "" and reporters or "none"), "debugversion")
+        QueueDebugMessage("INFO: Confirmed observed version after quorum: " .. frb_cVer(candidateVersion)
+            .. " (" .. frb_cNum(tostring(count)) .. " unique userIDs)", "debugversion")
+    end
+
+    local lastNotified = FillRaidBotsSavedSettings.lastNotifiedVersion or versionNumber
+    if isNewerVersion(lastNotified, candidateVersion) then
+        FillRaidBotsSavedSettings.lastNotifiedVersion = candidateVersion
+        newversion(candidateVersion)
+        MaybeShowUpdateVersionPopup()
+    end
+
+    return newlyConfirmed
+end
+
+frb_MAX_UNIQUE_USERS = 2000
+
+
+function frb_isValidUserID(value)
+    return type(value) == "string" and strfind(value, "^%d%d%d%d%d%d%d$") ~= nil
+end
+
+
+function frb_findCharacterRecord(characterName)
+    local S = FillRaidBotsSavedSettings
+    if type(characterName) ~= "string" or characterName == "" then return nil end
+    local wanted = frb_characterKey(characterName)
+    if wanted == "" then return nil end
+    for id, rec in pairs(S.uniqueUsers or {}) do
+        if type(rec) == "table" and type(rec.characters) == "table" then
+            for i = 1, #rec.characters do
+                local storedName = rec.characters[i]
+                if type(storedName) == "string" and frb_characterKey(storedName) == wanted then
+                    return tostring(id), rec
+                end
+            end
+        end
+    end
+    return nil
+end
+
+function frb_recordHasCharacter(record, characterName)
+    if type(record) ~= "table" or type(record.characters) ~= "table" then return false end
+    local wanted = frb_characterKey(characterName)
+    if wanted == "" then return false end
+    for i = 1, #record.characters do
+        local name = record.characters[i]
+        if type(name) == "string" and frb_characterKey(name) == wanted then
+            return true
+        end
+    end
+    return false
+end
+
+
+
+
+
+
+
+
+
+function frb_migrateUserID(sender, newID)
+    local S = FillRaidBotsSavedSettings
+    S.uniqueUsers = S.uniqueUsers or {}
+    if type(sender) ~= "string" or sender == "" or type(newID) ~= "string" then
+        return newID
+    end
+
+    local target = S.uniqueUsers[newID]
+    if frb_recordHasCharacter(target, sender) then
+        return newID
+    end
+
+    local oldID, record = frb_findCharacterRecord(sender)
+    if not oldID or not record or oldID == newID then
+        return newID
+    end
+
+    if target ~= nil then
+        QueueDebugMessage("WARNING: Character is stored under userID "
+            .. tostring(oldID) .. " but reported existing userID " .. tostring(newID)
+            .. "; report ignored", "debugversion")
+        return nil
+    end
+
+    record.userID = newID
+    record.previousUserIDs = nil 
+    S.uniqueUsers[newID] = record
+    S.uniqueUsers[oldID] = nil
+    QueueDebugMessage("INFO: Migrated userID " .. tostring(oldID) .. " -> "
+        .. tostring(newID), "debugversion")
+    return newID
+end
+
+
+function frb_pruneUniqueUsers()
+    local S = FillRaidBotsSavedSettings
+    local list = {}
+    for id, rec in pairs(S.uniqueUsers) do
+        list[#list + 1] = {id = id, seen = (type(rec) == "table" and tonumber(rec.lastSeen)) or 0}
+    end
+    local excess = #list - frb_MAX_UNIQUE_USERS
+    if excess <= 0 then return end
+
+    table.sort(list, function(a, b) return a.seen < b.seen end)
+    for i = 1, excess do
+        local id = list[i].id
+        S.uniqueUsers[id] = nil
+    end
+    QueueDebugMessage("INFO: Pruned " .. tostring(excess) .. " old user records (cap "
+        .. tostring(frb_MAX_UNIQUE_USERS) .. ")", "debugversion")
+end
+
+
+
+
+
+
+frb_KICKLAST_OFFSET_X = -110  
+frb_KICKLAST_OFFSET_Y = -30
+frb_botJoinOrder = {}        
+
+function frb_KickLastBotEnabled()
+    local S = FillRaidBotsSavedSettings
+    return not (S and S.isKickLastBotButtonEnabled == false)
+end
+
+function frb_IsBotUnitName(name)
+    return type(name) == "string" and string.find(name, "%*") ~= nil
+end
+
+
+
+function frb_UpdateBotOrder()
+    local present, current = {}, {}
+    local count = GetNumGroupMembers()
+    for i = 1, count do
+        local unit
+        if IsInRaid() then
+            unit = "raid" .. i
+        elseif i < count then
+            unit = "party" .. i
+        end
+        if unit and UnitExists(unit) and not UnitIsUnit(unit, "player") then
+            local name = UnitName(unit)
+            if frb_IsBotUnitName(name) and not present[name] then
+                present[name] = true
+                current[#current + 1] = name
+            end
+        end
+    end
+
+    local newOrder, known = {}, {}
+    for _, name in ipairs(frb_botJoinOrder) do
+        if present[name] and not known[name] then
+            known[name] = true
+            newOrder[#newOrder + 1] = name
+        end
+    end
+    for _, name in ipairs(current) do
+        if not known[name] then
+            known[name] = true
+            newOrder[#newOrder + 1] = name
+        end
+    end
+    frb_botJoinOrder = newOrder
+end
+
+function frb_GetLastBotName()
+    frb_UpdateBotOrder()
+    return frb_botJoinOrder[#frb_botJoinOrder]
+end
+
+function frb_KickLastBot()
+    local name = frb_GetLastBotName()
+    if not name then
+        DEFAULT_CHAT_FRAME:AddMessage("FillRaidBots: No bot found to kick.", 1.0, 1.0, 0.0)
+        return
+    end
+    if CanManageRaidBots and not CanManageRaidBots() then
+        DEFAULT_CHAT_FRAME:AddMessage("FillRaidBots: You must be a raid leader or assistant to kick bots.", 1.0, 1.0, 0.0)
+        return
+    end
+    UninviteUnit(name)
+    QueueDebugMessage("INFO: Kicked last bot: " .. frb_cChar(name), "debugremove")
+    table.remove(frb_botJoinOrder)
+end
+
+function frb_GetKickLastBotButton()
+    if frb_KickLastBotButton then return frb_KickLastBotButton end
+    if not LootFrame then return nil end
+
+    
+    local b = CreateFrame("Button", "FRB_KickLastBotButton", LootFrame, "UIPanelButtonTemplate")
+    b:SetWidth(100)
+    b:SetHeight(24)
+    b:SetText("Kick last bot")
+    b:SetPoint("TOPLEFT", LootFrame, "TOPRIGHT", frb_KICKLAST_OFFSET_X, frb_KICKLAST_OFFSET_Y)
+    b:Hide()
+    b:SetScript("OnClick", function(self)
+        frb_KickLastBot()
+        self:Hide()
+    end)
+    b:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        local name = frb_botJoinOrder[#frb_botJoinOrder]
+        GameTooltip:SetText(name and ("Kick last bot: " .. name) or "Kick last bot")
+        GameTooltip:Show()
+    end)
+    b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    frb_KickLastBotButton = b
+    return b
+end
+
+function frb_ShowKickLastBotButton()
+    local enabled = frb_KickLastBotEnabled()
+    local members = GetNumGroupMembers()
+    local canManage = (not CanManageRaidBots) or CanManageRaidBots()
+    local lastBot = frb_GetLastBotName()
+    QueueDebugMessage("DEBUG: Kick last bot at loot: setting=" .. tostring(enabled)
+        .. ", members=" .. tostring(members) .. ", leaderOrAssist=" .. tostring(canManage)
+        .. ", lastBot=" .. tostring(lastBot) .. ", LootFrame=" .. tostring(LootFrame ~= nil), "debuginfo")
+
+    if not enabled then return end
+    if not IsInGroup() then return end
+    
+    
+    if members ~= 2 then return end
+    if not canManage then return end
+    if not lastBot then return end
+    local b = frb_GetKickLastBotButton()
+    if b then
+        b:Show()
+        QueueDebugMessage("DEBUG: Kick last bot button shown (visible=" .. tostring(b:IsVisible()) .. ")", "debuginfo")
+    end
+end
+
+function frb_HideKickLastBotButton()
+    if frb_KickLastBotButton then frb_KickLastBotButton:Hide() end
+end
+
+function frb_ToggleKickLastBot()
+    FillRaidBotsSavedSettings = FillRaidBotsSavedSettings or {}
+    FillRaidBotsSavedSettings.isKickLastBotButtonEnabled = not frb_KickLastBotEnabled()
+    if not FillRaidBotsSavedSettings.isKickLastBotButtonEnabled then frb_HideKickLastBotButton() end
+    local cb = GetSettingsCheckbox and GetSettingsCheckbox("isKickLastBotButtonEnabled")
+    if cb then cb:SetChecked(frb_KickLastBotEnabled()) end
+    DEFAULT_CHAT_FRAME:AddMessage("FillRaidBots: Kick last bot button " ..
+        (frb_KickLastBotEnabled() and "enabled." or "disabled."), 0.0, 1.0, 0.0)
+end
+
+frb_kickLastBotFrame = CreateFrame("Frame")
+frb_kickLastBotFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+frb_kickLastBotFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
+frb_kickLastBotFrame:RegisterEvent("LOOT_OPENED")
+frb_kickLastBotFrame:RegisterEvent("LOOT_CLOSED")
+frb_kickLastBotFrame:SetScript("OnEvent", function(self, event)
+    if event == "LOOT_OPENED" then
+        frb_ShowKickLastBotButton()
+    elseif event == "LOOT_CLOSED" then
+        frb_HideKickLastBotButton()
+    else
+        frb_UpdateBotOrder()
+    end
+end)
+
+frb_frame = CreateFrame("Frame")
+frb_frame:RegisterEvent("PLAYER_LOGIN")
+frb_frame:RegisterEvent("CHAT_MSG_ADDON")
+
+frb_frame:SetScript("OnEvent", function(frb_self, frb_event, ...)
+    if frb_event == "PLAYER_LOGIN" then
         ShowDailyTipInChat()
 
         if not FillRaidBotsSavedSettings.userID then
             FillRaidBotsSavedSettings.userID = generateUserID()
         end
+        frb_SessionUserID = tostring(FillRaidBotsSavedSettings.userID)
 
-        SessionUserID = FillRaidBotsSavedSettings.userID
-
+        FillRaidBotsSavedSettings.userCount = tonumber(FillRaidBotsSavedSettings.userCount) or 0
+        FillRaidBotsSavedSettings.uniqueUsers = FillRaidBotsSavedSettings.uniqueUsers or {}
+        FillRaidBotsSavedSettings.versionClaims = nil 
         if not FillRaidBotsSavedSettings.lastNotifiedVersion then
             FillRaidBotsSavedSettings.lastNotifiedVersion = versionNumber
         end
 
-        if not FillRaidBotsSavedSettings.userCount
-            or FillRaidBotsSavedSettings.userCount == "" then
-            FillRaidBotsSavedSettings.userCount = 0
+        QueueDebugMessage(addonName .. " loaded. Current version: " .. versionNumber, "debuginfo")
+        QueueDebugMessage("INFO: Total unique users detected: " .. FillRaidBotsSavedSettings.userCount, "debuginfo")
+        QueueDebugMessage("DEBUG: Local userID=" .. tostring(frb_SessionUserID)
+            .. ", localVersion=" .. tostring(versionNumber)
+            .. ", observedVersion=" .. tostring(FillRaidBotsSavedSettings.observedVersion), "debugversion")
+
+        if versionNumber == Guard then
+            frb_sendVersionMessage()
+        else
+            QueueDebugMessage("ERROR: A, a, a, you didnt say the magic word.", "debugversion")
         end
 
-        if not FillRaidBotsSavedSettings.uniqueUsers then
-            FillRaidBotsSavedSettings.uniqueUsers = {}
+    elseif frb_event == "CHAT_MSG_ADDON" then
+        local prefix, message, channel, sender = ...
+        if prefix ~= addonPrefix or not sender or sender == "" or sender == UnitName("player") then
+            return
+        end
+        sender = frb_normalizeCharacterName(sender)
+        if sender == "" or string.lower(sender) == string.lower(UnitName("player") or "") then
+            return
+        end
+        if not message or message == "" then
+            QueueDebugMessage("ERROR: Received an empty or nil message", "debugversion")
+            return
         end
 
-        QueueDebugMessage(
-            addonName .. " loaded. Current version: " .. versionNumber,
-            "debuginfo"
-        )
+        
+        
+        local receivedVersion, reportedUserID, receivedObservedVersion = strsplit(";", message)
+        QueueDebugMessage("DEBUG: Received version report: reporterVersion=" .. frb_cVer(receivedVersion)
+            .. ", userID=" .. frb_cID(reportedUserID)
+            .. ", observedVersion=" .. frb_cObs(receivedObservedVersion)
+            .. ", channel=" .. tostring(channel) .. ", rawMessage=" .. tostring(message), "debugversion")
 
-        QueueDebugMessage(
-            "INFO: Total unique users detected: "
-            .. FillRaidBotsSavedSettings.userCount,
-            "debuginfo"
-        )
+        if not frb_isValidVersion(receivedVersion) then
+            QueueDebugMessage("ERROR: Invalid reporterVersion: " .. tostring(receivedVersion), "debugversion")
+            return
+        end
+        reportedUserID = tostring(reportedUserID or "")
+        if not frb_isValidUserID(reportedUserID) then
+            QueueDebugMessage("WARNING: Report has a missing or invalid userID; ignored for unique-user counting and version quorum", "debugversion")
+            return
+        end
 
-        QueueDebugMessage(
-            "Userid: " .. SessionUserID,
-            "debuginfo"
-        )
+        
+        
+        
+        
+        local isVote = receivedObservedVersion ~= nil
 
-        --if isNewerVersion(versionNumber, FillRaidBotsSavedSettings.lastNotifiedVersion) then
-        --    QueueDebugMessage("INFO: New update available: " .. FillRaidBotsSavedSettings.lastNotifiedVersion, "debuginfo")
-        --    sendVersionMessage(FillRaidBotsSavedSettings.lastNotifiedVersion, SessionUserID)
-        --    newversion(FillRaidBotsSavedSettings.lastNotifiedVersion)
-		newversion()
-        --    MaybeShowUpdateVersionPopup()
-        --else
-        --    if versionNumber == Guard then
-        --        sendVersionMessage(versionNumber, SessionUserID)
-        --    else
-        --        QueueDebugMessage("ERROR: A, a, a, you didnt say the magic word.", "debugversion")
-        --    end
-        --end
+        FillRaidBotsSavedSettings.uniqueUsers = FillRaidBotsSavedSettings.uniqueUsers or {}
+        if not frb_migrateUserID(sender, reportedUserID) then
+            return
+        end
+        local existing = FillRaidBotsSavedSettings.uniqueUsers[reportedUserID]
+        local isNewUser = existing == nil
+        if isNewUser then
+            FillRaidBotsSavedSettings.userCount = (tonumber(FillRaidBotsSavedSettings.userCount) or 0) + 1
+            QueueDebugMessage("INFO: " .. frb_col("|cff00ff00", "+ NEW UNIQUE USER") .. " userID="
+                .. frb_cID(reportedUserID)
+                .. ", reporterVersion=" .. frb_cVer(receivedVersion)
+                .. ", totalUniqueUsers=" .. frb_col("|cff00ff00", FillRaidBotsSavedSettings.userCount), "debugversion")
+        else
+            QueueDebugMessage("DEBUG: Existing userID seen again: userID=" .. frb_cID(reportedUserID)
+                .. "; not incrementing userCount", "debugversion")
+        end
 
-    elseif event == "CHAT_MSG_ADDON" then
-        local prefix, message, _, sender = ...
+        local characters = frb_addCharacterToRecord(existing, sender)
+        local record = type(existing) == "table" and existing or {}
+        record.userID = reportedUserID
+        record.nickname = sender
+        record.characters = characters
+        if isVote then
+            record.reporterVersion = receivedVersion
+        else
+            record.reporterVersion = nil 
+        end
+        record.version = receivedVersion 
+        record.lastSeen = time()
 
-        if prefix == addonPrefix then
-            if sender ~= UnitName("player") then
+        
+        
+        record.observedVersion = frb_getHighestObservedVersion(record.observedVersion, receivedObservedVersion)
+        FillRaidBotsSavedSettings.uniqueUsers[reportedUserID] = record
+        frb_pruneUniqueUsers()
 
-                if not message or message == "" then
-                    QueueDebugMessage(
-                        "ERROR: Received an empty or nil message",
-                        "debugversion"
-                    )
-                    return
-                end
+        local claimCount = frb_countVersionClaims(receivedVersion)
+        if not isVote then
+            QueueDebugMessage("DEBUG: " .. frb_col("|cffff8c00", "Legacy two-field report")
+                .. " from userID=" .. frb_cID(reportedUserID)
+                .. ", version=" .. frb_cVer(receivedVersion)
+                .. "; registered as user, not counted as a quorum vote", "debugversion")
+        elseif isNewerVersion(versionNumber, receivedVersion) and claimCount < frb_REQUIRED_VERSION_REPORTS then
+            QueueDebugMessage("WARNING: UNVERIFIED NEWER VERSION CLAIM: userID=" .. frb_cID(reportedUserID) .. ", claims=" .. frb_cVer(receivedVersion)
+                .. ", localVersion=" .. frb_cVer(versionNumber) .. ", quorum="
+                .. frb_cNum(tostring(claimCount) .. "/" .. tostring(frb_REQUIRED_VERSION_REPORTS)), "debugversion")
+        end
 
-                --local receivedVersion, userID = strsplit(";", message)
 
-                --QueueDebugMessage(
-                --    "ReceivedVersion: [" .. receivedVersion
-                --    .. "], from userID: [" .. tostring(userID) .. "]",
-                --    "debugversion"
-                --)
-
-                --if not tonumber(userID) then
-                --    QueueDebugMessage(
-                --        "ERROR: UserID is not a valid number: "
-                --        .. tostring(userID),
-                --        "debugversion"
-                --    )
-                --    return
-                --end
-
-                --local versionPattern = "^%d+%.%d+%.%d+$"
-
-                --if not strfind(receivedVersion, versionPattern) then
-                --    QueueDebugMessage(
-                --        "ERROR: Version format is invalid: "
-                --        .. tostring(receivedVersion),
-                --        "debugversion"
-                --    )
-                --    return
-                --end
-
-                --if not SessionUniqueUsers[userID]
-                --    and not FillRaidBotsSavedSettings.uniqueUsers[userID] then
-
-                --    SessionUniqueUsers[userID] = true
-                --    FillRaidBotsSavedSettings.uniqueUsers[userID] = true
-
-                --    FillRaidBotsSavedSettings.userCount =
-                --        FillRaidBotsSavedSettings.userCount + 1
-
-                --    QueueDebugMessage(
-                --        "INFO: New user detected. Total unique users: "
-                --        .. FillRaidBotsSavedSettings.userCount,
-                --        "debugversion"
-                --    )
-                --end
-
-                --if isNewerVersion(versionNumber, receivedVersion) then
-                --    local lastNotifiedVersion = FillRaidBotsSavedSettings.lastNotifiedVersion or ""
-                --    if isNewerVersion(lastNotifiedVersion, receivedVersion) then
-                --        QueueDebugMessage("INFO: New version detected: " .. receivedVersion, "debuginfo")
-                --        FillRaidBotsSavedSettings.lastNotifiedVersion = receivedVersion
-                --        sendVersionMessage(receivedVersion, SessionUserID)
-                --        newversion(receivedVersion)
-                --        MaybeShowUpdateVersionPopup()
-                --    else
-                --        QueueDebugMessage("INFO: Version " .. receivedVersion .. " already notified.", "debugversion")
-                --        MaybeShowUpdateVersionPopup()
-                --    end
-                --else
-                --    QueueDebugMessage("INFO: Your version is up to date.", "debugversion")
-                --    FillRaidBotsSavedSettings.lastNotifiedVersion = receivedVersion
-                --end
-
+        local newlyConfirmed = false
+        if isVote then
+            newlyConfirmed = frb_checkVersionQuorum(receivedVersion) and true or false
+        end
+        if frb_isValidVersion(receivedObservedVersion) then
+            
+            local forwardedQuorumReached = frb_checkVersionQuorum(receivedObservedVersion)
+            newlyConfirmed = newlyConfirmed or forwardedQuorumReached
+            local forwardedCount = frb_countVersionClaims(receivedObservedVersion)
+            if forwardedCount < frb_REQUIRED_VERSION_REPORTS then
+                QueueDebugMessage("DEBUG: Ignoring forwarded observedVersion=" .. receivedObservedVersion
+                    .. " for propagation; local quorum is only " .. tostring(forwardedCount)
+                    .. "/" .. tostring(frb_REQUIRED_VERSION_REPORTS), "debugversion")
             end
+        end
+
+        
+        if newlyConfirmed
+            and tostring(FillRaidBotsSavedSettings.observedVersion or "") ~= tostring(frb_lastBroadcastObservedVersion or "") then
+            QueueDebugMessage("DEBUG: Broadcasting quorum-confirmed version "
+                .. tostring(FillRaidBotsSavedSettings.observedVersion), "debugversion")
+            frb_sendVersionMessage()
         end
     end
 end)
-
 
 SLASH_RL1 = "/rl"
 SLASH_RL2 = "/reload"

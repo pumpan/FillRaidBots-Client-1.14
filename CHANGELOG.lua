@@ -1,5 +1,22 @@
 # 📦 FillRaidBots — Changelog
 
+## 🆕 5.3.0
+
+
+## 🚀 Added
+Kick last bot button on the loot frame (optional)
+
+## 🔧 Fixed
+fixed the refilling of mages/shamans/paladins with spec/totem/buff. 
+it now tries to refill the correct one if specified.
+
+### 🧠 Improved
+Improved settings layout.
+visually changed some checkboxes to radio buttons and added "kick last bot" option.
+
+### 🧠 Improved
+Improved the debugger frame.
+
 ## 🆕 Version 5.0
 
 ---
